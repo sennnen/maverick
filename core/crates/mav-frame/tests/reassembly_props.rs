@@ -1,6 +1,8 @@
 //! Property tests: whatever fragmentation the radio produces and whatever garbage sits between
 //! frames, every valid frame is recovered exactly and in order, and single-bit corruption is
 //! always caught by the payload CRC.
+// Tests are allowed to panic; the workspace-level denies apply to library code.
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use mav_frame::frame::{build_frame, WireFormat};
 use mav_frame::reassembler::{Reassembler, ReassemblyEvent};

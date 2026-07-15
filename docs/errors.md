@@ -29,6 +29,32 @@ code, marked retired. This is what makes a code stable enough to grep three mont
 to cite in a fixture, and to reference from documentation. All codes are documented in this file as
 they are assigned, next to the condition they name.
 
+Each category owns a thousand-wide range, and the category is derived from the code in
+`mav-model`, so the two can never disagree: Transport 1000–1999, Frame 2000–2999, Decode
+3000–3999, Timeline 4000–4999, Storage 5000–5999, Feature 6000–6999, Analytic 7000–7999,
+Ml 8000–8999, Ffi 9000–9999, Internal 10000 and above.
+
+## The code catalogue
+
+The table below is the registry of every assigned code. It is kept mechanically in step with
+`codes::ALL` in `mav-model` by a test in `mav-obs`; adding a code in one place and not the other
+fails the build.
+
+| code | name | condition |
+|---|---|---|
+| 2001 | FRAME_HEADER_CRC_MISMATCH | a frame header failed its CRC-8 (gen4) or CRC-16 (gen5) check |
+| 2002 | FRAME_PAYLOAD_CRC_MISMATCH | a frame payload failed its trailing CRC-32 check |
+| 2003 | FRAME_TRUNCATED | a declared frame length is shorter than its own CRC-32 field |
+| 2004 | FRAME_OVERSIZED | a declared frame length exceeds the maximum frame size |
+| 2005 | FRAME_GARBAGE_SKIPPED | bytes were discarded while scanning for a start-of-frame marker |
+| 2006 | FRAME_READER_OUT_OF_BOUNDS | a field read ran past the end of a payload |
+| 3001 | DECODE_UNKNOWN_PACKET_TYPE | a packet type has no entry in the device's manifest packet map |
+| 3002 | DECODE_LAYOUT_INVALID | a manifest field layout is internally inconsistent or unusable |
+| 3003 | DECODE_FIELD_UNREADABLE | a manifest-declared field could not be read from the payload |
+| 3004 | DECODE_NO_MANIFEST_FOR_MODEL | no registered manifest matches a device model string |
+| 4001 | TIMELINE_IMPLAUSIBLE_TIMESTAMP | a device timestamp fell outside the plausible window and the sample was placed on capture time |
+| 10000 | INTERNAL_INVARIANT | a state the code treats as impossible was reached |
+
 Library code does not panic. `unwrap`, `expect`, and `panic!` are denied by the clippy
 configuration for library code and allowed in tests. An impossible state is an `Internal` error
 with a code, not a crash, because a crash in an FFI'd library takes the host app down with it.

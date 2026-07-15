@@ -55,7 +55,8 @@ pub enum Severity {
 }
 
 /// Stable error codes. Append new ones at the end of their category range; never renumber.
-/// The catalogue with meanings lives in docs/errors.md.
+/// The catalogue with meanings lives in docs/errors.md, and every assigned code must also be
+/// listed in `ALL` below — tests hold the constants, the list, and the document in step.
 pub mod codes {
     pub const FRAME_HEADER_CRC_MISMATCH: u16 = 2001;
     pub const FRAME_PAYLOAD_CRC_MISMATCH: u16 = 2002;
@@ -64,7 +65,32 @@ pub mod codes {
     pub const FRAME_GARBAGE_SKIPPED: u16 = 2005;
     pub const FRAME_READER_OUT_OF_BOUNDS: u16 = 2006;
 
+    pub const DECODE_UNKNOWN_PACKET_TYPE: u16 = 3001;
+    pub const DECODE_LAYOUT_INVALID: u16 = 3002;
+    pub const DECODE_FIELD_UNREADABLE: u16 = 3003;
+    pub const DECODE_NO_MANIFEST_FOR_MODEL: u16 = 3004;
+
+    pub const TIMELINE_IMPLAUSIBLE_TIMESTAMP: u16 = 4001;
+
     pub const INTERNAL_INVARIANT: u16 = 10_000;
+
+    pub const ALL: &[(u16, &str)] = &[
+        (FRAME_HEADER_CRC_MISMATCH, "FRAME_HEADER_CRC_MISMATCH"),
+        (FRAME_PAYLOAD_CRC_MISMATCH, "FRAME_PAYLOAD_CRC_MISMATCH"),
+        (FRAME_TRUNCATED, "FRAME_TRUNCATED"),
+        (FRAME_OVERSIZED, "FRAME_OVERSIZED"),
+        (FRAME_GARBAGE_SKIPPED, "FRAME_GARBAGE_SKIPPED"),
+        (FRAME_READER_OUT_OF_BOUNDS, "FRAME_READER_OUT_OF_BOUNDS"),
+        (DECODE_UNKNOWN_PACKET_TYPE, "DECODE_UNKNOWN_PACKET_TYPE"),
+        (DECODE_LAYOUT_INVALID, "DECODE_LAYOUT_INVALID"),
+        (DECODE_FIELD_UNREADABLE, "DECODE_FIELD_UNREADABLE"),
+        (DECODE_NO_MANIFEST_FOR_MODEL, "DECODE_NO_MANIFEST_FOR_MODEL"),
+        (
+            TIMELINE_IMPLAUSIBLE_TIMESTAMP,
+            "TIMELINE_IMPLAUSIBLE_TIMESTAMP",
+        ),
+        (INTERNAL_INVARIANT, "INTERNAL_INVARIANT"),
+    ];
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
@@ -175,6 +201,24 @@ mod tests {
             MavError::new(codes::FRAME_TRUNCATED, "x").severity,
             Severity::Error
         );
+    }
+
+    #[test]
+    fn code_registry_is_unique_and_in_range() {
+        let mut seen = std::collections::HashSet::new();
+        for &(code, name) in codes::ALL {
+            assert!(seen.insert(code), "code {code} listed twice in codes::ALL");
+            assert!(!name.is_empty());
+            if code < 10_000 {
+                assert_ne!(
+                    Category::for_code(code),
+                    Category::Internal,
+                    "code {code} ({name}) falls outside every category range",
+                );
+            }
+        }
+        assert!(seen.contains(&codes::FRAME_HEADER_CRC_MISMATCH));
+        assert!(seen.contains(&codes::INTERNAL_INVARIANT));
     }
 
     #[test]

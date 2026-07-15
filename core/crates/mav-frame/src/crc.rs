@@ -33,17 +33,32 @@ pub fn crc16_modbus(data: &[u8]) -> u16 {
     crc
 }
 
-pub fn crc32(data: &[u8]) -> u32 {
-    let mut crc = 0xFFFF_FFFFu32;
-    for &byte in data {
-        crc ^= u32::from(byte);
-        for _ in 0..8 {
+// Table-driven because CRC-32 covers whole payloads, and historical syncs push megabytes through
+// it; the two header CRCs stay bitwise since they only ever see a handful of bytes.
+const CRC32_TABLE: [u32; 256] = {
+    let mut table = [0u32; 256];
+    let mut i = 0;
+    while i < 256 {
+        let mut crc = i as u32;
+        let mut bit = 0;
+        while bit < 8 {
             crc = if crc & 1 != 0 {
                 (crc >> 1) ^ 0xEDB8_8320
             } else {
                 crc >> 1
             };
+            bit += 1;
         }
+        table[i] = crc;
+        i += 1;
+    }
+    table
+};
+
+pub fn crc32(data: &[u8]) -> u32 {
+    let mut crc = 0xFFFF_FFFFu32;
+    for &byte in data {
+        crc = (crc >> 8) ^ CRC32_TABLE[usize::from((crc as u8) ^ byte)];
     }
     !crc
 }

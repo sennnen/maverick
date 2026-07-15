@@ -21,6 +21,13 @@ rust-version = "1.96"
 license = "UNLICENSED"
 publish = false
 
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+
 [workspace.dependencies]
 mav-model = { path = "crates/mav-model" }
 mav-frame = { path = "crates/mav-frame" }
