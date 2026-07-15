@@ -1,2 +1,20 @@
-//! Device manifests and the boxed `DeviceCodec` trait. See docs/connectors.md.
-//! Not yet implemented — landed by a Milestone 1 work packet.
+//! The connector contract: manifest types, the boxed `DeviceCodec` trait, the per-device
+//! key-value store handle, the manifest-driven default codec, and the registry that resolves a
+//! model string to a device family. The design and its boundaries are docs/connectors.md; the
+//! short form is that a manifest holds everything static, a codec holds only what data cannot
+//! express, and a codec's interface gives it no way to reach storage, the network, analytics, or
+//! another device.
+#![forbid(unsafe_code)]
+
+pub mod codec;
+pub mod kv;
+pub mod manifest;
+pub mod registry;
+
+pub use codec::{DeviceCodec, ManifestCodec};
+pub use kv::{DeviceKv, MemoryKv};
+pub use manifest::{
+    Conversion, FieldSpec, FieldType, FrameConfig, Gatt, Identity, Layout, Manifest, RepeatSpec,
+    SubsecondsUnit, TimeSpec,
+};
+pub use registry::Registry;

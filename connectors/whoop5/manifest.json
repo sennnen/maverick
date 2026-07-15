@@ -1,0 +1,66 @@
+{
+  "schema": "connector-manifest/v1",
+  "identity": {
+    "family": "whoop5",
+    "display_name": "WHOOP 5.0 / MG",
+    "models": ["WHOOP 5.0", "5.0", "WHOOP MG", "MG", "WHOOP"],
+    "fallback_for_unknown_models": true,
+    "confidence": "XVAL for the 5.0; the MG is assumed identical from APK analysis only [HW]. The two share a service UUID and cannot be told apart at scan time, so both resolve here. Legacy registry rows stored the bare string WHOOP, and unknown strings default to this family, per docs/protocol/whoop.md."
+  },
+  "gatt": {
+    "service": "fd4b0001-cce1-4033-93ce-002d5875f58a",
+    "command": "fd4b0002-cce1-4033-93ce-002d5875f58a",
+    "notify": [
+      "fd4b0003-cce1-4033-93ce-002d5875f58a",
+      "fd4b0004-cce1-4033-93ce-002d5875f58a",
+      "fd4b0005-cce1-4033-93ce-002d5875f58a",
+      "fd4b0007-cce1-4033-93ce-002d5875f58a"
+    ]
+  },
+  "frame": {
+    "wire_format": "gen5",
+    "max_frame_bytes": 8192
+  },
+  "packets": {
+    "35": "command",
+    "36": "command_response",
+    "40": "realtime_data",
+    "47": "historical_data",
+    "48": "event",
+    "49": "metadata",
+    "50": "console_logs"
+  },
+  "layouts": {
+    "realtime_data": {
+      "time": {
+        "seconds_offset": 10,
+        "subseconds_offset": 14,
+        "subseconds_unit": "milliseconds",
+        "confidence": "XVAL for the offsets (gen4 offsets plus 4, HR cross-checked against GATT 2A37 to under half a bpm); the subseconds unit is CODE-INFERRED and unresolved against GET_CLOCK's 1/32768 units, see the ledger."
+      },
+      "fields": [
+        {
+          "name": "heart_rate",
+          "stream": "heart_rate",
+          "type": "u8",
+          "offset": 16
+        }
+      ],
+      "repeats": [
+        {
+          "name": "rr_interval",
+          "stream": "rr_interval",
+          "type": "u16_le",
+          "count_offset": 17,
+          "start_offset": 18,
+          "stride": 2,
+          "max_count": 16,
+          "drop_zero": true
+        }
+      ]
+    }
+  },
+  "record_versions": {},
+  "capabilities": ["heart_rate", "rr_interval"],
+  "confidence_note": "Realtime subset only (Milestone 1). Every fact here derives from docs/protocol/whoop.md and carries that ledger's tags; nothing in this file is hardware-verified yet. historical_data, event, metadata, and console_logs are mapped so the decoder counts them as known-but-not-decoded instead of erroring; their layouts land with Milestone 5."
+}

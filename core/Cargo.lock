@@ -104,7 +104,13 @@ version = "0.0.0"
 
 [[package]]
 name = "mav-codec"
-version = "0.0.0"
+version = "0.1.0"
+dependencies = [
+ "mav-frame",
+ "mav-model",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "mav-engine"

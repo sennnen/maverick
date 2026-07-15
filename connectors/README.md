@@ -10,7 +10,8 @@ small codec crate. The contract, and the argument for why it is shaped this way,
 The hard rule: adding a device changes nothing in `core/crates`. If it seems to need to, that is
 an interface dispute and goes to an ADR.
 
-Planned first residents: `whoop5/` (Milestone 1), `mock/` (Milestone 2, deliberately awkward, to
-prove the abstraction), `whoop4/` (Milestone 5, historical sync). None exist yet; the manifests
-are written by their milestone packets, against the facts in
+Residents so far: `whoop5/` holds the realtime-subset manifest (Milestone 1; every fact in it
+carries the ledger's confidence tags, nothing hardware-verified yet). Still to come: `mock/`
+(Milestone 2, deliberately awkward, to prove the abstraction) and `whoop4/` (Milestone 5,
+historical sync). Manifests are written by their milestone packets, against the facts in
 [docs/protocol/whoop.md](../docs/protocol/whoop.md).

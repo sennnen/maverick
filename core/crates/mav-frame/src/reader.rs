@@ -121,6 +121,10 @@ impl<'a> TypedReader<'a> {
         Ok(i16::from_le_bytes(self.take_at::<2>(offset)?))
     }
 
+    pub fn i32_le_at(&self, offset: usize) -> Result<i32> {
+        Ok(i32::from_le_bytes(self.take_at::<4>(offset)?))
+    }
+
     pub fn f32_le_at(&self, offset: usize) -> Result<f32> {
         Ok(f32::from_le_bytes(self.take_at::<4>(offset)?))
     }
