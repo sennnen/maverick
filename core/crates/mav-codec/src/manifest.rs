@@ -16,7 +16,20 @@ pub struct Manifest {
     pub schema: String,
     pub identity: Identity,
     pub gatt: Gatt,
+    /// Standard GATT profiles the device also exposes (heart rate, battery, device info). On some
+    /// devices these are readable without the custom-service bond, which is how a live pulse comes
+    /// out of a WHOOP 5.0 with no handshake at all.
+    #[serde(default)]
+    pub standard_gatt: Option<StandardGatt>,
     pub frame: FrameConfig,
+    /// The command opcodes the acquisition state machine writes. Data, not logic: the machine
+    /// reads this table, the manifest does not sequence anything.
+    #[serde(default)]
+    pub commands: Vec<CommandSpec>,
+    /// The feature-flag writes that turn a mute strap into a streaming one. Present only on
+    /// devices that gate their data behind a configuration handshake (the gen5 straps do).
+    #[serde(default)]
+    pub enable_sequence: Option<EnableSequence>,
     /// Packet-type byte to layout key. A key present in `layouts` decodes to samples; a key
     /// absent from `layouts` is a known control or not-yet-decoded packet that produces no
     /// samples and no error. A packet-type byte missing from this map entirely is unknown and is
@@ -55,6 +68,73 @@ pub struct Gatt {
     pub service: String,
     pub command: String,
     pub notify: Vec<String>,
+}
+
+/// Standard-profile characteristics, stored as their 16-bit assigned numbers (e.g. "180D"). These
+/// are the Bluetooth SIG profiles any client can read; the point of listing them is that they can
+/// be a data source that sidesteps the custom service entirely.
+#[derive(Clone, PartialEq, Debug, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StandardGatt {
+    #[serde(default)]
+    pub heart_rate: Option<GattProfile>,
+    #[serde(default)]
+    pub battery: Option<GattProfile>,
+    /// Device Information service UUID, if present. Its model-string characteristic is one way to
+    /// tell apart devices that share a custom-service UUID at scan time.
+    #[serde(default)]
+    pub device_info_service: Option<String>,
+    /// True when the heart-rate profile answers before the custom-service bond is established.
+    #[serde(default)]
+    pub heart_rate_unbonded: bool,
+    #[serde(default)]
+    pub confidence: String,
+}
+
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GattProfile {
+    pub service: String,
+    pub characteristic: String,
+}
+
+/// One command the state machine can send. `b3` is the fourth inner byte, which is
+/// command-specific on the gen5 wire and which the strap checks before it will act; a wrong `b3`
+/// is ignored with no error, so it is recorded here rather than guessed at the call site. Left
+/// absent on devices that do not use the convention.
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CommandSpec {
+    pub name: String,
+    pub opcode: u8,
+    #[serde(default)]
+    pub b3: Option<u8>,
+    #[serde(default)]
+    pub note: String,
+}
+
+/// The configuration handshake: a run of writes through one command, each carrying a feature-flag
+/// name in a fixed-width field followed by a value byte. On the gen5 straps this is the step that
+/// actually unlocks the biometric stream.
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EnableSequence {
+    /// The name of the command in `commands` that performs each write.
+    pub command: String,
+    /// Width of the ASCII flag-name field at the start of the payload.
+    pub name_field_bytes: usize,
+    /// Total payload length (name field, then the value byte, then padding).
+    pub payload_bytes: usize,
+    pub flags: Vec<EnableFlag>,
+    #[serde(default)]
+    pub confidence: String,
+}
+
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EnableFlag {
+    pub name: String,
+    pub value: u8,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -207,7 +287,30 @@ impl Manifest {
                 }
             }
         }
+        if let Some(sequence) = &self.enable_sequence {
+            if !self.commands.iter().any(|c| c.name == sequence.command) {
+                return Err(MavError::new(
+                    codes::DECODE_LAYOUT_INVALID,
+                    "enable_sequence.command names no command in the manifest",
+                )
+                .context(sequence.command.clone()));
+            }
+            if sequence.name_field_bytes >= sequence.payload_bytes {
+                return Err(MavError::new(
+                    codes::DECODE_LAYOUT_INVALID,
+                    "enable_sequence payload has no room for a value byte after the name field",
+                )
+                .context(format!(
+                    "name_field {} >= payload {}",
+                    sequence.name_field_bytes, sequence.payload_bytes
+                )));
+            }
+        }
         Ok(())
+    }
+
+    pub fn command(&self, name: &str) -> Option<&CommandSpec> {
+        self.commands.iter().find(|c| c.name == name)
     }
 
     /// The layout for a packet-type byte: `Ok(Some)` when it decodes to samples, `Ok(None)` for a
@@ -276,6 +379,83 @@ mod tests {
     fn unknown_top_level_field_is_refused() {
         let json = minimal_json().replace("\"capabilities\"", "\"surprise\": 1, \"capabilities\"");
         assert!(Manifest::from_json(&json).is_err());
+    }
+
+    #[test]
+    fn commands_and_enable_sequence_parse_and_are_looked_up() {
+        let json = minimal_json().replace(
+            "\"capabilities\"",
+            r#""commands": [
+                { "name": "get_hello", "opcode": 145, "b3": 1 },
+                { "name": "set_config", "opcode": 120, "b3": 1 },
+                { "name": "get_data_range", "opcode": 34, "b3": 0 }
+            ],
+            "enable_sequence": {
+                "command": "set_config",
+                "name_field_bytes": 32,
+                "payload_bytes": 40,
+                "flags": [{ "name": "enable_r22_packets", "value": 1 }]
+            },
+            "capabilities""#,
+        );
+        let manifest = Manifest::from_json(&json).unwrap();
+        assert_eq!(manifest.command("get_hello").unwrap().opcode, 145);
+        assert_eq!(manifest.command("get_data_range").unwrap().b3, Some(0));
+        assert!(manifest.command("nonexistent").is_none());
+        let seq = manifest.enable_sequence.as_ref().unwrap();
+        assert_eq!(seq.command, "set_config");
+        assert_eq!(seq.flags[0].name, "enable_r22_packets");
+    }
+
+    #[test]
+    fn enable_sequence_naming_an_absent_command_is_refused() {
+        let json = minimal_json().replace(
+            "\"capabilities\"",
+            r#""enable_sequence": {
+                "command": "set_config",
+                "name_field_bytes": 32,
+                "payload_bytes": 40,
+                "flags": []
+            },
+            "capabilities""#,
+        );
+        let err = Manifest::from_json(&json).unwrap_err();
+        assert_eq!(err.code, codes::DECODE_LAYOUT_INVALID);
+    }
+
+    #[test]
+    fn enable_sequence_with_no_room_for_a_value_byte_is_refused() {
+        let json = minimal_json().replace(
+            "\"capabilities\"",
+            r#""commands": [{ "name": "set_config", "opcode": 120, "b3": 1 }],
+            "enable_sequence": {
+                "command": "set_config",
+                "name_field_bytes": 40,
+                "payload_bytes": 40,
+                "flags": []
+            },
+            "capabilities""#,
+        );
+        let err = Manifest::from_json(&json).unwrap_err();
+        assert_eq!(err.code, codes::DECODE_LAYOUT_INVALID);
+    }
+
+    #[test]
+    fn standard_gatt_parses_when_present() {
+        let json = minimal_json().replace(
+            "\"capabilities\"",
+            r#""standard_gatt": {
+                "heart_rate": { "service": "180D", "characteristic": "2A37" },
+                "battery": { "service": "180F", "characteristic": "2A19" },
+                "device_info_service": "180A",
+                "heart_rate_unbonded": true
+            },
+            "capabilities""#,
+        );
+        let manifest = Manifest::from_json(&json).unwrap();
+        let sg = manifest.standard_gatt.as_ref().unwrap();
+        assert_eq!(sg.heart_rate.as_ref().unwrap().characteristic, "2A37");
+        assert!(sg.heart_rate_unbonded);
     }
 
     #[test]

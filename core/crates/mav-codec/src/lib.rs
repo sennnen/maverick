@@ -14,7 +14,7 @@ pub mod registry;
 pub use codec::{DeviceCodec, ManifestCodec};
 pub use kv::{DeviceKv, MemoryKv};
 pub use manifest::{
-    Conversion, FieldSpec, FieldType, FrameConfig, Gatt, Identity, Layout, Manifest, RepeatSpec,
-    SubsecondsUnit, TimeSpec,
+    CommandSpec, Conversion, EnableFlag, EnableSequence, FieldSpec, FieldType, FrameConfig, Gatt,
+    GattProfile, Identity, Layout, Manifest, RepeatSpec, StandardGatt, SubsecondsUnit, TimeSpec,
 };
 pub use registry::Registry;

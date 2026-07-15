@@ -40,6 +40,41 @@ fn whoop5_manifest_declares_exactly_hr_and_rr() {
 }
 
 #[test]
+fn whoop5_command_table_carries_the_captured_opcodes_and_b3() {
+    let manifest = whoop5();
+    let hello = manifest.command("get_hello").unwrap();
+    assert_eq!(hello.opcode, 145);
+    assert_eq!(hello.b3, Some(1));
+    // The two commands the strap wants b3=0 on; a wrong b3 is silently ignored.
+    assert_eq!(manifest.command("get_data_range").unwrap().b3, Some(0));
+    assert_eq!(manifest.command("send_historical").unwrap().b3, Some(0));
+    // The historical ack echoes the cursor and wants b3=1.
+    assert_eq!(manifest.command("historical_ack").unwrap().opcode, 23);
+    assert_eq!(manifest.command("historical_ack").unwrap().b3, Some(1));
+}
+
+#[test]
+fn whoop5_enable_sequence_unlocks_r22_through_set_config() {
+    let manifest = whoop5();
+    let seq = manifest.enable_sequence.as_ref().unwrap();
+    assert_eq!(seq.command, "set_config");
+    assert_eq!(seq.name_field_bytes, 32);
+    assert_eq!(seq.payload_bytes, 40);
+    assert!(seq.flags.iter().any(|f| f.name == "enable_r22_packets"));
+    assert!(seq.flags.iter().any(|f| f.name == "hr_ch_switching"));
+    // Every flag names a command that exists (validated on load, asserted here for clarity).
+    assert!(manifest.command(&seq.command).is_some());
+}
+
+#[test]
+fn whoop5_offers_the_standard_heart_rate_profile() {
+    let sg = whoop5().standard_gatt.unwrap();
+    assert_eq!(sg.heart_rate.unwrap().characteristic, "2A37");
+    // Unlike the 4.0, the 5.0's standard HR profile needs the OS bond.
+    assert!(!sg.heart_rate_unbonded);
+}
+
+#[test]
 fn whoop5_realtime_frame_decodes_at_the_documented_offsets() {
     let manifest = whoop5();
     let mut payload = vec![0u8; 22];
