@@ -159,7 +159,10 @@ version = "0.0.0"
 
 [[package]]
 name = "mav-sqi"
-version = "0.0.0"
+version = "0.1.0"
+dependencies = [
+ "mav-model",
+]
 
 [[package]]
 name = "mav-store"
@@ -167,7 +170,11 @@ version = "0.0.0"
 
 [[package]]
 name = "mav-timeline"
-version = "0.0.0"
+version = "0.1.0"
+dependencies = [
+ "mav-model",
+ "proptest",
+]
 
 [[package]]
 name = "memchr"
