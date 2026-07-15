@@ -1,0 +1,43 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/mav-model",
+    "crates/mav-frame",
+    "crates/mav-codec",
+    "crates/mav-timeline",
+    "crates/mav-sqi",
+    "crates/mav-feature",
+    "crates/mav-analytic",
+    "crates/mav-store",
+    "crates/mav-obs",
+    "crates/mav-engine",
+    "crates/mav-ffi",
+    "crates/mav-replay",
+]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.96"
+license = "UNLICENSED"
+publish = false
+
+[workspace.dependencies]
+mav-model = { path = "crates/mav-model" }
+mav-frame = { path = "crates/mav-frame" }
+mav-codec = { path = "crates/mav-codec" }
+mav-timeline = { path = "crates/mav-timeline" }
+mav-sqi = { path = "crates/mav-sqi" }
+mav-feature = { path = "crates/mav-feature" }
+mav-analytic = { path = "crates/mav-analytic" }
+mav-store = { path = "crates/mav-store" }
+mav-obs = { path = "crates/mav-obs" }
+mav-engine = { path = "crates/mav-engine" }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+proptest = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
