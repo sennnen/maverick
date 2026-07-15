@@ -53,6 +53,15 @@ for dir in docs/plans/active docs/plans/completed docs/adr; do
     fi
 done
 
+# Every milestone plan file must be indexed in docs/plans/README.md.
+for plan in docs/plans/active/*.md docs/plans/completed/*.md; do
+    [ -e "$plan" ] || continue
+    rel=${plan#docs/plans/}
+    if ! grep -q "$rel" docs/plans/README.md; then
+        fail "$plan is not listed in docs/plans/README.md"
+    fi
+done
+
 if [ "$failures" -gt 0 ]; then
     echo "check_docs: $failures problem(s)" >&2
     exit 1
