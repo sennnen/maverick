@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - Design system — editorial, Veri-inspired
+// MARK: - Design system (NOOP WHOOP-only rebuild) — editorial, Veri-inspired
 //
 // Pure-black editorial canvas (with a light variant), rounded tiles carrying a
 // luminous RADIAL COLOUR GLOW, and clean Helvetica Neue typography — thin, large
@@ -138,7 +138,7 @@ enum AuraEffort {
   /// the native 0–100, one decimal on WHOOP 0–21 where the tenth matters.
   static func text(_ stored: Double?) -> String {
     guard let stored else { return "--" }
-    let f = 1.0
+    let f = UnitPrefs.currentEffortDisplayFactor()
     let v = stored * f
     return f == 1.0 ? String(Int(v.rounded())) : String(format: "%.1f", v)
   }

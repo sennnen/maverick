@@ -15,6 +15,12 @@ private struct AuraGlassModifier<S: Shape>: ViewModifier {
   func body(content: Content) -> some View {
     if reduceTransparency {
       content.background(AuraDesign.card, in: shape)
+    } else if #available(iOS 26.0, *) {
+      if interactive {
+        content.glassEffect(.regular.interactive(), in: shape)
+      } else {
+        content.glassEffect(.regular, in: shape)
+      }
     } else {
       content.background(.ultraThinMaterial, in: shape)
     }

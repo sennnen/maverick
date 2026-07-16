@@ -7,17 +7,48 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		05D3048EA9DD86841C3FCA43 /* MavAuraRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FA7DF3C514AC667AAFABDF1 /* MavAuraRootView.swift */; };
-		18C5BEAFD9996AB002547688 /* AuraComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA00D522495863EFB8987CF /* AuraComponents.swift */; };
+		074FFD7570F5BFC8C5762C64 /* AuraPrivacyAndReminders.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93CFCF7FFB51503B675A857 /* AuraPrivacyAndReminders.swift */; };
+		0A3B4F6246F49465765D012D /* Stores.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5CC4D752270D3E077DB9AF3 /* Stores.swift */; };
+		13712B5736355DB09AD5912E /* WorkoutPrefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1142256492D4FB00CB48A6C9 /* WorkoutPrefs.swift */; };
 		1AD6A9A1DCBB8FD7DF2BBCD8 /* MavSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D81BB132E15FD138D990D171 /* MavSnapshot.swift */; };
-		376C89B847C31944735D126F /* AuraKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7968D3E476D4DE0CDBBFC17D /* AuraKit.swift */; };
+		3AB8E1D6D09A5D3614768ED0 /* AuraCharts.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE416D965CBA9D93D9BE3557 /* AuraCharts.swift */; };
+		3BCF0B190991191920AE22D1 /* CountdownTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2471D0FFBE74F673839C2559 /* CountdownTimer.swift */; };
 		553E9AE6D0DF7E745B7DA739 /* MavStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F54528C914D0CBF2B09C338 /* MavStore.swift */; };
+		5A4BF1053485D23EF5E8E1C0 /* RouteMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61B0D1EF5B46E5E015A8AE03 /* RouteMath.swift */; };
+		5C784B0B19D4546E99E69298 /* AuraMetricDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E43401383DF23421DD8A7A61 /* AuraMetricDetailView.swift */; };
+		603A65AB3D6EF0ADA2B83EBD /* WidgetAnchorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 186BBE0388C59C875F86413D /* WidgetAnchorTests.swift */; };
 		619577474C9D1261A3C6F7BA /* MavCore.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = BC4DDC7FE63A5BD0D9B52928 /* MavCore.xcframework */; };
-		622250487F22746FEC740FBA /* MavHubs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EE758863A6FF8E87595554B /* MavHubs.swift */; };
+		65C886E50B5952FE770E4C21 /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B2CF897638B4C75BC7C1243 /* RootTabView.swift */; };
 		6B0CCD0F533DB8A4AD46E59E /* MaverickApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC45713B7650201F3BBA999F /* MaverickApp.swift */; };
-		6BCBAF9BA454C7DCF71CABD0 /* AuraDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E0CAC252656618C0DF01FCB /* AuraDesign.swift */; };
-		77362AB71856E5DA0C7FFD16 /* AuraHubHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA09DD8405B97E8A57FDC556 /* AuraHubHeader.swift */; };
+		77B3C1862E9BB9FB39C63751 /* AuraReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32966D295C38E3DD4B2FD078 /* AuraReportsView.swift */; };
+		80D8107662E93D88B1E0C6D9 /* AuraMLSignalsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C492F56CD3FCD0D397982F67 /* AuraMLSignalsCard.swift */; };
+		83E9910722A3DB8A35E88BEB /* Units.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0773D80E2F6F94F0D2412C4 /* Units.swift */; };
+		851D19A9AEF12ECC33DB5F91 /* StoreDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7C7D073C4D7BBF3084890F5 /* StoreDiagnostics.swift */; };
+		919DAAE1B11C6E0DD70145C1 /* AuraJournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 458ABBE60B3413C9594CF92F /* AuraJournalView.swift */; };
 		9344A42D3645B6F6A7CCD831 /* MavSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14A49EDDB7C36481A91500DC /* MavSnapshotTests.swift */; };
+		9B264E0D37BC2000DBF4DD15 /* AuraRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C95D1D514A93EC401555036 /* AuraRecoveryView.swift */; };
+		9DB7DDF0AE4328F9155FF528 /* AuraDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBAA41987E4FDBAE6506ADE1 /* AuraDiagnosticsView.swift */; };
+		A0C68A9742EDD890323B8796 /* AuraStrainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C83D3F7F5C43D34D588F75C /* AuraStrainView.swift */; };
+		A758F0F46CE54ED26BA9117D /* AuraTodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5E9C32A0B6BB7C041B87B92 /* AuraTodayView.swift */; };
+		A8B6169C4DA6A9B2EED38404 /* AnalyticsShims.swift in Sources */ = {isa = PBXBuildFile; fileRef = 216A2D51C2F5A4AFA7E58359 /* AnalyticsShims.swift */; };
+		AF57F90448635067359EF047 /* LoopingTimePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E7855CD9B4096D278EABEFB /* LoopingTimePicker.swift */; };
+		C32B8C52A8CC41B4EF385659 /* AuraKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9153FCF75B63AE80DEC03486 /* AuraKit.swift */; };
+		C7E950C8D717EB6627408530 /* Appearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C308EF1E54DE57286D0D95 /* Appearance.swift */; };
+		CAF8E3A53AAF761504B1A1BD /* MavStandins.swift in Sources */ = {isa = PBXBuildFile; fileRef = 949AEBF0671C3B8EF4A6A1D3 /* MavStandins.swift */; };
+		CC362DE599DD7DA18CFE1339 /* AuraHubHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06175A030CF83F9ADC88E4B9 /* AuraHubHeader.swift */; };
+		CD161B5CF23338BF80749B0C /* AuraSleepHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92C070832BB99631789D4731 /* AuraSleepHubView.swift */; };
+		D801172ADD9543DED4A50BCF /* AuraDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8271E24213177A8CCA6A4B57 /* AuraDesign.swift */; };
+		D8764DE30F25A170827D584A /* NavRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EDBE2184C3A41D1A0BE599A /* NavRouter.swift */; };
+		E3E51251BDEDD1881B74BC8B /* TrainingTargets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DB9A882C4DE52613D3F964C /* TrainingTargets.swift */; };
+		ED17A345F1496A20B032DA06 /* AuraTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249FF52F9180D25C0115C9F /* AuraTrendsView.swift */; };
+		EDE3AE771981914E2B636908 /* WorkoutZones.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB9B4905A2A02F23F7DD65BF /* WorkoutZones.swift */; };
+		EE89D96AEAADAB436299F83A /* AuraSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FED0CA782D13BBFDE108BC7D /* AuraSettingsSheet.swift */; };
+		F6C2EFE83D77D679E91FAE4F /* JournalCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5C0ACFC5483F357F3E50E52 /* JournalCatalog.swift */; };
+		F74FA0B4233F12D3283A2CF5 /* Repository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20DD728BFA39E9918A058CD9 /* Repository.swift */; };
+		F98C4AD70962584CB2B5E688 /* AuraComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19281EE56AEE60E24FEE2C4E /* AuraComponents.swift */; };
+		F9B051DDAABCD2C617778E8E /* ReadModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2142FDE4257BF0BF9F8BAF62 /* ReadModels.swift */; };
+		FC76F7D0F9BF72B0C841CDB5 /* AuraTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57AD7F334A2BF2765E1E4E1E /* AuraTimerView.swift */; };
+		FD6CE8F4D4C9EE6745CFAE8E /* AuraScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50374C31A8CA5ACCE2028EC7 /* AuraScreens.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,20 +62,51 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		06175A030CF83F9ADC88E4B9 /* AuraHubHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraHubHeader.swift; sourceTree = "<group>"; };
+		06C308EF1E54DE57286D0D95 /* Appearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Appearance.swift; sourceTree = "<group>"; };
+		0DB9A882C4DE52613D3F964C /* TrainingTargets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingTargets.swift; sourceTree = "<group>"; };
+		0EDBE2184C3A41D1A0BE599A /* NavRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavRouter.swift; sourceTree = "<group>"; };
+		1142256492D4FB00CB48A6C9 /* WorkoutPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPrefs.swift; sourceTree = "<group>"; };
 		14A49EDDB7C36481A91500DC /* MavSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavSnapshotTests.swift; sourceTree = "<group>"; };
-		3E0CAC252656618C0DF01FCB /* AuraDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraDesign.swift; sourceTree = "<group>"; };
+		186BBE0388C59C875F86413D /* WidgetAnchorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAnchorTests.swift; sourceTree = "<group>"; };
+		19281EE56AEE60E24FEE2C4E /* AuraComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraComponents.swift; sourceTree = "<group>"; };
+		1C83D3F7F5C43D34D588F75C /* AuraStrainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraStrainView.swift; sourceTree = "<group>"; };
+		1C95D1D514A93EC401555036 /* AuraRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraRecoveryView.swift; sourceTree = "<group>"; };
+		20DD728BFA39E9918A058CD9 /* Repository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repository.swift; sourceTree = "<group>"; };
+		2142FDE4257BF0BF9F8BAF62 /* ReadModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadModels.swift; sourceTree = "<group>"; };
+		216A2D51C2F5A4AFA7E58359 /* AnalyticsShims.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsShims.swift; sourceTree = "<group>"; };
+		2471D0FFBE74F673839C2559 /* CountdownTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountdownTimer.swift; sourceTree = "<group>"; };
+		32966D295C38E3DD4B2FD078 /* AuraReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraReportsView.swift; sourceTree = "<group>"; };
+		458ABBE60B3413C9594CF92F /* AuraJournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraJournalView.swift; sourceTree = "<group>"; };
+		50374C31A8CA5ACCE2028EC7 /* AuraScreens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraScreens.swift; sourceTree = "<group>"; };
 		52796BE429CD38DE8B914F0D /* MaverickTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MaverickTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		57AD7F334A2BF2765E1E4E1E /* AuraTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraTimerView.swift; sourceTree = "<group>"; };
+		5E7855CD9B4096D278EABEFB /* LoopingTimePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopingTimePicker.swift; sourceTree = "<group>"; };
+		61B0D1EF5B46E5E015A8AE03 /* RouteMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMath.swift; sourceTree = "<group>"; };
 		628E74D0BF2F152EC0E9409D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		6FA0C0D2F36FCAB853951588 /* Maverick.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Maverick.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		6FA7DF3C514AC667AAFABDF1 /* MavAuraRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavAuraRootView.swift; sourceTree = "<group>"; };
-		7968D3E476D4DE0CDBBFC17D /* AuraKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraKit.swift; sourceTree = "<group>"; };
-		8EE758863A6FF8E87595554B /* MavHubs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavHubs.swift; sourceTree = "<group>"; };
+		7249FF52F9180D25C0115C9F /* AuraTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraTrendsView.swift; sourceTree = "<group>"; };
+		8271E24213177A8CCA6A4B57 /* AuraDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraDesign.swift; sourceTree = "<group>"; };
+		8B2CF897638B4C75BC7C1243 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
+		9153FCF75B63AE80DEC03486 /* AuraKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraKit.swift; sourceTree = "<group>"; };
+		92C070832BB99631789D4731 /* AuraSleepHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraSleepHubView.swift; sourceTree = "<group>"; };
+		949AEBF0671C3B8EF4A6A1D3 /* MavStandins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavStandins.swift; sourceTree = "<group>"; };
 		9F54528C914D0CBF2B09C338 /* MavStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavStore.swift; sourceTree = "<group>"; };
 		BC45713B7650201F3BBA999F /* MaverickApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaverickApp.swift; sourceTree = "<group>"; };
 		BC4DDC7FE63A5BD0D9B52928 /* MavCore.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = MavCore.xcframework; path = "build/mav-core/MavCore.xcframework"; sourceTree = "<group>"; };
-		CEA00D522495863EFB8987CF /* AuraComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraComponents.swift; sourceTree = "<group>"; };
+		C492F56CD3FCD0D397982F67 /* AuraMLSignalsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraMLSignalsCard.swift; sourceTree = "<group>"; };
 		D81BB132E15FD138D990D171 /* MavSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavSnapshot.swift; sourceTree = "<group>"; };
-		DA09DD8405B97E8A57FDC556 /* AuraHubHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraHubHeader.swift; sourceTree = "<group>"; };
+		D93CFCF7FFB51503B675A857 /* AuraPrivacyAndReminders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraPrivacyAndReminders.swift; sourceTree = "<group>"; };
+		DBAA41987E4FDBAE6506ADE1 /* AuraDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraDiagnosticsView.swift; sourceTree = "<group>"; };
+		E43401383DF23421DD8A7A61 /* AuraMetricDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraMetricDetailView.swift; sourceTree = "<group>"; };
+		E5C0ACFC5483F357F3E50E52 /* JournalCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalCatalog.swift; sourceTree = "<group>"; };
+		E5CC4D752270D3E077DB9AF3 /* Stores.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stores.swift; sourceTree = "<group>"; };
+		EB9B4905A2A02F23F7DD65BF /* WorkoutZones.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutZones.swift; sourceTree = "<group>"; };
+		EE416D965CBA9D93D9BE3557 /* AuraCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraCharts.swift; sourceTree = "<group>"; };
+		F0773D80E2F6F94F0D2412C4 /* Units.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Units.swift; sourceTree = "<group>"; };
+		F5E9C32A0B6BB7C041B87B92 /* AuraTodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraTodayView.swift; sourceTree = "<group>"; };
+		F7C7D073C4D7BBF3084890F5 /* StoreDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreDiagnostics.swift; sourceTree = "<group>"; };
+		FED0CA782D13BBFDE108BC7D /* AuraSettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraSettingsSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -94,16 +156,12 @@
 		4B78B393B733F73BFC1A1181 /* Maverick */ = {
 			isa = PBXGroup;
 			children = (
-				CEA00D522495863EFB8987CF /* AuraComponents.swift */,
-				3E0CAC252656618C0DF01FCB /* AuraDesign.swift */,
-				DA09DD8405B97E8A57FDC556 /* AuraHubHeader.swift */,
-				7968D3E476D4DE0CDBBFC17D /* AuraKit.swift */,
 				628E74D0BF2F152EC0E9409D /* Info.plist */,
-				6FA7DF3C514AC667AAFABDF1 /* MavAuraRootView.swift */,
 				BC45713B7650201F3BBA999F /* MaverickApp.swift */,
-				8EE758863A6FF8E87595554B /* MavHubs.swift */,
 				D81BB132E15FD138D990D171 /* MavSnapshot.swift */,
 				9F54528C914D0CBF2B09C338 /* MavStore.swift */,
+				92A1742AB61BEF6807D422EE /* Model */,
+				8BFA15A6C6AC7747AE0384CE /* UI */,
 			);
 			path = Maverick;
 			sourceTree = "<group>";
@@ -114,6 +172,56 @@
 				BC4DDC7FE63A5BD0D9B52928 /* MavCore.xcframework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		8BFA15A6C6AC7747AE0384CE /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				EE416D965CBA9D93D9BE3557 /* AuraCharts.swift */,
+				19281EE56AEE60E24FEE2C4E /* AuraComponents.swift */,
+				8271E24213177A8CCA6A4B57 /* AuraDesign.swift */,
+				DBAA41987E4FDBAE6506ADE1 /* AuraDiagnosticsView.swift */,
+				06175A030CF83F9ADC88E4B9 /* AuraHubHeader.swift */,
+				458ABBE60B3413C9594CF92F /* AuraJournalView.swift */,
+				9153FCF75B63AE80DEC03486 /* AuraKit.swift */,
+				E43401383DF23421DD8A7A61 /* AuraMetricDetailView.swift */,
+				C492F56CD3FCD0D397982F67 /* AuraMLSignalsCard.swift */,
+				1C95D1D514A93EC401555036 /* AuraRecoveryView.swift */,
+				32966D295C38E3DD4B2FD078 /* AuraReportsView.swift */,
+				50374C31A8CA5ACCE2028EC7 /* AuraScreens.swift */,
+				FED0CA782D13BBFDE108BC7D /* AuraSettingsSheet.swift */,
+				92C070832BB99631789D4731 /* AuraSleepHubView.swift */,
+				1C83D3F7F5C43D34D588F75C /* AuraStrainView.swift */,
+				57AD7F334A2BF2765E1E4E1E /* AuraTimerView.swift */,
+				F5E9C32A0B6BB7C041B87B92 /* AuraTodayView.swift */,
+				7249FF52F9180D25C0115C9F /* AuraTrendsView.swift */,
+				5E7855CD9B4096D278EABEFB /* LoopingTimePicker.swift */,
+				8B2CF897638B4C75BC7C1243 /* RootTabView.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		92A1742AB61BEF6807D422EE /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				216A2D51C2F5A4AFA7E58359 /* AnalyticsShims.swift */,
+				06C308EF1E54DE57286D0D95 /* Appearance.swift */,
+				D93CFCF7FFB51503B675A857 /* AuraPrivacyAndReminders.swift */,
+				2471D0FFBE74F673839C2559 /* CountdownTimer.swift */,
+				E5C0ACFC5483F357F3E50E52 /* JournalCatalog.swift */,
+				949AEBF0671C3B8EF4A6A1D3 /* MavStandins.swift */,
+				0EDBE2184C3A41D1A0BE599A /* NavRouter.swift */,
+				2142FDE4257BF0BF9F8BAF62 /* ReadModels.swift */,
+				20DD728BFA39E9918A058CD9 /* Repository.swift */,
+				61B0D1EF5B46E5E015A8AE03 /* RouteMath.swift */,
+				F7C7D073C4D7BBF3084890F5 /* StoreDiagnostics.swift */,
+				E5CC4D752270D3E077DB9AF3 /* Stores.swift */,
+				0DB9A882C4DE52613D3F964C /* TrainingTargets.swift */,
+				F0773D80E2F6F94F0D2412C4 /* Units.swift */,
+				1142256492D4FB00CB48A6C9 /* WorkoutPrefs.swift */,
+				EB9B4905A2A02F23F7DD65BF /* WorkoutZones.swift */,
+			);
+			path = Model;
 			sourceTree = "<group>";
 		};
 		975D0A4DF28DF66F623AF717 = {
@@ -131,6 +239,7 @@
 			isa = PBXGroup;
 			children = (
 				14A49EDDB7C36481A91500DC /* MavSnapshotTests.swift */,
+				186BBE0388C59C875F86413D /* WidgetAnchorTests.swift */,
 			);
 			path = MaverickTests;
 			sourceTree = "<group>";
@@ -217,6 +326,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9344A42D3645B6F6A7CCD831 /* MavSnapshotTests.swift in Sources */,
+				603A65AB3D6EF0ADA2B83EBD /* WidgetAnchorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -224,15 +334,45 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				18C5BEAFD9996AB002547688 /* AuraComponents.swift in Sources */,
-				6BCBAF9BA454C7DCF71CABD0 /* AuraDesign.swift in Sources */,
-				77362AB71856E5DA0C7FFD16 /* AuraHubHeader.swift in Sources */,
-				376C89B847C31944735D126F /* AuraKit.swift in Sources */,
-				05D3048EA9DD86841C3FCA43 /* MavAuraRootView.swift in Sources */,
-				622250487F22746FEC740FBA /* MavHubs.swift in Sources */,
+				A8B6169C4DA6A9B2EED38404 /* AnalyticsShims.swift in Sources */,
+				C7E950C8D717EB6627408530 /* Appearance.swift in Sources */,
+				3AB8E1D6D09A5D3614768ED0 /* AuraCharts.swift in Sources */,
+				F98C4AD70962584CB2B5E688 /* AuraComponents.swift in Sources */,
+				D801172ADD9543DED4A50BCF /* AuraDesign.swift in Sources */,
+				9DB7DDF0AE4328F9155FF528 /* AuraDiagnosticsView.swift in Sources */,
+				CC362DE599DD7DA18CFE1339 /* AuraHubHeader.swift in Sources */,
+				919DAAE1B11C6E0DD70145C1 /* AuraJournalView.swift in Sources */,
+				C32B8C52A8CC41B4EF385659 /* AuraKit.swift in Sources */,
+				80D8107662E93D88B1E0C6D9 /* AuraMLSignalsCard.swift in Sources */,
+				5C784B0B19D4546E99E69298 /* AuraMetricDetailView.swift in Sources */,
+				074FFD7570F5BFC8C5762C64 /* AuraPrivacyAndReminders.swift in Sources */,
+				9B264E0D37BC2000DBF4DD15 /* AuraRecoveryView.swift in Sources */,
+				77B3C1862E9BB9FB39C63751 /* AuraReportsView.swift in Sources */,
+				FD6CE8F4D4C9EE6745CFAE8E /* AuraScreens.swift in Sources */,
+				EE89D96AEAADAB436299F83A /* AuraSettingsSheet.swift in Sources */,
+				CD161B5CF23338BF80749B0C /* AuraSleepHubView.swift in Sources */,
+				A0C68A9742EDD890323B8796 /* AuraStrainView.swift in Sources */,
+				FC76F7D0F9BF72B0C841CDB5 /* AuraTimerView.swift in Sources */,
+				A758F0F46CE54ED26BA9117D /* AuraTodayView.swift in Sources */,
+				ED17A345F1496A20B032DA06 /* AuraTrendsView.swift in Sources */,
+				3BCF0B190991191920AE22D1 /* CountdownTimer.swift in Sources */,
+				F6C2EFE83D77D679E91FAE4F /* JournalCatalog.swift in Sources */,
+				AF57F90448635067359EF047 /* LoopingTimePicker.swift in Sources */,
 				1AD6A9A1DCBB8FD7DF2BBCD8 /* MavSnapshot.swift in Sources */,
+				CAF8E3A53AAF761504B1A1BD /* MavStandins.swift in Sources */,
 				553E9AE6D0DF7E745B7DA739 /* MavStore.swift in Sources */,
 				6B0CCD0F533DB8A4AD46E59E /* MaverickApp.swift in Sources */,
+				D8764DE30F25A170827D584A /* NavRouter.swift in Sources */,
+				F9B051DDAABCD2C617778E8E /* ReadModels.swift in Sources */,
+				F74FA0B4233F12D3283A2CF5 /* Repository.swift in Sources */,
+				65C886E50B5952FE770E4C21 /* RootTabView.swift in Sources */,
+				5A4BF1053485D23EF5E8E1C0 /* RouteMath.swift in Sources */,
+				851D19A9AEF12ECC33DB5F91 /* StoreDiagnostics.swift in Sources */,
+				0A3B4F6246F49465765D012D /* Stores.swift in Sources */,
+				E3E51251BDEDD1881B74BC8B /* TrainingTargets.swift in Sources */,
+				83E9910722A3DB8A35E88BEB /* Units.swift in Sources */,
+				13712B5736355DB09AD5912E /* WorkoutPrefs.swift in Sources */,
+				EDE3AE771981914E2B636908 /* WorkoutZones.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

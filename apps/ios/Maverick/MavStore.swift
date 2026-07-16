@@ -24,12 +24,17 @@ final class MavStore: ObservableObject {
 
   func retry() { state = .opening; refresh() }
 
-  private static func config() -> RuntimeConfig {
+  /// The core store's on-disk location — shared with the diagnostics size readout.
+  nonisolated static func databaseURL() -> URL {
     let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
       .appendingPathComponent("Maverick", isDirectory: true)
     try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    return root.appendingPathComponent("mav.sqlite")
+  }
+
+  private static func config() -> RuntimeConfig {
     return RuntimeConfig(
-      databasePath: root.appendingPathComponent("mav.sqlite").path,
+      databasePath: databaseURL().path,
       timezoneId: TimeZone.current.identifier,
       transportCapacity: 256,
       appVersion: "0.1.0",
