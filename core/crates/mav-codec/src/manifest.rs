@@ -3,6 +3,7 @@
 //! docs/connectors.md. Everything here is data about the wire; analytic judgement (thresholds,
 //! baselines) does not belong in a manifest.
 
+use mav_frame::spec::{CrcKind, Endian, FrameSpec, HeaderCrc, LengthField, Trailer};
 use mav_model::error::{codes, MavError, Result};
 use mav_model::stream::StreamKind;
 use serde::{Deserialize, Serialize};
@@ -140,9 +141,128 @@ pub struct EnableFlag {
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FrameConfig {
-    /// "gen4" or "gen5"; must name a wire format mav-frame implements.
+    /// `gen4` or `gen5` for the WHOOP presets, or `custom` for a device that declares its own
+    /// framing in `spec` (ADR-012).
     pub wire_format: String,
     pub max_frame_bytes: u32,
+    /// Required when `wire_format` is `custom`: the frame format described as data.
+    #[serde(default)]
+    pub spec: Option<FrameSpecConfig>,
+}
+
+impl FrameConfig {
+    /// The `mav-frame` frame description this config resolves to. The reassembler is driven by it,
+    /// so a device's framing is data, not a hardcoded format.
+    pub fn to_spec(&self) -> Result<FrameSpec> {
+        match self.wire_format.as_str() {
+            "gen4" => Ok(FrameSpec::gen4()),
+            "gen5" => Ok(FrameSpec::gen5()),
+            "custom" => self
+                .spec
+                .as_ref()
+                .ok_or_else(|| {
+                    MavError::new(
+                        codes::DECODE_LAYOUT_INVALID,
+                        "wire_format is custom but no spec was given",
+                    )
+                })?
+                .to_frame_spec(),
+            other => Err(
+                MavError::new(codes::DECODE_LAYOUT_INVALID, "unknown wire_format")
+                    .context(other.to_owned()),
+            ),
+        }
+    }
+}
+
+/// A frame format as manifest data, mirroring `mav_frame::FrameSpec` (ADR-012). Enums are strings
+/// here so the JSON reads plainly: `endian` is `le` or `be`, `crc` is `crc8`, `crc16_modbus`, or
+/// `crc32`.
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FrameSpecConfig {
+    pub sof: u8,
+    pub header_len: usize,
+    pub length: LengthFieldConfig,
+    pub length_includes_trailer: bool,
+    #[serde(default)]
+    pub header_crc: Option<HeaderCrcConfig>,
+    pub trailer: TrailerConfig,
+}
+
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LengthFieldConfig {
+    pub offset: usize,
+    pub width: usize,
+    pub endian: String,
+}
+
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HeaderCrcConfig {
+    pub crc: String,
+    pub over: [usize; 2],
+    pub at: usize,
+    pub endian: String,
+}
+
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TrailerConfig {
+    pub crc: String,
+    pub endian: String,
+}
+
+impl FrameSpecConfig {
+    fn to_frame_spec(&self) -> Result<FrameSpec> {
+        Ok(FrameSpec {
+            sof: self.sof,
+            header_len: self.header_len,
+            length: LengthField {
+                offset: self.length.offset,
+                width: self.length.width,
+                endian: parse_endian(&self.length.endian)?,
+            },
+            length_includes_trailer: self.length_includes_trailer,
+            header_crc: match &self.header_crc {
+                None => None,
+                Some(h) => Some(HeaderCrc {
+                    kind: parse_crc(&h.crc)?,
+                    over: (h.over[0], h.over[1]),
+                    at: h.at,
+                    endian: parse_endian(&h.endian)?,
+                }),
+            },
+            trailer: Trailer {
+                kind: parse_crc(&self.trailer.crc)?,
+                endian: parse_endian(&self.trailer.endian)?,
+            },
+        })
+    }
+}
+
+fn parse_endian(s: &str) -> Result<Endian> {
+    match s {
+        "le" => Ok(Endian::Le),
+        "be" => Ok(Endian::Be),
+        other => Err(
+            MavError::new(codes::DECODE_LAYOUT_INVALID, "endian must be le or be")
+                .context(other.to_owned()),
+        ),
+    }
+}
+
+fn parse_crc(s: &str) -> Result<CrcKind> {
+    match s {
+        "crc8" => Ok(CrcKind::Crc8),
+        "crc16_modbus" => Ok(CrcKind::Crc16Modbus),
+        "crc32" => Ok(CrcKind::Crc32),
+        other => Err(
+            MavError::new(codes::DECODE_LAYOUT_INVALID, "unknown crc kind")
+                .context(other.to_owned()),
+        ),
+    }
 }
 
 /// How to decode one packet kind's payload into samples. Offsets are relative to the start of the
@@ -255,12 +375,9 @@ impl Manifest {
                     .context(format!("got {:?}, want {MANIFEST_SCHEMA:?}", self.schema)),
             );
         }
-        if !matches!(self.frame.wire_format.as_str(), "gen4" | "gen5") {
-            return Err(
-                MavError::new(codes::DECODE_LAYOUT_INVALID, "unknown wire_format")
-                    .context(self.frame.wire_format.clone()),
-            );
-        }
+        // Resolving the frame spec validates the wire format, and for a custom format checks the
+        // spec is present and its enum strings are known.
+        self.frame.to_spec()?;
         if self.identity.models.is_empty() {
             return Err(MavError::new(
                 codes::DECODE_LAYOUT_INVALID,
@@ -371,6 +488,48 @@ mod tests {
     #[test]
     fn unknown_wire_format_is_refused() {
         let json = minimal_json().replace("gen5", "gen9");
+        let err = Manifest::from_json(&json).unwrap_err();
+        assert_eq!(err.code, codes::DECODE_LAYOUT_INVALID);
+    }
+
+    #[test]
+    fn a_custom_frame_spec_resolves_to_a_frame_spec() {
+        let json = minimal_json().replace(
+            "\"wire_format\": \"gen5\", \"max_frame_bytes\": 8192",
+            r#""wire_format": "custom", "max_frame_bytes": 8192,
+               "spec": {
+                 "sof": 90, "header_len": 3,
+                 "length": { "offset": 1, "width": 2, "endian": "be" },
+                 "length_includes_trailer": false,
+                 "trailer": { "crc": "crc8", "endian": "le" }
+               }"#,
+        );
+        let manifest = Manifest::from_json(&json).unwrap();
+        let spec = manifest.frame.to_spec().unwrap();
+        assert_eq!(
+            spec,
+            FrameSpec {
+                sof: 0x5A,
+                header_len: 3,
+                length: LengthField {
+                    offset: 1,
+                    width: 2,
+                    endian: Endian::Be
+                },
+                length_includes_trailer: false,
+                header_crc: None,
+                trailer: Trailer {
+                    kind: CrcKind::Crc8,
+                    endian: Endian::Le
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn custom_without_a_spec_is_refused() {
+        let json =
+            minimal_json().replace("\"wire_format\": \"gen5\"", "\"wire_format\": \"custom\"");
         let err = Manifest::from_json(&json).unwrap_err();
         assert_eq!(err.code, codes::DECODE_LAYOUT_INVALID);
     }

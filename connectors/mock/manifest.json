@@ -1,0 +1,26 @@
+{
+  "schema": "connector-manifest/v1",
+  "identity": {
+    "family": "mock",
+    "display_name": "Mock device",
+    "models": ["MOCK"]
+  },
+  "gatt": { "service": "mock-service", "command": "mock-command", "notify": ["mock-notify"] },
+  "frame": {
+    "wire_format": "custom",
+    "max_frame_bytes": 8192,
+    "spec": {
+      "sof": 90,
+      "header_len": 3,
+      "length": { "offset": 1, "width": 2, "endian": "be" },
+      "length_includes_trailer": false,
+      "trailer": { "crc": "crc8", "endian": "le" }
+    }
+  },
+  "packets": {
+    "0": "keyframe",
+    "1": "delta"
+  },
+  "capabilities": ["heart_rate"],
+  "confidence_note": "A fake device, not a real one. Its wire format is deliberately unlike WHOOP (0x5A start byte = decimal 90, big-endian length counting the payload only, a single CRC-8 trailer, no header CRC, no padding), described here as a custom frame spec now that ADR-012 made framing manifest data. The framing is core-handled through this spec; the stateful delta decode and the learned anchor are what fall to the mock codec. It declares HeartRate only, no RrInterval, so Milestone 3 can prove capability negotiation hides recovery on a device without RR. See connectors/mock/FORMAT.md."
+}

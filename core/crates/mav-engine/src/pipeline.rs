@@ -8,7 +8,6 @@ use mav_codec::codec::{DeviceCodec, ManifestCodec};
 use mav_codec::kv::MemoryKv;
 use mav_codec::manifest::Manifest;
 use mav_feature::hr::{hr_summary, HR_FEATURE_ALGORITHM, HR_FEATURE_VERSION};
-use mav_frame::frame::WireFormat;
 use mav_frame::reassembler::{Reassembler, ReassemblyEvent};
 use mav_model::error::{codes, MavError, Result};
 use mav_model::ids::{DeviceId, MetadataId};
@@ -98,8 +97,7 @@ pub fn run_realtime(
     store: &Store,
     tap: &dyn Tap,
 ) -> Result<Snapshot> {
-    let wire = wire_format(manifest)?;
-    let mut reassembler = Reassembler::new(wire);
+    let mut reassembler = Reassembler::with_spec(manifest.frame.to_spec()?);
     let mut codec = ManifestCodec::new();
     let mut kv = MemoryKv::new();
     let mut timeline = Timeline::new();
@@ -223,22 +221,10 @@ pub fn run_realtime_json(
     run_realtime(&manifest, &capture, &store, tap)
 }
 
-fn wire_format(manifest: &Manifest) -> Result<WireFormat> {
-    match manifest.frame.wire_format.as_str() {
-        "gen4" => Ok(WireFormat::Gen4),
-        "gen5" => Ok(WireFormat::Gen5),
-        other => Err(MavError::new(
-            codes::DECODE_LAYOUT_INVALID,
-            "manifest wire_format is not one mav-frame implements",
-        )
-        .context(other.to_owned())),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mav_frame::frame::build_frame;
+    use mav_frame::frame::{build_frame, WireFormat};
 
     fn realtime_manifest() -> Manifest {
         Manifest::from_json(
