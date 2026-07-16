@@ -58,6 +58,10 @@ pub enum Severity {
 /// The catalogue with meanings lives in docs/errors.md, and every assigned code must also be
 /// listed in `ALL` below — tests hold the constants, the list, and the document in step.
 pub mod codes {
+    pub const TRANSPORT_COMMAND_TIMEOUT: u16 = 1001;
+    pub const TRANSPORT_UNEXPECTED_RESPONSE: u16 = 1002;
+    pub const TRANSPORT_UNEXPECTED_BYTES: u16 = 1003;
+
     pub const FRAME_HEADER_CRC_MISMATCH: u16 = 2001;
     pub const FRAME_PAYLOAD_CRC_MISMATCH: u16 = 2002;
     pub const FRAME_TRUNCATED: u16 = 2003;
@@ -75,6 +79,12 @@ pub mod codes {
     pub const INTERNAL_INVARIANT: u16 = 10_000;
 
     pub const ALL: &[(u16, &str)] = &[
+        (TRANSPORT_COMMAND_TIMEOUT, "TRANSPORT_COMMAND_TIMEOUT"),
+        (
+            TRANSPORT_UNEXPECTED_RESPONSE,
+            "TRANSPORT_UNEXPECTED_RESPONSE",
+        ),
+        (TRANSPORT_UNEXPECTED_BYTES, "TRANSPORT_UNEXPECTED_BYTES"),
         (FRAME_HEADER_CRC_MISMATCH, "FRAME_HEADER_CRC_MISMATCH"),
         (FRAME_PAYLOAD_CRC_MISMATCH, "FRAME_PAYLOAD_CRC_MISMATCH"),
         (FRAME_TRUNCATED, "FRAME_TRUNCATED"),

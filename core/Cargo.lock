@@ -114,7 +114,12 @@ dependencies = [
 
 [[package]]
 name = "mav-engine"
-version = "0.0.0"
+version = "0.1.0"
+dependencies = [
+ "mav-frame",
+ "mav-model",
+ "mav-obs",
+]
 
 [[package]]
 name = "mav-feature"

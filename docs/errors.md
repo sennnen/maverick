@@ -42,6 +42,9 @@ fails the build.
 
 | code | name | condition |
 |---|---|---|
+| 1001 | TRANSPORT_COMMAND_TIMEOUT | a command's response never arrived after the retry budget was spent |
+| 1002 | TRANSPORT_UNEXPECTED_RESPONSE | a response arrived that matched no outstanding command (wrong sequence, or none pending) |
+| 1003 | TRANSPORT_UNEXPECTED_BYTES | data bytes arrived in a connection state that does not expect them |
 | 2001 | FRAME_HEADER_CRC_MISMATCH | a frame header failed its CRC-8 (gen4) or CRC-16 (gen5) check |
 | 2002 | FRAME_PAYLOAD_CRC_MISMATCH | a frame payload failed its trailing CRC-32 check |
 | 2003 | FRAME_TRUNCATED | a declared frame length is shorter than its own CRC-32 field |

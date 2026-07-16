@@ -1,3 +1,11 @@
-//! Orchestration: triggers, the task graph, caching keyed on input hash + algorithm version.
-//! Drives the synchronous pipeline. See docs/pipeline.md.
-//! Not yet implemented — landed by a Milestone 1+ work packet.
+//! Orchestration: the connection state machine, and (in later packets) the triggers, task graph,
+//! and recompute cache that drive the synchronous pipeline. See docs/pipeline.md.
+//!
+//! The one piece here today is acquisition, the pipeline's entry stage. It is a pure state machine
+//! fed by injected events, so the whole of it is testable without a radio; the thin native
+//! transport shim that feeds it real bytes is the only part that waits for hardware.
+#![forbid(unsafe_code)]
+
+pub mod acquisition;
+
+pub use acquisition::{Acquisition, Command, Event, HandshakeConfig, State, StepOutcome};
