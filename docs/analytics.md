@@ -10,7 +10,8 @@ The 1996 ESC/NASPE Task Force defines RMSSD, SDNN, NN50, and pNN50 over normal-t
 measured from cardiac beats. Its definitions are the reference for Maverick's formulas:
 [Heart rate variability: standards of measurement, physiological interpretation and clinical use](https://www.escardio.org/static-file/Escardio/Guidelines/Scientific-Statements/guidelines-Heart-Rate-Variability-FT-1996.pdf).
 
-WHOOP's RR stream is derived from optical pulse timing, not ECG R peaks. That distinction matters.
+WHOOP's RR stream is derived from optical pulse timing, not ECG R peaks. Its connectors therefore
+declare `interval_source: ppg`. That distinction matters.
 Optical pulse-rate variability can be useful, but it is not diagnostic ECG HRV and the strap does
 not expose a trustworthy normal-beat classifier. `mav-analytic` therefore requires an
 `IntervalSource` and labels a PPG result `pulse_rate_variability`. Only an ECG-derived interval

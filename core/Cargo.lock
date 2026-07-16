@@ -432,6 +432,7 @@ dependencies = [
 name = "mav-engine"
 version = "0.1.0"
 dependencies = [
+ "mav-analytic",
  "mav-codec",
  "mav-feature",
  "mav-frame",

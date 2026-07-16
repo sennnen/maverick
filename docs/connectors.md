@@ -55,6 +55,9 @@ device family and known before any strap is ever connected:
   conversion is a fixed constant.
 - **Record versions.** The historical record versions the device emits, keyed by their version or
   subtype byte, each with its own field layout and a maturity note.
+- **Capabilities and interval source.** The stream kinds the device produces, plus `ppg`, `ecg`, or
+  `unknown` for beat-to-beat intervals. This controls whether variability may be labelled optical
+  PRV or ECG HRV; the presence of RR alone cannot answer that.
 - **Sensor configs.** The commands and parameters used to start, stop, and configure raw-sensor
   streams.
 

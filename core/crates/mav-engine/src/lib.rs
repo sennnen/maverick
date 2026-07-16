@@ -11,8 +11,8 @@ pub mod pipeline;
 pub mod snapshot;
 
 pub use acquisition::{Acquisition, Command, Event, HandshakeConfig, State, StepOutcome};
-pub use pipeline::{run_realtime, run_realtime_json, Capture};
-pub use snapshot::{Snapshot, SNAPSHOT_SCHEMA};
+pub use pipeline::{run_realtime, run_realtime_json, run_realtime_output, Capture, PipelineOutput};
+pub use snapshot::{AnalyticsSnapshot, Snapshot, ANALYTICS_SNAPSHOT_SCHEMA, SNAPSHOT_SCHEMA};
 
 /// Re-exported so `mav-replay` and the FFI can name a device manifest without depending on
 /// `mav-codec` directly; the engine is the one crate above the stages that assembles them.

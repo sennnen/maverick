@@ -23,6 +23,10 @@ pub struct Manifest {
     #[serde(default)]
     pub standard_gatt: Option<StandardGatt>,
     pub frame: FrameConfig,
+    /// Physical source of beat-to-beat intervals. Optical devices say `ppg`; electrode devices
+    /// may say `ecg`. Omitted means the source has not been established.
+    #[serde(default)]
+    pub interval_source: IntervalSourceConfig,
     /// The command opcodes the acquisition state machine writes. Data, not logic: the machine
     /// reads this table, the manifest does not sequence anything.
     #[serde(default)]
@@ -46,6 +50,15 @@ pub struct Manifest {
     pub capabilities: Vec<StreamKind>,
     #[serde(default)]
     pub confidence_note: String,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum IntervalSourceConfig {
+    Ecg,
+    Ppg,
+    #[default]
+    Unknown,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -538,6 +551,16 @@ mod tests {
     fn unknown_top_level_field_is_refused() {
         let json = minimal_json().replace("\"capabilities\"", "\"surprise\": 1, \"capabilities\"");
         assert!(Manifest::from_json(&json).is_err());
+    }
+
+    #[test]
+    fn interval_source_defaults_unknown_and_parses_ppg() {
+        let unknown = Manifest::from_json(&minimal_json()).unwrap();
+        assert_eq!(unknown.interval_source, IntervalSourceConfig::Unknown);
+
+        let json = minimal_json().replace("\"frame\":", "\"interval_source\": \"ppg\", \"frame\":");
+        let ppg = Manifest::from_json(&json).unwrap();
+        assert_eq!(ppg.interval_source, IntervalSourceConfig::Ppg);
     }
 
     #[test]

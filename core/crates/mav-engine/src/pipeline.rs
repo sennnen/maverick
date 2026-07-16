@@ -3,10 +3,11 @@
 //! fixed order docs/pipeline.md sets. It is the shared path `mav-replay` and the FFI both drive, so
 //! that a capture replayed offline runs the identical code the live device would.
 
-use crate::snapshot::Snapshot;
+use crate::snapshot::{AnalyticsSnapshot, Snapshot};
+use mav_analytic::{negotiate, time_domain, IntervalSource, HRV_ALGORITHM, HRV_VERSION};
 use mav_codec::codec::{DeviceCodec, ManifestCodec};
 use mav_codec::kv::MemoryKv;
-use mav_codec::manifest::Manifest;
+use mav_codec::manifest::{IntervalSourceConfig, Manifest};
 use mav_feature::hr::{hr_summary, HR_FEATURE_ALGORITHM, HR_FEATURE_VERSION};
 use mav_frame::reassembler::{Reassembler, ReassemblyEvent};
 use mav_model::error::{codes, MavError, Result};
@@ -23,6 +24,7 @@ use serde::Deserialize;
 /// Fixed provenance ids for the M1 slice, so the snapshot is byte-for-byte reproducible.
 const SQI_PROVENANCE: MetadataId = MetadataId::new(1);
 const HR_PROVENANCE: MetadataId = MetadataId::new(2);
+const HRV_PROVENANCE: MetadataId = MetadataId::new(3);
 
 const CAPTURE_SCHEMA: &str = "capture/v1";
 
@@ -35,6 +37,12 @@ pub struct Capture {
     /// implausible and the timeline has to fall back.
     pub capture_wall: WallTime,
     pub chunks: Vec<Vec<u8>>,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct PipelineOutput {
+    pub snapshot: Snapshot,
+    pub analytics: AnalyticsSnapshot,
 }
 
 #[derive(Deserialize)]
@@ -97,6 +105,15 @@ pub fn run_realtime(
     store: &Store,
     tap: &dyn Tap,
 ) -> Result<Snapshot> {
+    Ok(run_realtime_output(manifest, capture, store, tap)?.snapshot)
+}
+
+pub fn run_realtime_output(
+    manifest: &Manifest,
+    capture: &Capture,
+    store: &Store,
+    tap: &dyn Tap,
+) -> Result<PipelineOutput> {
     let mut reassembler = Reassembler::with_spec(manifest.frame.to_spec()?);
     let mut codec = ManifestCodec::new();
     let mut kv = MemoryKv::new();
@@ -196,15 +213,48 @@ pub fn run_realtime(
     })?;
 
     let snapshot = Snapshot::from_hr(capture.device, &summary);
+    let interval_source = match manifest.interval_source {
+        IntervalSourceConfig::Ecg => IntervalSource::Ecg,
+        IntervalSourceConfig::Ppg => IntervalSource::Ppg,
+        IntervalSourceConfig::Unknown => IntervalSource::Unknown,
+    };
+    let rr_samples = store.samples(capture.device, StreamKind::RrInterval)?;
+    let variability = time_domain(&rr_samples, interval_source, HRV_PROVENANCE);
+    if let Some(value) = &variability {
+        store.upsert_provenance(&Provenance {
+            metadata: HRV_PROVENANCE,
+            source_stream: StreamKind::RrInterval,
+            quality: 1.0,
+            algorithm_id: HRV_ALGORITHM.to_owned(),
+            algorithm_version: HRV_VERSION,
+            sample_count: value.interval_count,
+        })?;
+        tap.on_stage(
+            Stage::Metrics,
+            TapEvent::Produced {
+                count: 1,
+                ids,
+                summary: None,
+            },
+        );
+    }
+    let analytics = AnalyticsSnapshot::new(
+        interval_source,
+        variability.as_ref(),
+        negotiate(&manifest.capabilities),
+    );
     tap.on_stage(
         Stage::Snapshots,
         TapEvent::Produced {
-            count: 1,
+            count: 2,
             ids,
             summary: None,
         },
     );
-    Ok(snapshot)
+    Ok(PipelineOutput {
+        snapshot,
+        analytics,
+    })
 }
 
 /// Parse a manifest and a capture from JSON, run them through a fresh in-memory store, and return
@@ -233,6 +283,7 @@ mod tests {
                 "identity": { "family": "testgen5", "display_name": "T", "models": ["T"] },
                 "gatt": { "service": "s", "command": "c", "notify": ["n"] },
                 "frame": { "wire_format": "gen5", "max_frame_bytes": 8192 },
+                "interval_source": "ppg",
                 "packets": { "40": "realtime_data" },
                 "layouts": {
                     "realtime_data": {
@@ -263,6 +314,20 @@ mod tests {
         payload[10..14].copy_from_slice(&ts.to_le_bytes());
         payload[16] = hr;
         payload[17] = 0;
+        build_frame(WireFormat::Gen5, &payload).unwrap()
+    }
+
+    fn realtime_frame_with_rr(ts: u32, hr: u8, rr: &[u16]) -> Vec<u8> {
+        let mut payload = vec![0u8; 18 + rr.len() * 2];
+        payload[0] = 40;
+        payload[1] = 1;
+        payload[10..14].copy_from_slice(&ts.to_le_bytes());
+        payload[16] = hr;
+        payload[17] = rr.len() as u8;
+        for (index, value) in rr.iter().enumerate() {
+            let offset = 18 + index * 2;
+            payload[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
+        }
         build_frame(WireFormat::Gen5, &payload).unwrap()
     }
 
@@ -317,6 +382,45 @@ mod tests {
 
         assert_eq!(a, b);
         assert_eq!(a.canonical_hash().unwrap(), b.canonical_hash().unwrap());
+    }
+
+    #[test]
+    fn rr_capture_produces_prv_and_honest_recovery_availability() {
+        let capture = Capture {
+            device: DeviceId::new(1),
+            capture_wall: WallTime::from_unix_seconds(1_752_600_500),
+            chunks: vec![realtime_frame_with_rr(
+                1_752_600_000,
+                72,
+                &[800, 800, 850, 790, 900, 0, 50],
+            )],
+        };
+        let store = Store::open_in_memory().unwrap();
+        let output = run_realtime_output(&realtime_manifest(), &capture, &store, &NullTap).unwrap();
+
+        assert_eq!(output.analytics.interval_source, "ppg");
+        assert_eq!(
+            output.analytics.variability_label.as_deref(),
+            Some("pulse_rate_variability")
+        );
+        assert_eq!(output.analytics.mean_interval_micros, Some(828_000));
+        assert_eq!(output.analytics.rmssd_micros, Some(67_454));
+        assert_eq!(output.analytics.sdnn_micros, Some(46_583));
+        assert_eq!(output.analytics.nn50_count, Some(2));
+        assert_eq!(output.analytics.pnn50_milli_percent, Some(50_000));
+        assert_eq!(output.analytics.interval_count, 5);
+        assert_eq!(output.analytics.excluded_interval_count, 1);
+        assert!(output
+            .analytics
+            .availability
+            .iter()
+            .any(
+                |item| item.analytic == mav_analytic::AnalyticId::TimeDomainHrv && item.available
+            ));
+        assert!(output.analytics.availability.iter().any(|item| {
+            item.analytic == mav_analytic::AnalyticId::Recovery
+                && item.reason == Some(mav_analytic::UnavailableReason::AlgorithmNotAdmitted)
+        }));
     }
 
     #[test]

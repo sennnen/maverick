@@ -13,6 +13,7 @@ mav-codec = { workspace = true }
 mav-sqi = { workspace = true }
 mav-timeline = { workspace = true }
 mav-feature = { workspace = true }
+mav-analytic = { workspace = true }
 mav-store = { workspace = true }
 mav-obs = { workspace = true }
 serde = { workspace = true }

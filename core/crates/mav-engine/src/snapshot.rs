@@ -4,12 +4,16 @@
 //! parity check: two platforms running the one shared core over the one fixture must return an
 //! identical hash, and any difference is a binding bug (see docs/testing.md).
 
+use mav_analytic::{
+    AnalyticAvailability, IntervalSource, TimeDomainHrv, HRV_ALGORITHM, HRV_VERSION,
+};
 use mav_feature::hr::HrSummary;
 use mav_model::error::{codes, MavError, Result};
 use mav_model::ids::DeviceId;
 use serde::{Deserialize, Serialize};
 
 pub const SNAPSHOT_SCHEMA: &str = "snapshot/v1";
+pub const ANALYTICS_SNAPSHOT_SCHEMA: &str = "analytics-snapshot/v1";
 
 /// The Milestone 1 snapshot: current heart rate and the session summary. The mean is carried as an
 /// integer of milli-bpm rather than a float so the canonical form has no floating-point formatting
@@ -50,6 +54,72 @@ impl Snapshot {
 
     /// A stable 64-bit hash of the canonical form, as lowercase hex. FNV-1a is used because it is
     /// tiny, dependency-free, and identical on every platform, which is all the parity check needs.
+    pub fn canonical_hash(&self) -> Result<String> {
+        Ok(fnv1a_64(self.canonical_json()?.as_bytes()))
+    }
+}
+
+/// Deterministic analytic read model. Floats become fixed-point integers before crossing FFI or
+/// entering a parity hash.
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub struct AnalyticsSnapshot {
+    pub schema: String,
+    pub interval_source: String,
+    pub variability_label: Option<String>,
+    pub mean_interval_micros: Option<u64>,
+    pub rmssd_micros: Option<u64>,
+    pub sdnn_micros: Option<u64>,
+    pub nn50_count: Option<u32>,
+    pub pnn50_milli_percent: Option<u64>,
+    pub interval_count: u32,
+    pub excluded_interval_count: u32,
+    pub algorithm: String,
+    pub algorithm_version: String,
+    pub availability: Vec<AnalyticAvailability>,
+    pub provenance_id: Option<u64>,
+}
+
+impl AnalyticsSnapshot {
+    pub fn new(
+        source: IntervalSource,
+        variability: Option<&TimeDomainHrv>,
+        availability: Vec<AnalyticAvailability>,
+    ) -> Self {
+        Self {
+            schema: ANALYTICS_SNAPSHOT_SCHEMA.to_owned(),
+            interval_source: match source {
+                IntervalSource::Ecg => "ecg",
+                IntervalSource::Ppg => "ppg",
+                IntervalSource::Unknown => "unknown",
+            }
+            .to_owned(),
+            variability_label: variability.map(|value| value.label.clone()),
+            mean_interval_micros: variability
+                .map(|value| (value.mean_interval_ms * 1_000.0).round() as u64),
+            rmssd_micros: variability.map(|value| (value.rmssd_ms * 1_000.0).round() as u64),
+            sdnn_micros: variability.map(|value| (value.sdnn_ms * 1_000.0).round() as u64),
+            nn50_count: variability.map(|value| value.nn50_count),
+            pnn50_milli_percent: variability
+                .map(|value| (value.pnn50_percent * 1_000.0).round() as u64),
+            interval_count: variability.map_or(0, |value| value.interval_count),
+            excluded_interval_count: variability.map_or(0, |value| value.excluded_count),
+            algorithm: HRV_ALGORITHM.to_owned(),
+            algorithm_version: HRV_VERSION.to_string(),
+            availability,
+            provenance_id: variability.map(|value| value.provenance.get()),
+        }
+    }
+
+    pub fn canonical_json(&self) -> Result<String> {
+        serde_json::to_string(self).map_err(|e| {
+            MavError::new(
+                codes::STORAGE_SERIALIZE,
+                "could not serialise the analytics snapshot",
+            )
+            .context(e.to_string())
+        })
+    }
+
     pub fn canonical_hash(&self) -> Result<String> {
         Ok(fnv1a_64(self.canonical_json()?.as_bytes()))
     }
@@ -116,5 +186,26 @@ mod tests {
         changed.current_bpm = Some(64);
         let b = Snapshot::from_hr(DeviceId::new(1), &changed);
         assert_ne!(a.canonical_hash().unwrap(), b.canonical_hash().unwrap());
+    }
+
+    #[test]
+    fn analytics_snapshot_uses_fixed_point_numbers() {
+        let variability = TimeDomainHrv {
+            source: IntervalSource::Ppg,
+            label: "pulse_rate_variability".to_owned(),
+            mean_interval_ms: 800.125,
+            rmssd_ms: 42.25,
+            sdnn_ms: 51.5,
+            nn50_count: 2,
+            pnn50_percent: 40.0,
+            interval_count: 6,
+            excluded_count: 1,
+            provenance: MetadataId::new(9),
+        };
+        let snapshot = AnalyticsSnapshot::new(IntervalSource::Ppg, Some(&variability), Vec::new());
+        assert_eq!(snapshot.mean_interval_micros, Some(800_125));
+        assert_eq!(snapshot.rmssd_micros, Some(42_250));
+        assert_eq!(snapshot.pnn50_milli_percent, Some(40_000));
+        assert_eq!(snapshot.interval_source, "ppg");
     }
 }
