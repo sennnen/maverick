@@ -139,7 +139,11 @@ whole generated package atomically so stale slices cannot survive.
 
 **Exit:** M0 platform linking and M1-P11 parity are complete on CI.
 
-**Status: pending.**
+**Status: in progress.** Reproducible scripts now build a device/simulator XCFramework and Android
+arm64-v8a/x86_64 shared libraries from pinned Rust targets, generate language bindings, replace
+their ignored package directories without retaining stale slices, and emit SHA-256 inventories.
+Dedicated macOS and Linux CI jobs execute both real cross-builds. Native compile/link parity tests
+remain and land with the minimal application projects in PL-P4.
 
 ---
 

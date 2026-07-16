@@ -15,25 +15,19 @@ assets, services, widgets, and notification machinery are not app dependencies h
 
 ## Building the core for Android
 
-The core is exposed through `mav-ffi`, which builds a shared library plus generated Kotlin. From
-`core/`:
+Install the pinned NDK once:
 
-    # Build the shared library for an Android ABI (repeat per ABI you ship).
-    cargo build -p mav-ffi --target aarch64-linux-android
+    sdkmanager "ndk;29.0.14206865"
 
-    # Generate the Kotlin bindings from the built library.
-    cargo run -p mav-ffi --features cli --bin uniffi-bindgen -- \
-        generate --library target/debug/libmav_ffi.so --language kotlin --out-dir generated/kotlin
+Then run:
 
-That produces `uniffi/mav_ffi/mav_ffi.kt`. Put the built `.so` under the app's `jniLibs/<abi>/` and
-add the generated Kotlin (which depends on the `net.java.dev.jna` JNA runtime) to the app source;
-the app then calls `coreVersion()` and `runCapture(manifestJson, captureJson)` directly. Wiring the
-NDK cross-compile per ABI and the Gradle packaging is a step for the app milestone, not the M0
-binding.
+    bash tools/platform/build_android.sh
 
-`runCapture` returns canonical session and analytics JSON plus one parity hash for each. Hosts should
-render availability reasons from the analytics JSON rather than reconstructing capability rules in
-Kotlin.
+The script builds API 26 arm64-v8a and x86_64 shared libraries, generates Kotlin, and writes
+`apps/android/build/mav-core` with a complete SHA-256 inventory. Generated output is ignored by Git
+and must never be edited.
 
-The Rust surface and bindgen step are verified in CI. PL-P3 replaces these manual commands with the
-reproducible Android library build used by local development and release CI.
+Gradle adds `apps/android/build/mav-core/Sources` as a source directory,
+`apps/android/build/mav-core/jniLibs` as its native library directory, and exactly
+`net.java.dev.jna:jna:5.12.0@aar`. UniFFI requires JNA 5.12.0 or newer; Maverick pins the documented
+minimum until a measured reason justifies changing it.

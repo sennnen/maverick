@@ -51,3 +51,29 @@ jobs:
       - uses: actions/checkout@v4
       - run: bash tools/check_docs.sh
       - run: python3 tools/check_deps.py
+
+  package-ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.96.1
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+      - run: bash tools/platform/build_ios.sh
+      - run: test -f apps/ios/build/mav-core/MavCore.xcframework/Info.plist
+      - run: test -f apps/ios/build/mav-core/Sources/mav_ffi.swift
+      - run: test -f apps/ios/build/mav-core/SHA256SUMS
+
+  package-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.96.1
+        with:
+          targets: aarch64-linux-android,x86_64-linux-android
+      - run: sdkmanager "ndk;29.0.14206865"
+      - run: bash tools/platform/build_android.sh
+      - run: test -f apps/android/build/mav-core/jniLibs/arm64-v8a/libmav_ffi.so
+      - run: test -f apps/android/build/mav-core/jniLibs/x86_64/libmav_ffi.so
+      - run: test -f apps/android/build/mav-core/Sources/uniffi/mav_ffi/mav_ffi.kt
+      - run: test -f apps/android/build/mav-core/SHA256SUMS

@@ -15,24 +15,15 @@ dependencies here.
 
 ## Building the core for iOS
 
-The core is exposed through `mav-ffi`, which builds a static library plus a generated Swift module.
-From `core/`:
+Install full Xcode, select it with `xcode-select`, then run:
 
-    # Build the static library for the simulator (add device and cross-arch targets as needed).
-    cargo build -p mav-ffi --target aarch64-apple-ios-sim
+    bash tools/platform/build_ios.sh
 
-    # Generate the Swift bindings from the built library.
-    cargo run -p mav-ffi --features cli --bin uniffi-bindgen -- \
-        generate --library target/debug/libmav_ffi.dylib --language swift --out-dir generated/swift
+The script pins the Rust targets, builds arm64 device plus arm64/x86_64 simulator slices, creates
+`apps/ios/build/mav-core/MavCore.xcframework`, generates
+`apps/ios/build/mav-core/Sources/mav_ffi.swift`, and writes a complete SHA-256 inventory. It replaces
+the package as one directory so stale slices cannot survive a rebuild. Generated output is ignored
+by Git and must never be edited.
 
-That produces `mav_ffi.swift`, `mav_ffiFFI.h`, and `mav_ffiFFI.modulemap`. Package the static
-library and the modulemap into an `.xcframework` and add the generated Swift file to the app target;
-the app then calls `coreVersion()` and `runCapture(manifestJson:captureJson:)` directly. The exact
-`.xcframework` packaging is a step for the app milestone, not the M0 binding.
-
-`runCapture` returns canonical session and analytics JSON plus one parity hash for each. Hosts should
-render availability reasons from the analytics JSON rather than reconstructing capability rules in
-Swift.
-
-The Rust surface and bindgen step are verified in CI. PL-P3 replaces these manual commands with the
-reproducible XCFramework build used by local development and release CI.
+The app target links `MavCore.xcframework` and compiles `mav_ffi.swift`. Product code constructs
+`MavRuntime`; `runCapture` remains the debug parity surface.
