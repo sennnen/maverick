@@ -12,6 +12,15 @@ settings:
     SWIFT_VERSION: "5.10"
     SWIFT_STRICT_CONCURRENCY: minimal
     CODE_SIGN_STYLE: Automatic
+schemes:
+  Maverick:
+    build:
+      targets:
+        Maverick: all
+        MaverickTests: [test]
+    test:
+      targets:
+        - MaverickTests
 targets:
   Maverick:
     type: application

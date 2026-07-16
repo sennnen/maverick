@@ -77,6 +77,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.96.1
         with:
           targets: aarch64-linux-android,x86_64-linux-android
+      - uses: android-actions/setup-android@v3
       - run: sdkmanager "ndk;29.0.14206865"
       - run: bash tools/platform/build_android.sh
       - run: test -f apps/android/build/mav-core/jniLibs/arm64-v8a/libmav_ffi.so
