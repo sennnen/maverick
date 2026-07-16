@@ -33,7 +33,10 @@ pub struct Provenance {
 pub struct JournalEntry {
     pub id: i64,
     pub code: u16,
+    pub category: Category,
+    pub severity: Severity,
     pub message: String,
+    pub context: Vec<String>,
     pub created_ns: i64,
 }
 
@@ -291,7 +294,8 @@ impl Store {
         let mut statement = self
             .conn
             .prepare(
-                "SELECT id, code, message, created_ns FROM error_journal \
+                "SELECT id, code, category, severity, message, context_json, created_ns \
+                 FROM error_journal \
                  ORDER BY id DESC LIMIT ?1",
             )
             .map_err(|e| query_err("preparing journal read", &e))?;
@@ -300,8 +304,29 @@ impl Store {
                 Ok(JournalEntry {
                     id: row.get(0)?,
                     code: row.get(1)?,
-                    message: row.get(2)?,
-                    created_ns: row.get(3)?,
+                    category: parse_category(&row.get::<_, String>(2)?).map_err(|message| {
+                        rusqlite::Error::FromSqlConversionFailure(
+                            2,
+                            rusqlite::types::Type::Text,
+                            Box::new(std::io::Error::new(
+                                std::io::ErrorKind::InvalidData,
+                                message,
+                            )),
+                        )
+                    })?,
+                    severity: parse_severity(&row.get::<_, String>(3)?).map_err(|message| {
+                        rusqlite::Error::FromSqlConversionFailure(
+                            3,
+                            rusqlite::types::Type::Text,
+                            Box::new(std::io::Error::new(
+                                std::io::ErrorKind::InvalidData,
+                                message,
+                            )),
+                        )
+                    })?,
+                    message: row.get(4)?,
+                    context: from_json_for_row(&row.get::<_, String>(5)?, 5)?,
+                    created_ns: row.get(6)?,
                 })
             })
             .map_err(|e| query_err("reading the journal", &e))?;
@@ -361,6 +386,41 @@ fn severity_str(severity: Severity) -> &'static str {
         Severity::Error => "error",
         Severity::Fatal => "fatal",
     }
+}
+
+fn parse_category(value: &str) -> std::result::Result<Category, String> {
+    match value {
+        "transport" => Ok(Category::Transport),
+        "frame" => Ok(Category::Frame),
+        "decode" => Ok(Category::Decode),
+        "timeline" => Ok(Category::Timeline),
+        "storage" => Ok(Category::Storage),
+        "feature" => Ok(Category::Feature),
+        "analytic" => Ok(Category::Analytic),
+        "ml" => Ok(Category::Ml),
+        "ffi" => Ok(Category::Ffi),
+        "internal" => Ok(Category::Internal),
+        other => Err(format!("unknown stored error category {other:?}")),
+    }
+}
+
+fn parse_severity(value: &str) -> std::result::Result<Severity, String> {
+    match value {
+        "warning" => Ok(Severity::Warning),
+        "error" => Ok(Severity::Error),
+        "fatal" => Ok(Severity::Fatal),
+        other => Err(format!("unknown stored error severity {other:?}")),
+    }
+}
+
+fn from_json_for_row<T: DeserializeOwned>(text: &str, column: usize) -> rusqlite::Result<T> {
+    serde_json::from_str(text).map_err(|error| {
+        rusqlite::Error::FromSqlConversionFailure(
+            column,
+            rusqlite::types::Type::Text,
+            Box::new(error),
+        )
+    })
 }
 
 #[cfg(test)]
@@ -486,5 +546,7 @@ mod tests {
         assert_eq!(recent.len(), 2);
         assert_eq!(recent[0].message, "second");
         assert_eq!(recent[0].code, codes::TIMELINE_IMPLAUSIBLE_TIMESTAMP);
+        assert_eq!(recent[0].category, Category::Timeline);
+        assert_eq!(recent[0].severity, Severity::Error);
     }
 }

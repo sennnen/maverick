@@ -125,7 +125,7 @@ impl AnalyticsSnapshot {
     }
 }
 
-fn fnv1a_64(bytes: &[u8]) -> String {
+pub(crate) fn fnv1a_64(bytes: &[u8]) -> String {
     let mut hash = 0xcbf2_9ce4_8422_2325u64;
     for &byte in bytes {
         hash ^= u64::from(byte);

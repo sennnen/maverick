@@ -9,6 +9,7 @@
 pub mod acquisition;
 pub mod historical;
 pub mod pipeline;
+pub mod runtime;
 pub mod snapshot;
 
 pub use acquisition::{Acquisition, Command, Event, HandshakeConfig, State, StepOutcome};
@@ -19,6 +20,10 @@ pub use historical::{
 pub use pipeline::{
     run_realtime, run_realtime_json, run_realtime_output, run_realtime_output_json, Capture,
     IngestStats, PipelineOutput, RealtimeProcessor,
+};
+pub use runtime::{
+    ConnectionState, ConnectorRegistration, HostConnection, HostError, HostRuntime, HostSnapshot,
+    HostSnapshotResult, RuntimeConfig, TransportAction, HOST_SNAPSHOT_SCHEMA,
 };
 pub use snapshot::{AnalyticsSnapshot, Snapshot, ANALYTICS_SNAPSHOT_SCHEMA, SNAPSHOT_SCHEMA};
 

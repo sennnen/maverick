@@ -47,6 +47,7 @@ fails the build.
 | 1003 | TRANSPORT_UNEXPECTED_BYTES | data bytes arrived in a connection state that does not expect them |
 | 1004 | TRANSPORT_HISTORICAL_PROTOCOL | historical control events arrived in an unsafe or impossible order |
 | 1005 | TRANSPORT_COMMAND_REJECTED | a matched device command response carried a non-success result |
+| 1006 | TRANSPORT_NATIVE_FAILURE | the native BLE stack reported that a requested transport operation failed |
 | 2001 | FRAME_HEADER_CRC_MISMATCH | a frame header failed its CRC-8 (gen4) or CRC-16 (gen5) check |
 | 2002 | FRAME_PAYLOAD_CRC_MISMATCH | a frame payload failed its trailing CRC-32 check |
 | 2003 | FRAME_TRUNCATED | a declared frame length is shorter than its own CRC-32 field |
@@ -63,6 +64,10 @@ fails the build.
 | 5003 | STORAGE_NEWER_SCHEMA | the database schema version is newer than the code understands |
 | 5004 | STORAGE_QUERY | a storage read or write failed |
 | 5005 | STORAGE_SERIALIZE | a value could not be serialised for storage or read back |
+| 9001 | FFI_RUNTIME_STATE | a host-runtime operation was called in a state where it is not valid |
+| 9002 | FFI_ACTION_QUEUE_FULL | a host-runtime transport action could not be queued without exceeding the fixed capacity |
+| 9003 | FFI_CONNECTOR_NOT_FOUND | a host-runtime operation named a connector that is not registered |
+| 9004 | FFI_CONNECTOR_DOWNGRADE | connector registration attempted to replace an installed version with an older one |
 | 10000 | INTERNAL_INVARIANT | a state the code treats as impossible was reached |
 
 Library code does not panic. `unwrap`, `expect`, and `panic!` are denied by the clippy

@@ -103,7 +103,10 @@ stateful object; it does not replay a growing JSON capture on every notification
 **Exit:** one in-memory host-runtime test drives bytes to read model, plus one SQLite-backed restart
 test proves state survives process death.
 
-**Status: pending.**
+**Status: partial.** The engine-side runtime is real: persistent SQLite, versioned connector
+registration, bounded scan/connect/subscribe actions, incremental notification processing, durable
+rejection journalling, restart survival, canonical `host-snapshot/v1`, and exact queue/state errors.
+The UniFFI object and generated-binding assertions remain before this packet is done.
 
 ---
 
