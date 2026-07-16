@@ -10,3 +10,4 @@
 - [ADR-008](ADR-008.md) — Provenance by metadata reference
 - [ADR-009](ADR-009.md) — Algorithms admitted only with a golden fixture or published reference
 - [ADR-010](ADR-010.md) — UniFFI for the bindings
+- [ADR-011](ADR-011.md) — Connectors are a separate importable package, not bundled in the app

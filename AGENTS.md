@@ -42,8 +42,8 @@ maverick/
     mav-ffi               the uniffi facade the apps bind to
     mav-replay            runs a capture file through the whole pipeline; our stand-in for hardware
   connectors/
-    whoop4, whoop5        a manifest.json each, plus a codec crate only where logic needs one
-    mock                  a deliberately odd fake device that keeps the abstraction honest
+    mock                  a fake device that keeps the abstraction honest; real ones live in
+                          the separate sennnen/maverick-connectors repo (see ADR-011)
   fixtures/               golden fixtures, versioned; see fixtures/README for the naming rules
   apps/ios, apps/android  thin binding shells; the real app work is a later milestone
   tools/                  check_docs.sh and check_deps.py, the mechanical gates

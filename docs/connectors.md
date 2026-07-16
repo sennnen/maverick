@@ -123,3 +123,25 @@ purpose so that the manifest-plus-codec contract has to prove itself before real
 devices arrive and it is too late to change cheaply. When the mock survives the pipeline with no
 core edits, that is evidence the contract holds; when it cannot, that is a design bug to fix in the
 contract, before it becomes ten device-specific branches inside the decoder.
+
+## Where connectors live
+
+Device connectors are not part of this repository and are not bundled in the app. They live in their
+own repository, `sennnen/maverick-connectors`, and are imported rather than built in, for the reasons
+in [ADR-011](adr/ADR-011.md). The app reads connector manifests from that repository or a local copy
+of it; the core does not depend on it. The dependency runs one way only: a connector is validated
+against the `mav-codec` schema in this repository, and `mav-codec` never learns about any specific
+device, which is the boxed-in boundary from [ADR-007](adr/ADR-007.md) expressed as a repository
+split.
+
+Two things stay in this repository. The mock connector under `connectors/` is a fixture for testing
+the abstraction, not a distributable device, so it lives with the code it tests. And a device
+manifest that one of the core's own tests needs is constructed inline in the test rather than pulled
+from the connectors repository, so the core stays self-contained. Developing a real vertical slice
+against a WHOOP capture needs the connectors repository checked out alongside this one.
+
+The single connector the app itself may carry is a generic Bluetooth heart-rate connector for the
+standard GATT profile (`0x180D` / `0x2A37`). That profile is an open standard, not a device family,
+so a zero-configuration fallback for it can live in the app without making the app a home for
+device-specific code. Everything that decodes a proprietary format is a connector and belongs in the
+connectors repository.

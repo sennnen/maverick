@@ -97,9 +97,8 @@ maverick/
       mav-ffi/         the UniFFI facade both apps link
       mav-replay/      binary: run a capture file through the pipeline, for hardware-free dev
   connectors/
-    whoop4/manifest.json   plus a codec crate when logic requires it
-    whoop5/manifest.json
-    mock/manifest.json     the fake device used to prove the abstraction
+    mock/manifest.json     the fake device used to prove the abstraction; the real device
+                           connectors live in the separate maverick-connectors repo (ADR-011)
   fixtures/            golden fixtures, versioned; README explains naming and the rules
   apps/
     ios/README.md      binding shell; the real app is a later milestone
