@@ -17,12 +17,12 @@ uniffi::setup_scaffolding!();
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum FfiError {
-    #[error("MAV-{code} [{category}/{severity}] {message}")]
+    #[error("MAV-{code} [{category}/{severity}] {safe_message}")]
     Core {
         code: u16,
         category: String,
         severity: String,
-        message: String,
+        safe_message: String,
         context: Vec<String>,
     },
 }
@@ -33,7 +33,7 @@ impl From<MavError> for FfiError {
             code: error.code,
             category: format!("{:?}", error.category).to_lowercase(),
             severity: format!("{:?}", error.severity).to_lowercase(),
-            message: error.message,
+            safe_message: error.message,
             context: error.context,
         }
     }
@@ -376,12 +376,12 @@ mod tests {
         let FfiError::Core {
             code,
             category,
-            message,
+            safe_message,
             ..
         } = err;
         assert_eq!(code, mav_model::error::codes::DECODE_LAYOUT_INVALID);
         assert_eq!(category, "decode");
-        assert_eq!(message, "manifest does not parse");
+        assert_eq!(safe_message, "manifest does not parse");
     }
 
     #[test]
