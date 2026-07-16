@@ -247,8 +247,12 @@ agreed phone sizes.
 
 **Exit:** both apps show the cleaned Aura shell and compile without any NOOP domain package.
 
-**Status: in progress.** Both apps have the cleaned four-hub Aura shell, settings sheet, horizontal
-switching, and honest unavailable states. Visual regression fixtures still need a CI simulator lane.
+**Status: in progress.** Superseding the earlier "rewrite entangled components" guidance, the owner
+directed a verbatim adoption: both apps now carry the NOOP Aura UI files copied file-for-file
+(package renames/imports only), with Mav-owned adapter stores exposing NOOP's member surface over
+`host-snapshot/v1` and same-name stand-ins for destinations whose subsystems live in future core
+lanes. Hubs, settings sheet, horizontal switching, and honest unavailable states are in. Visual
+regression fixtures still need a CI simulator lane.
 
 ---
 

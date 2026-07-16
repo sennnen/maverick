@@ -7,11 +7,15 @@ analytics logic. Its implementation sequence is defined in the
 The exact runtime, event, action, snapshot, threading, and compatibility rules are in
 [the platform contract](../../docs/platform.md).
 
-The UI specification is the current Aura Android shell from the prior NOOP workspace: Today,
-Recovery, Strain, and Sleep hubs, platform-appropriate bottom navigation, and one app-wide settings
-sheet. We will copy or rewrite only presentation code that fits this boundary. NOOP's
-`AppViewModel`, Room repositories, WHOOP BLE client, analytics, onboarding, Health Connect, ML
-assets, services, widgets, and notification machinery are not app dependencies here.
+The UI is the NOOP Aura compose UI, copied file-for-file into `ui/aura/` (package rename only):
+Today, Recovery, Strain, and Sleep hubs, the Material bottom navigation, one app-wide settings
+sheet, and the trends/reports/metric-detail/workout-detail/timer surfaces. A Mav-owned
+`AppViewModel` adapter exposes NOOP's member surface over the core's `host-snapshot/v1`; day
+history, workouts, and ML signals stay empty until the core serves them, and the routed legacy
+destinations (live console, devices, coach, journal, …) are same-signature Mav stand-ins so
+`AuraRoot.kt` stays byte-identical to its source. NOOP's actual data engine—its Room repositories,
+WHOOP BLE client, importers, ML assets, services, widgets, and notification machinery—is still not
+an app dependency.
 
 ## Build and test
 
@@ -22,9 +26,9 @@ Use JDK 17 and set `ANDROID_HOME` or `ANDROID_SDK_ROOT`, then run:
 Gradle builds the Rust package first, compiles the generated Kotlin binding, runs the strict host
 snapshot decoder tests, and emits `app/build/outputs/apk/debug/app-debug.apk`. The APK contains only
 the shipped arm64-v8a and x86_64 libraries. The same gate builds the minified release variant through
-R8; signing is reserved for the release-candidate workflow. The current launch surface is
-deliberately diagnostic: it proves the database, stateful runtime, generated binding, canonical
-snapshot decoder, and APK packaging before Aura presentation code lands.
+R8; signing is reserved for the release-candidate workflow. The launch surface is the Aura shell;
+the strict snapshot-decoder tests and the ported NOOP helper tests (logical day, widget anchor,
+stage segments, zone parsing) run in the same gate.
 
 ## Building the core for Android
 
