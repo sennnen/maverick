@@ -23,7 +23,7 @@ Maverick analytics are admitted.
 
 ## Building the core for iOS
 
-Install full Xcode, select it with `xcode-select`, install XcodeGen (`brew install xcodegen`), then
+Install Xcode 26 or later, select it with `xcode-select`, install XcodeGen (`brew install xcodegen`), then
 run:
 
     bash tools/platform/build_ios.sh
@@ -44,5 +44,5 @@ Run the complete, reproducible app build from the repository root:
     bash tools/platform/build_ios_app.sh
 
 It first rebuilds the ignored core package, then generates `Maverick.xcodeproj` from `project.yml`
-and runs the iPhone 16 Pro simulator unit tests. The project itself is committed; run XcodeGen again
+and runs the first available iPhone simulator's unit tests. The project itself is committed; run XcodeGen again
 after changing the project specification.

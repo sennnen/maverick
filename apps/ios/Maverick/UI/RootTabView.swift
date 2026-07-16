@@ -172,11 +172,7 @@ private struct AuraTabBar: View {
 
 private extension View {
     @ViewBuilder func liquidGlass(in shape: some Shape) -> some View {
-        if #available(iOS 26.0, *) {
-            self.glassEffect(.regular, in: shape)
-        } else {
-            self.background(.ultraThinMaterial, in: shape)
-        }
+        self.glassEffect(.regular, in: shape)
     }
 }
 #endif

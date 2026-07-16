@@ -2,7 +2,7 @@ name: Maverick
 options:
   bundleIdPrefix: com.sennnen
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "26.0"
   createIntermediateGroups: true
   developmentLanguage: en
 settings:
@@ -25,7 +25,7 @@ targets:
   Maverick:
     type: application
     platform: iOS
-    deploymentTarget: "17.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Maverick
       - path: build/mav-core/Sources
@@ -55,7 +55,7 @@ targets:
   MaverickTests:
     type: bundle.unit-test
     platform: iOS
-    deploymentTarget: "17.0"
+    deploymentTarget: "26.0"
     sources:
       - path: MaverickTests
     dependencies:
