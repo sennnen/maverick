@@ -4,12 +4,14 @@
 //! which is the strongest evidence we can hold without hardware.
 
 use crate::crc::{crc16_modbus, crc32, crc8};
+use crate::spec::FrameSpec;
 use mav_model::error::{codes, MavError, Result};
 
 pub const START_OF_FRAME: u8 = 0xAA;
 
 /// gen4 is the WHOOP 4.0 wire (4-byte header, CRC-8 header check); gen5 is the WHOOP 5.0 and MG
-/// wire (8-byte header, CRC-16 header check, payload padded to a 4-byte boundary).
+/// wire (8-byte header, CRC-16 header check, payload padded to a 4-byte boundary). The pair are
+/// named presets over the general [`FrameSpec`]; a connector can supply a third format as data.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum WireFormat {
     Gen4,
@@ -21,6 +23,14 @@ impl WireFormat {
         match self {
             WireFormat::Gen4 => 4,
             WireFormat::Gen5 => 8,
+        }
+    }
+
+    /// The data-driven description of this format, used by the reassembler.
+    pub const fn spec(self) -> FrameSpec {
+        match self {
+            WireFormat::Gen4 => FrameSpec::gen4(),
+            WireFormat::Gen5 => FrameSpec::gen5(),
         }
     }
 }

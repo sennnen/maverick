@@ -2,8 +2,8 @@
 //! back into validated frames. Nothing is dropped silently; garbage and CRC failures come back as
 //! events so the caller can log them with their error codes.
 
-use crate::crc::{crc16_modbus, crc32, crc8};
-use crate::frame::{RawFrame, WireFormat, START_OF_FRAME};
+use crate::frame::{RawFrame, WireFormat};
+use crate::spec::FrameSpec;
 use mav_model::error::{codes, MavError};
 
 const DEFAULT_MAX_FRAME_BYTES: usize = 8192;
@@ -15,25 +15,36 @@ pub enum ReassemblyEvent {
     /// Bytes discarded while scanning for a start-of-frame marker.
     SkippedGarbage { bytes: usize },
     /// A start-of-frame that failed validation. One byte was consumed and scanning resumed, so a
-    /// real frame that happened to contain 0xAA in its body is still recovered.
+    /// real frame that happened to contain the start byte in its body is still recovered.
     InvalidFrame(MavError),
 }
 
 pub struct Reassembler {
-    format: WireFormat,
+    spec: FrameSpec,
     max_frame_bytes: usize,
     buf: Vec<u8>,
     pos: usize,
 }
 
 impl Reassembler {
+    /// Reassemble one of the WHOOP wire formats.
     pub fn new(format: WireFormat) -> Self {
-        Self::with_max_frame_bytes(format, DEFAULT_MAX_FRAME_BYTES)
+        Self::with_spec(format.spec())
+    }
+
+    /// Reassemble any frame format described by a `FrameSpec`. This is the path a connector with a
+    /// non-WHOOP framing uses (ADR-012).
+    pub fn with_spec(spec: FrameSpec) -> Self {
+        Self::with_spec_and_max(spec, DEFAULT_MAX_FRAME_BYTES)
     }
 
     pub fn with_max_frame_bytes(format: WireFormat, max_frame_bytes: usize) -> Self {
+        Self::with_spec_and_max(format.spec(), max_frame_bytes)
+    }
+
+    pub fn with_spec_and_max(spec: FrameSpec, max_frame_bytes: usize) -> Self {
         Self {
-            format,
+            spec,
             max_frame_bytes,
             buf: Vec::new(),
             pos: 0,
@@ -63,7 +74,7 @@ impl Reassembler {
         loop {
             let skipped = self.buf[self.pos..]
                 .iter()
-                .take_while(|&&b| b != START_OF_FRAME)
+                .take_while(|&&b| b != self.spec.sof)
                 .count();
             if skipped > 0 {
                 self.pos += skipped;
@@ -71,24 +82,14 @@ impl Reassembler {
             }
 
             let avail = self.buf.len() - self.pos;
-            if avail < self.format.header_len() {
+            if avail < self.spec.header_len {
                 break;
             }
 
             let head = &self.buf[self.pos..];
-            let (declared, header_ok) = match self.format {
-                WireFormat::Gen4 => {
-                    let declared = u16::from_le_bytes([head[1], head[2]]);
-                    (declared, crc8(&head[1..3]) == head[3])
-                }
-                WireFormat::Gen5 => {
-                    let declared = u16::from_le_bytes([head[2], head[3]]);
-                    let stored = u16::from_le_bytes([head[6], head[7]]);
-                    (declared, crc16_modbus(&head[0..6]) == stored)
-                }
-            };
+            let declared = self.spec.read_declared(head);
 
-            if !header_ok {
+            if !self.spec.header_crc_ok(head) {
                 events.push(ReassemblyEvent::InvalidFrame(
                     MavError::new(codes::FRAME_HEADER_CRC_MISMATCH, "header crc mismatch")
                         .context(format!("declared_len {declared}")),
@@ -97,11 +98,11 @@ impl Reassembler {
                 continue;
             }
 
-            if usize::from(declared) < 4 {
+            if declared < self.spec.min_declared() {
                 events.push(ReassemblyEvent::InvalidFrame(
                     MavError::new(
                         codes::FRAME_TRUNCATED,
-                        "declared length shorter than its crc32",
+                        "declared length leaves no room for payload",
                     )
                     .context(format!("declared_len {declared}")),
                 ));
@@ -109,7 +110,7 @@ impl Reassembler {
                 continue;
             }
 
-            let total = self.format.header_len() + usize::from(declared);
+            let total = self.spec.total_len(declared);
             if total > self.max_frame_bytes {
                 events.push(ReassemblyEvent::InvalidFrame(
                     MavError::new(codes::FRAME_OVERSIZED, "frame exceeds maximum size")
@@ -124,24 +125,19 @@ impl Reassembler {
             }
 
             let frame = &self.buf[self.pos..self.pos + total];
-            let payload = &frame[self.format.header_len()..total - 4];
-            let stored = u32::from_le_bytes([
-                frame[total - 4],
-                frame[total - 3],
-                frame[total - 2],
-                frame[total - 1],
-            ]);
-            if crc32(payload) != stored {
+            if !self.spec.trailer_ok(frame, total) {
+                let (start, end) = self.spec.payload_range(total);
                 events.push(ReassemblyEvent::InvalidFrame(
-                    MavError::new(codes::FRAME_PAYLOAD_CRC_MISMATCH, "payload crc32 mismatch")
-                        .context(format!("payload_len {}", payload.len())),
+                    MavError::new(codes::FRAME_PAYLOAD_CRC_MISMATCH, "payload crc mismatch")
+                        .context(format!("payload_len {}", end - start)),
                 ));
                 self.pos += 1;
                 continue;
             }
 
+            let (start, end) = self.spec.payload_range(total);
             events.push(ReassemblyEvent::Frame(RawFrame {
-                payload: payload.to_vec(),
+                payload: frame[start..end].to_vec(),
             }));
             self.pos += total;
         }
@@ -241,8 +237,9 @@ mod tests {
 
     #[test]
     fn oversized_declared_length_is_rejected_not_awaited() {
+        use crate::crc::crc8;
         let mut r = Reassembler::with_max_frame_bytes(WireFormat::Gen4, 64);
-        let mut header = vec![START_OF_FRAME];
+        let mut header = vec![crate::frame::START_OF_FRAME];
         let declared = 1000u16.to_le_bytes();
         header.extend_from_slice(&declared);
         header.push(crc8(&declared));
@@ -250,6 +247,50 @@ mod tests {
         assert!(matches!(
             events.first(),
             Some(ReassemblyEvent::InvalidFrame(err)) if err.code == codes::FRAME_OVERSIZED
+        ));
+    }
+
+    #[test]
+    fn a_custom_spec_reassembles_a_non_whoop_frame() {
+        use crate::crc::crc8;
+        use crate::spec::{CrcKind, Endian, FrameSpec, LengthField, Trailer};
+
+        // The mock format: 0x5A SOF, big-endian payload length, a single CRC-8 trailer, no header
+        // CRC, and the length counts the payload only.
+        let spec = FrameSpec {
+            sof: 0x5A,
+            header_len: 3,
+            length: LengthField {
+                offset: 1,
+                width: 2,
+                endian: Endian::Be,
+            },
+            length_includes_trailer: false,
+            header_crc: None,
+            trailer: Trailer {
+                kind: CrcKind::Crc8,
+                endian: Endian::Le,
+            },
+        };
+        let payload = [0x00u8, 0x01, 0x02, 0x03];
+        let mut wire = vec![0x5A];
+        wire.extend_from_slice(&(payload.len() as u16).to_be_bytes());
+        wire.extend_from_slice(&payload);
+        wire.push(crc8(&payload));
+
+        let mut r = Reassembler::with_spec(spec);
+        let events = r.push(&wire);
+        assert_eq!(frames_of(&events), vec![payload.to_vec()]);
+        assert_eq!(r.pending(), 0);
+
+        // A corrupted trailer is rejected, just like the WHOOP path.
+        let mut bad = wire.clone();
+        let last = bad.len() - 1;
+        bad[last] ^= 0xFF;
+        let events = Reassembler::with_spec(spec).push(&bad);
+        assert!(matches!(
+            events.first(),
+            Some(ReassemblyEvent::InvalidFrame(e)) if e.code == codes::FRAME_PAYLOAD_CRC_MISMATCH
         ));
     }
 
