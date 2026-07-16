@@ -12,18 +12,29 @@ still owes a hardware check.
 
 The tags:
 
-- **[XVAL]** — both surveyed codebases agree. High confidence, still verify on hardware eventually.
+- **[XVAL]** — sources agree. High confidence, still verify on hardware eventually.
 - **[ONE]** — only one codebase asserts it. Medium confidence; the source is named where it matters.
+- **[JUDES]** — from the third source's round-tripped MG capture. Strong for the gen5 wire, one unit.
+- **[SERIES]** — from the fourth source's sniffed 4.0 and decoded MG buffer. Corpus-pinned, one setup.
 - **[PROV]** — provisional, uncalibrated, or self-admittedly guessed. Treat as an approximation.
 - **[HW]** — can only be confirmed with a physical strap, which we do not have.
-- **[CONFLICT]** — the two codebases disagree. Must be resolved on hardware; do not hardcode a guess.
+- **[CONFLICT]** — the sources disagree. Must be resolved on hardware; do not hardcode a guess.
 
-The two sources are referred to below as the two surveyed codebases, one a Rust core with real
-capture fixtures, the other a Swift and Kotlin implementation, also with real fixtures and honest
-provenance comments. A standing rule for this document, learned from both of them: a protocol claim
-must cite a code location or a fixture, because prose docs drifted from code in both repos (one had
-a wrong gen5 frame layout and a UUID typo, the other referenced a manifest file that did not exist).
-`tools/check_docs.sh` fails on dead cross-references for the same reason.
+There are four sources. Two are surveyed codebases: one a Rust core with real capture fixtures,
+the other a Swift and Kotlin implementation, also with real fixtures and honest provenance comments.
+The third, tagged **[JUDES]** below, is a June 2026 writeup of cracking the 5.0 (judes.club), built
+on an HCI capture of the official app talking to a real MG and validated by round-tripping all 8,031
+captured frames byte for byte. The fourth, tagged **[SERIES]**, is a multi-part writeup that took a
+4.0 apart with a hardware sniffer (nRF52840 plus BlueZ), then moved to the MG and decoded its
+overnight buffer record by record, pinning every offset against a large stored corpus. The third and
+fourth agree with each other and with the surveyed repos on the gen5 envelope and the command bytes,
+which is about as much corroboration as reverse-engineering gets, but all of it is still someone
+else's hardware and owes the same check on ours. A standing rule for this document, learned from all
+four: a protocol claim must cite a code location or a fixture, because prose docs drifted from code
+in the surveyed repos (one had a wrong gen5 frame layout and a UUID typo, the other referenced a
+manifest file that did not exist) and the fourth source is itself a catalogue of plausible field
+labels that turned out wrong. `tools/check_docs.sh` fails on dead cross-references for the same
+reason.
 
 ## Device families
 
@@ -45,10 +56,25 @@ the 5.0 based on static analysis of the Android app, and were never confirmed on
 All of the above is [XVAL]. Of the notify characteristics, `…0004` carries events and wrist on/off,
 and `…0007` is a debug menu. [ONE, Rust repo]
 
-The straps also expose standard GATT characteristics: Heart Rate `180D / 2A37` (which works
-**unbonded** on the 4.0), Battery `180F / 2A19`, Battery Level Status `2BED`, and Device Information
-`180A`. [XVAL] Note the Battery Level Status UUID is `2BED`; one source's prose said `2BEB`, which
-is a documentation typo, and its code has `2BED`. Trust the code.
+On gen5 the notify characteristics carry, in order, command responses (`…0003`), events (`…0004`),
+fragmented data (`…0005`), and a fourth channel new in the 5.0 (`…0007`). [JUDES]
+
+The straps also expose standard GATT characteristics: Heart Rate `180D / 2A37`, Battery
+`180F / 2A19`, Battery Level Status `2BED`, and Device Information `180A`. [XVAL] Note the Battery
+Level Status UUID is `2BED`; one source's prose said `2BEB`, which is a documentation typo, and its
+code has `2BED`. Trust the code.
+
+The standard heart-rate profile is a real, shallow data source: a flags byte, then heart rate, then
+RR intervals when the flags say they are present, giving live HR and RR with no custom-service
+protocol at all. On the 4.0 it answers **unbonded**. On the 5.0 it needs the phone's OS bond like
+everything else, because the whole device sits behind authenticated pairing. [JUDES, and the 4.0
+half is XVAL] It carries no motion, no raw optical signal, and no stored history; those live behind
+the bond and the enable handshake below.
+
+Device Information reports a model string that disambiguates units the custom service cannot: a
+captured MG reported model `MG`, hardware `WS50_r03`, firmware `50.38.1.0`. [JUDES] Since the 5.0
+and the MG share a custom-service UUID and are identical at scan time, the model string read after
+connect is the clean way to tell them apart.
 
 ## Frame format
 
@@ -78,15 +104,24 @@ total  = declared_len + 4
 [0]      0xAA
 [1]      0x01              format / version
 [2..3]   declared_len  u16 LE   (= padded_payload_len + 4)
-[4..5]   0x00 0x01         reserved
+[4..5]   src, dst          routing: 0x00 0x01 phone-to-strap, 0x01 0x00 the other way
 [6..7]   CRC16/Modbus(bytes[0..=5])  LE
 [8..]    payload, zero-padded to a 4-byte boundary
 [tail]   CRC32(padded payload)  u32 LE
 total  = declared_len + 8
 ```
 
-Both layouts are [XVAL]. The proof both codebases cite is a static gen5 hello frame,
-`aa0108000001e67123019101363e5c8d`, which decodes exactly under the 8-byte layout.
+Both layouts are [XVAL], and the gen5 envelope is now the best-attested fact in this document:
+the third source round-tripped all 8,031 frames of its capture through exactly this layout, encode
+equalling decode for every one. The two bytes at `[4..5]` are a source and destination pair rather
+than a fixed constant, `0x00 0x01` on the way to the strap and `0x01 0x00` on the way back; because
+the header CRC-16 covers them, a reassembler that validates the CRC over the received bytes handles
+both directions without special-casing. The strap does not itself validate the header CRC-16 (the
+third source found arbitrary values at `[6..7]` accepted for outbound commands), but we compute and
+check it anyway, because it is the only integrity check on the header and it costs nothing. [JUDES,
+and the src/dst routing is [ONE] from the fourth source]. The proof all sources cite is the static
+gen5 hello frame `aa0108000001e67123019101363e5c8d`, which decodes exactly under the 8-byte layout
+and which `mav-frame` reproduces byte for byte in `fixtures/frame/gen5_hello_v1.json`.
 
 ### Reassembly
 
@@ -125,6 +160,14 @@ The packet types, all [XVAL]:
 
 An unknown packet-type byte becomes `Unknown(u8)` and is logged; it never panics. [XVAL]
 
+The command and response types are `0x23` (35, COMMAND) and `0x24` (36, COMMAND_RESPONSE), confirmed
+directly from sniffed wire bytes on both a 4.0 and an MG. [SERIES, and XVAL with the surveyed repos]
+Older community documentation listed these as `0x72` and `0x73`; that was never an on-wire value,
+just a red herring carried forward through several write-ups, and it produced complete silence for
+anyone who trusted it. This is the clearest warning in the whole document about trusting a number
+because it is written down: the only way anyone found the real bytes was to watch the official app
+put them on the wire.
+
 ## Commands (opcodes)
 
 The subset both codebases agree on is high confidence: [XVAL]
@@ -148,9 +191,26 @@ fuller key-exchange chain of 117 (start), 118 (send next), and 120 (set). R22 is
 capability (packet `0x10`), gated by capability rather than by any one opcode. [ONE each, and the
 two accounts are consistent with one another]
 
-There is one outright disagreement. Entering and exiting high-frequency historical sync is opcodes
-85 / 86 in the Rust repo and 96 / 97 in the Swift/Kotlin repo. [CONFLICT] This must be resolved on
-hardware; do not hardcode either guess without a fixture that proves it.
+There is one outright disagreement on high-frequency sync. Entering and exiting it is opcodes 85 / 86
+in the Rust repo and 96 / 97 in the Swift/Kotlin repo. [CONFLICT] This must be resolved on hardware;
+do not hardcode either guess without a fixture that proves it.
+
+There is a second disagreement, on the hello opcode, and it splits by generation. The fourth source
+sniffed a 4.0 sending its hello as command `0x23` (35), which it calls `GET_HELLO_HARVARD`, and an
+MG sending `0x91` (145), which is the plain `GET_HELLO`; it is explicit that the newer straps moved
+the hello to its own opcode. [SERIES] The surveyed repos used 145 for both generations. All sources
+agree the gen5 hello is 145; the gen4 hello is the conflict. [CONFLICT on gen4] Because the fourth
+source is a direct wire capture (`aa 10 00 57 23 04 23 …`, where the inner `23 04 23` is type 0x23,
+sequence, command 0x23), the `whoop4` manifest uses 35 and records the conflict; a fixture from our
+own 4.0 settles it.
+
+More historical-sync commands are now confirmed from sniffed traffic. [SERIES] `0x16` (22) requests
+history and `0x17` (23) acknowledges a burst and advances the strap's read pointer without deleting
+anything. `HISTORY_COMPLETE` is a metadata packet (type 49) with command 3, emitted only by the
+strap; a client cannot ask for it. And `0x19` (25), `FORCE_TRIM`, is the one that deletes the buffer
+up to the write head, irreversibly. The safe-trim invariant below is not optional discipline: the
+fourth source lost five hours of recording to a daemon that trimmed on an error path before
+`HISTORY_COMPLETE` had arrived.
 
 ### No transport encryption
 
@@ -229,6 +289,50 @@ Each of these is asserted by one codebase, at medium confidence. [ONE each]
   is outside a physiological range. The device data is the arbiter; do not store garbage. [ONE,
   Swift/Kotlin repo]
 
+### The MG buffer codec (R20: K=18 and K=26)
+
+The MG does not store Harvard's 93-byte V24 records. It stores R20 records in two inner subtypes,
+and the fourth source pinned their layouts against a corpus of nearly two million records. [SERIES]
+These are historical-buffer records (packet type 47), not realtime, so they belong to Milestone 5;
+they are documented here so the work starts from a map rather than a wall.
+
+Both subtypes open with a common ten-byte body header: a `u32` LE counter at `body[0:4]` that
+increments once per record and resets on reboot, a `u32` LE unix timestamp at `body[4:8]`, and a
+`u16` LE session marker at `body[8:10]`.
+
+**K=18, the per-second metrics record (109 bytes).** Heart rate is a single `u8` bpm at `body[11]`,
+zero when the strap has no optical lock, so the same byte doubles as a validity flag. A secondary HR
+sits at `body[26]` and tracks the primary at correlation +0.94. Skin temperature is an `i16` LE at
+`body[62:64]` scaled by 0.01 to give degrees Celsius, traceable to the strap's ams AS6221 sensor.
+Motion lives at `body[104]`, and its polarity is **inverted** relative to Harvard: high means still,
+low means movement, so a Harvard rest gate ported straight across gates on the wrong records. A
+packed state byte at `body[70]` carries an on-wire sleep state in bits 5–4, decoding to `{0 STILL,
+1 WAKE, 2 SLEEP, 3 UP}` (the STILL/SLEEP split is decisive in the data; WAKE versus UP cannot be
+told apart from passive captures, so treat that half as [PROV]). SpO2 is a single tri-mode byte at
+`body[71]`: real percentages in one range, saturation sentinels with bit 7 set, and low-value
+diagnostic codes, so a naive mask reads a `0x08` diagnostic code as "8 %". A block of internal AGC
+and quality channels sits at `body[29:45]`, and three of its channels at `body[33:45]` are `f32`
+**big-endian**, not little; read little-endian they are noise. `body[96]` looks like a second heart
+rate and is not, it is an AGC readback whose correlation with real HR is about zero. All of the
+`body[96]`, byte-order, and SpO2-sentinel corrections were caught only by checking a candidate label
+against a known-good value across the whole corpus, which is the discipline this document keeps
+preaching. [SERIES, HIGH confidence on HR/motion/skin-temp/sleep-state, [PROV] on the rest]
+
+**K=26, the raw-PPG burst (73 bytes).** After the ten-byte header and a two-byte per-burst index at
+`body[10:12]`, `body[16:64]` holds 24 `i16` LE photodiode samples, one record per second, giving a
+24 Hz wire rate confirmed across 2,332 bursts (sample count equalled duration in seconds times 24,
+with no exceptions). 24 Hz is coarse for PPG: a 41.7 ms sample period quantises beat timing to about
+±21 ms, which alone floors RMSSD around 30 ms even with flawless peak detection. That floor is a
+constraint to design around, not a bug to fix. [SERIES]
+
+**The off-by-eleven trap.** Each MG record arrives inside an 8-byte frame header plus a 3-byte inner
+prefix (type, sequence, subtype) before the body, so a position measured from the frame start is 11
+bytes ahead of the same position measured from the body start. An early field map placed SpO2 at
+frame offset `0x52` and landed on a skin-temperature byte; `0x52 − 11 = body[71]` is the real SpO2
+byte. Every offset above is body-relative. Maverick already counts from the inner payload rather
+than the frame (the `mav-codec` field layouts are offsets into `payload`, where `payload[0]` is the
+packet type), so the manifest offset for `body[N]` is `N + 3`.
+
 ## Unit conversions
 
 - **HR:** whole bpm as a `u8`, except R22 (milli-bpm / 10) and gen5's 8.8 fixed-point (`/ 256`).
@@ -260,9 +364,15 @@ On gen4 there is no agreement on the absolute scale.
 - The Swift/Kotlin repo uses a learned per-device affine fit: `°C = 33.0 + (raw - anchorRaw) * 0.05`,
   where `anchorRaw` defaults to 826 but is learned from the worn-band median for that specific
   device. [ONE]
+- The fourth source reads the same field (at `body[65:66]` of the 93-byte V24 record) as `raw * 0.04`,
+  which lands around 31–36 °C on the bicep, and warns that a nearby offset (`body[69:70]`) is LED
+  drive current, not temperature, so it tracks perfusion and impersonates a temperature signal. That
+  mislabel is exactly the sort of plausible-but-wrong reading this document keeps flagging. [SERIES]
 
-Both repos say explicitly that the gen4 absolute skin temperature is provisional, and that only the
-deviation from the device's own baseline is defensible. [PROV / CONFLICT]
+The three slopes (0.033, 0.05, 0.04 °C per count) are close enough to agree that the field is skin
+temperature and far enough apart that the absolute value is not settled. All sources say the gen4
+absolute figure is provisional and only deviation from the device's own baseline is defensible.
+[PROV / CONFLICT]
 
 The design consequence for Maverick is set out in [../connectors.md](../connectors.md), and it is
 worth restating here because it drives a piece of the architecture. Skin temperature is modelled as
@@ -281,6 +391,42 @@ in Maverick are not purely declarative.
   the offload path is what actually yields data. [ONE, Swift/Kotlin repo]
 - **PPG:** gen5 v26 gives 24 Hz; gen4 raw optical is roughly 437 Hz on a single green channel as
   `s24` LE. [ONE each]
+
+### There is no live optical stream on the gen5 straps
+
+This is the finding that shapes the whole gen5 strategy. On the MG (and the 5.0, which shares its
+firmware) there is no live raw-optical feed to subscribe to. The command that should start one,
+`ENABLE_OPTICAL_DATA` = `0x6B` (107), is present in the app but not implemented in the strap: it is
+neither refused nor acknowledged, it is silently discarded, and two independent investigations
+reached that conclusion separately. [JUDES and SERIES agree] The realtime commands that do respond,
+`0x3F` (63, `SEND_R10_R11_REALTIME`) on gen5 and `0x6A` (106, `TOGGLE_IMU_MODE`) on gen4, stream
+six-axis inertial data plus a single HR byte, not optical. [SERIES]
+
+The consequence is that every gen5 signal, heart rate, HRV, SpO2, skin temperature, sleep state, and
+the raw PPG, comes out of the historical sync buffer or not at all. The same `0x2F` (47) replay
+mechanism that carries backfill on the 4.0 is the carrier for the MG's per-second and burst records
+too; there is no separate realtime channel behind them. For Maverick this means the gen5 realtime
+path in the M1 manifest (packet 40) is really the standard heart-rate profile plus buffered replay,
+and that the historical pipeline (Milestone 5) is not a nice-to-have for the gen5 straps, it is the
+only way in.
+
+### ECG on the MG
+
+The MG is the medical-grade variant, and it adds a single-lead ECG and a dedicated skin-temperature
+sensor on top of the optical front-end. Its firmware is byte-identical to the 5.0's; the product
+difference is selected in software through config keys, so the ECG and skin-temperature paths are
+the only MG-only behaviour at the BLE level. [SERIES] The hardware behind the bytes, worth knowing
+because every decoded field traces to one of these: an Ambiq Apollo4 Blue MCU, a Maxim MAX86176
+optical front-end, a TDK ICM45686 six-axis IMU, and an ams AS6221 skin-temperature sensor. [SERIES]
+
+None of the four sources has decoded the ECG. Every available writeup that reaches the MG buffer
+maps the optical metrics (K=18) and the raw PPG burst (K=26) and stops there; the ECG waveform is
+not in any mapped record, and no source has found the command or the record type that carries it.
+So the honest state is: **the MG has ECG hardware, and reading it over Bluetooth is unsolved as far
+as we know.** It is very likely gated behind a config key like the rest of the MG-only paths, and
+finding it will need our own MG, an on-wrist ECG session captured while the official app records one,
+and the same labelled-capture, corpus-pinning method the fourth source used on the optical records.
+This is an `[HW]` item on the hardware checklist, not something to design a decoder for now.
 
 ## Historical sync and backfill
 
@@ -335,9 +481,22 @@ invariant test in `mav-timeline`, described in [../pipeline.md](../pipeline.md).
 ## The hardware checklist
 
 When the straps arrive, this document becomes a checklist. Every [CONFLICT] is resolved against a
-live capture (the high-frequency-sync opcodes first). Every [PROV] value is calibrated or confirmed
-(the gen4 skin-temp scale, the SpO2 constants, the resp scale, the guessed gen5 v18 offsets). Every
-[HW] assumption is checked (MG capability parity with the 5.0). Every [XVAL] fact is spot-checked,
-because agreement between two reverse-engineered codebases is a strong prior, not a measurement.
-Fixtures are regenerated from real captures, and the tags in this file flip to hardware-verified as
-each item is confirmed.
+live capture: the high-frequency-sync opcodes, and the gen4 hello opcode (35 versus 145). Every
+[PROV] value is calibrated or confirmed: the gen4 skin-temp scale (now three candidate slopes), the
+SpO2 constants and the MG's tri-mode SpO2 byte, the resp scale, the guessed gen5 v18 offsets, and
+the WAKE-versus-UP half of the MG sleep-state enum. Every [HW] assumption is checked, MG capability
+parity with the 5.0 among them.
+
+Two items on this list need a specific capture rather than a spot-check. **The MG ECG** is unsolved
+in every source; finding it needs an on-wrist ECG session recorded while the official app captures
+one, then the labelled-capture method against stored raw bytes. **The MG sleep SpO2** is the same
+shape of gap: the strap computes a 0–100 SpO2 scalar on-wrist during sleep and exports it, but every
+capture anyone has drained so far was taken awake, so the byte that carries it has not been seen
+changing. A real multi-hour sleep drain, diffed at `body[71]` (`inner[74]`) against the console SpO2
+oracle across sleep versus wake, is what pins it. Both are why the connector system is built to run
+without hardware now and absorb these facts as data later, rather than blocking on devices we do not
+yet have.
+
+Every [XVAL] fact is still spot-checked, because agreement between reverse-engineered sources is a
+strong prior, not a measurement. Fixtures are regenerated from our own captures, and the tags in
+this file flip to hardware-verified as each item is confirmed.

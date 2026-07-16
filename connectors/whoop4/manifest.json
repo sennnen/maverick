@@ -28,12 +28,13 @@
     "max_frame_bytes": 8192
   },
   "commands": [
-    { "name": "toggle_realtime_hr", "opcode": 3, "note": "Starts the live HR/RR stream on the custom channel." },
-    { "name": "get_hello", "opcode": 145, "note": "0x91, in gen4 framing." },
-    { "name": "get_battery_level", "opcode": 26, "note": "Response is u16 deci-percent on gen4, unlike the gen5 direct percent." },
-    { "name": "get_data_range", "opcode": 34, "note": "Response carries the last-synced page sequence as LE32 at bytes 10..13." },
-    { "name": "send_historical", "opcode": 22, "note": "0x16." },
-    { "name": "historical_ack", "opcode": 23, "note": "0x17, [0x01, LE32 page_seq, page_count]." }
+    { "name": "toggle_realtime_hr", "opcode": 3, "note": "0x03. Starts the live HR/RR stream on the custom channel; realtime data comes back as packet type 0x28 (40)." },
+    { "name": "get_hello", "opcode": 35, "note": "0x23 = GET_HELLO_HARVARD, sniffed directly from a 4.0. [CONFLICT] The surveyed repos used 145 for both generations; the gen5 hello is 145, but a wire capture shows the 4.0 hello as 0x23. Settle against our own 4.0." },
+    { "name": "get_battery_level", "opcode": 26, "note": "0x1a. Response is u16 deci-percent on gen4, unlike the gen5 direct percent." },
+    { "name": "get_data_range", "opcode": 34, "note": "0x22. Response carries the last-synced page sequence as LE32 at bytes 10..13." },
+    { "name": "send_historical", "opcode": 22, "note": "0x16. Requests the historical buffer replay (packet type 0x2f)." },
+    { "name": "historical_ack", "opcode": 23, "note": "0x17. Advances the read pointer; deletes nothing. HISTORY_COMPLETE arrives as metadata (type 49) command 3." },
+    { "name": "force_trim", "opcode": 25, "note": "0x19 = FORCE_TRIM. Irreversibly deletes the buffer up to the write head. Never send until HISTORY_COMPLETE has arrived and at least one record came back; a mis-sequenced trim cost the fourth source five hours of data." }
   ],
   "packets": {
     "35": "command",
