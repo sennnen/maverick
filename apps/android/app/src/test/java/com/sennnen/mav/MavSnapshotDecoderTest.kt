@@ -16,7 +16,16 @@ class MavSnapshotDecoderTest {
                   "storage_schema":1,
                   "revision":7,
                   "connection":{"state":"disconnected","display_name":null},
-                  "session":null
+                  "session":null,
+                  "analytics":{
+                    "availability":[
+                      {
+                        "analytic":"recovery",
+                        "available":false,
+                        "reason":{"kind":"algorithm_not_admitted"}
+                      }
+                    ]
+                  }
                 }
             """.trimIndent(),
             hash = "abc",
@@ -28,6 +37,7 @@ class MavSnapshotDecoderTest {
         assertEquals("disconnected", snapshot.connectionState)
         assertNull(snapshot.deviceName)
         assertNull(snapshot.currentBpm)
+        assertEquals("Recovery model not admitted", snapshot.recoveryUnavailableReason)
         assertEquals("abc", snapshot.hash)
     }
 
