@@ -185,7 +185,7 @@ The subset both codebases agree on is high confidence: [XVAL]
 | 10 | set_clock |
 | 11 | get_clock |
 | 22 | send_historical_data |
-| 23 | historical_data_result (trim ack) |
+| 23 | historical_data_result (cursor acknowledgement; does not delete) |
 | 26 | get_battery_level |
 | 34 | get_data_range |
 | 63 | send_r10_r11_realtime (type-43 raw stream on/off) |
@@ -494,16 +494,17 @@ little-endian `u32`, so the next page is `last + 1`. Then `SEND_HISTORICAL_DATA`
 short `0x02` ack, `HISTORICAL_DATA_RESULT` (23, `[0x01, LE32 seq, page_count]`), the record stream
 and a `HISTORY_END`, then increment the sequence and repeat until `HISTORY_COMPLETE`.
 
-Metadata kinds are 1 START, 2 END (which carries the ack payload and trim cursor), and 3 COMPLETE.
+Metadata kinds are 1 START, 2 END (which carries the cursor data to acknowledge), and 3 COMPLETE.
 
-### The safe-trim invariant
+### The safe-cursor invariant
 
-The Swift/Kotlin repo's backfiller is careful in a way worth copying exactly. A chunk of history is
-forgotten from the strap only after it has been durably stored on the phone **and** the link has
-confirmed the trim. The order is: decode, persist durably, optionally enqueue the raw batch, advance
-the cursor, then acknowledge the trim. A persist failure blocks all further acknowledgements, so the
-cursor can never advance past history that was not stored, and a strap is never told to discard data
-the phone has not safely written. [ONE, Swift/Kotlin repo, and it is a strong point]
+The Swift/Kotlin repo's backfiller is careful in a way worth copying exactly. The read cursor advances
+only after the corresponding chunk has been durably stored on the phone. The order is: decode,
+persist durably, optionally enqueue the raw batch, then acknowledge the cursor. A persist failure
+blocks all further acknowledgements, so the cursor can never advance past history that was not
+stored. `HISTORICAL_DATA_RESULT` does not delete the buffered records; only the separate
+`FORCE_TRIM` command does that, and Maverick does not issue it automatically. [ONE, Swift/Kotlin
+repo, strengthened by the sniffed command distinction in SERIES]
 
 ### Clock correction and plausibility
 
