@@ -1,5 +1,5 @@
 import XCTest
-@testable import Maverick
+@testable import Mav
 
 final class MavSnapshotTests: XCTestCase {
   func testDecodesStructuredRecoveryUnavailability() throws {
