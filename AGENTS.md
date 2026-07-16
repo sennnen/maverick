@@ -19,6 +19,7 @@ maverick/
     PLAN.md               master plan: principles, milestone table, work-packet protocol
     architecture.md       crate ownership and the dependency edges allowed to exist
     pipeline.md           the stage-by-stage contracts data moves through
+    analytics.md          admitted formulas, HRV/PRV distinction, capability availability
     connectors.md         manifest schema, the DeviceCodec contract, how to add a device
     protocol/whoop.md     every known WHOOP fact, each carrying a confidence tag
     testing.md            fixture rules, property tests, parity, what counts as a real test
@@ -41,9 +42,8 @@ maverick/
     mav-engine            orchestration: triggers, task graph, caching
     mav-ffi               the uniffi facade the apps bind to
     mav-replay            runs a capture file through the whole pipeline; our stand-in for hardware
-  connectors/
-    mock                  a fake device that keeps the abstraction honest; real ones live in
-                          the separate sennnen/maverick-connectors repo (see ADR-011)
+  connectors/             development-only connector fixtures; real connectors live in the
+                          separate sennnen/maverick-connectors repo (see ADR-011)
   fixtures/               golden fixtures, versioned; see fixtures/README for the naming rules
   apps/ios, apps/android  thin binding shells; the real app work is a later milestone
   tools/                  check_docs.sh and check_deps.py, the mechanical gates
