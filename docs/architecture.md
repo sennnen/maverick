@@ -132,5 +132,5 @@ that static data cannot express, and zero edits to the core. The manifest holds 
 codec holds only the stateful or learned parts, and it is boxed in: it sees bytes, its own
 manifest, and a per-device key-value store, and it cannot touch storage, the network, analytics, or
 any other device. When that boundary holds, a new device cannot reach the parts of the system that
-would let a decode bug become a corruption bug. The mock connector in `connectors/mock` exists to
-prove the boundary holds before real second and third devices are piled onto it.
+would let a decode bug become a corruption bug. ADR-012's custom-frame tests challenge the boundary
+with a shape unlike WHOOP without creating a fake device family.

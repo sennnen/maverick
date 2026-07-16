@@ -255,7 +255,7 @@ mod tests {
         use crate::crc::crc8;
         use crate::spec::{CrcKind, Endian, FrameSpec, LengthField, Trailer};
 
-        // The mock format: 0x5A SOF, big-endian payload length, a single CRC-8 trailer, no header
+        // A custom format: 0x5A SOF, big-endian payload length, a single CRC-8 trailer, no header
         // CRC, and the length counts the payload only.
         let spec = FrameSpec {
             sof: 0x5A,

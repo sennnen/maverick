@@ -92,7 +92,7 @@ pub struct FrameSpec {
     pub header_len: usize,
     pub length: LengthField,
     /// True when the declared length counts the trailer (gen4/gen5, whose length includes the
-    /// CRC-32); false when it counts the payload only (the mock).
+    /// CRC-32); false when it counts the payload only (custom formats may do this).
     pub length_includes_trailer: bool,
     pub header_crc: Option<HeaderCrc>,
     pub trailer: Trailer,

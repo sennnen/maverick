@@ -10,7 +10,7 @@ Milestones are gated by exit criteria, not dates. The full table with scope and 
 |---|---|---|---|
 | M0 | Bedrock | Workspace, CI gates, docs system, frozen `mav-model`, complete `mav-frame`, errors and observability, UniFFI hello world | [active/M0.md](active/M0.md) |
 | M1 | First vertical slice | Realtime HR from a WHOOP capture, end to end, identical snapshot hash on both platforms | [active/M1.md](active/M1.md) |
-| M2 | Connector framing hardening | An adversarial format exposed the closed enum; ADR-012 made framing manifest data | [active/M2.md](active/M2.md) |
+| M2 | Connector framing hardening | An adversarial format exposed the closed enum; ADR-012 made framing manifest data | [completed/M2.md](completed/M2.md) |
 | M3 | RR variability and honest availability | Published time-domain variability; PPG labelled PRV; no invented Recovery score | [active/M3.md](active/M3.md) |
 | M4 | Sleep | Gravity/HR/RR/respiration features, rule-based staging first, night-summary snapshots | not yet broken into packets |
 | M5 | Historical sync | Backfill state machine, all known record versions, clock correction, plausibility gates, recompute triggers | not yet broken into packets |

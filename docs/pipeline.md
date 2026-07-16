@@ -220,9 +220,9 @@ hardcodes a device check.
 
 The consequence is that a recovery metric on a strap with no RR data shows up in the inspector as
 "unavailable: missing RR", which is a true and legible statement, rather than being absent with no
-explanation or, worse, computed from nothing. The mock device in `connectors/mock` is built without
-RR precisely so that this path is exercised: recovery must disappear cleanly when its input is not
-there.
+explanation or, worse, computed from nothing. Capability negotiation tests this directly with
+declared stream sets: no fake device family is needed to prove that missing RR makes an analytic
+unavailable.
 
 ## Hard rules
 

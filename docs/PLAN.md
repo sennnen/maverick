@@ -50,7 +50,7 @@ The Rust core with UniFFI bindings, both platforms always, is kept. Vertical-sli
 
 **5. Milestones decompose into work packets, and the packet is the unit of agent work.** The prior plan already noticed that agents degrade on broad, open-ended tasks. A work packet makes the narrow task structural rather than a matter of discipline. Each packet names the files it owns, the files it must not touch, the exact contract it implements, the failing tests it writes first, and the commands that must pass before it is done. One packet is one commit. An agent that stays inside its packet cannot collide with another agent, because their owned files do not overlap. Section 10 of this document defines the template and the protocol in full.
 
-**6. The mock second device comes early, right after the first vertical slice.** The connector abstraction — manifest plus codec — is the thing that lets us add devices without editing the core. An abstraction that has only ever seen one device has not been tested; it has been shaped to fit that one device. So immediately after the first real slice works end to end, we introduce a mock device with a deliberately different frame format and a codec that needs its own per-device state, and we require it to stream through the pipeline with no edits to the core at all. If that requires a core edit, the abstraction was wrong, and we would much rather learn that at device number two than at device number six.
+**6. Challenge abstractions early, but do not turn probes into product.** After the first vertical slice, an adversarial frame description challenged the connector boundary and exposed a closed `gen4|gen5` framing enum. ADR-012 made framing manifest data. The probe stopped there: Maverick keeps the reusable architecture and its unit tests, not a fake device family, fake captures, or fake analytics.
 
 ## Repository layout
 
@@ -96,9 +96,8 @@ maverick/
       mav-engine/      orchestration: triggers, the task graph, caching
       mav-ffi/         the UniFFI facade both apps link
       mav-replay/      binary: run a capture file through the pipeline, for hardware-free dev
-  connectors/
-    mock/manifest.json     the fake device used to prove the abstraction; the real device
-                           connectors live in the separate maverick-connectors repo (ADR-011)
+  connectors/             no proprietary connectors; real device connectors live in the
+                          separate maverick-connectors repo (ADR-011)
   fixtures/            golden fixtures, versioned; README explains naming and the rules
   apps/
     ios/README.md      binding shell; the real app is a later milestone

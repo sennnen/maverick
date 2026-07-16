@@ -116,13 +116,9 @@ The whole procedure for a new device is:
 2. If, and only if, the device needs stateful or learned logic, add a small codec crate for it.
 3. Register the manifest (and codec, if any) so the registry in `mav-codec` can find it.
 
-There is no step that edits a core crate. The `connectors/mock` device exists to keep this honest:
-it has a deliberately different frame format from WHOOP and a codec that needs per-device state, and
-it must stream through the untouched pipeline. It is the abstraction's test case, added early on
-purpose so that the manifest-plus-codec contract has to prove itself before real second and third
-devices arrive and it is too late to change cheaply. When the mock survives the pipeline with no
-core edits, that is evidence the contract holds; when it cannot, that is a design bug to fix in the
-contract, before it becomes ten device-specific branches inside the decoder.
+There is no step that edits a core crate. ADR-012 came from challenging this promise with an
+adversarial frame description: it exposed that framing was still a closed WHOOP enum, so framing
+became manifest data. The probe remains as focused unit tests, not as a fake device connector.
 
 ## Where connectors live
 
@@ -134,11 +130,9 @@ against the `mav-codec` schema in this repository, and `mav-codec` never learns 
 device, which is the boxed-in boundary from [ADR-007](adr/ADR-007.md) expressed as a repository
 split.
 
-Two things stay in this repository. The mock connector under `connectors/` is a fixture for testing
-the abstraction, not a distributable device, so it lives with the code it tests. And a device
-manifest that one of the core's own tests needs is constructed inline in the test rather than pulled
-from the connectors repository, so the core stays self-contained. Developing a real vertical slice
-against a WHOOP capture needs the connectors repository checked out alongside this one.
+Device manifests needed by core tests are constructed inline rather than pulled from the connectors
+repository, so the core stays self-contained. Developing a real vertical slice against a WHOOP
+capture needs the connectors repository checked out alongside this one.
 
 The single connector the app itself may carry is a generic Bluetooth heart-rate connector for the
 standard GATT profile (`0x180D` / `0x2A37`). That profile is an open standard, not a device family,
