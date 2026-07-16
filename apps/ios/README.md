@@ -1,8 +1,15 @@
-# iOS shell
+# iOS app
 
-The thin native layer for iOS: CoreBluetooth ownership, the UniFFI binding to the core, and
-eventually the UI that renders snapshots. Deliberately kept as small as possible; anything worth
-getting wrong belongs in `core/`.
+The native iOS application owns CoreBluetooth, Apple platform presentation, and the UniFFI binding
+to the core. It renders immutable read models and does not contain decoding, timeline, storage, or
+analytics logic. Its implementation sequence is defined in the
+[platform lane](../../docs/plans/active/platform.md).
+
+The UI specification is the current Aura iOS shell from the prior NOOP workspace: Today, Recovery,
+Strain, and Sleep hubs behind the floating glass tab bar, with one app-wide settings sheet. We will
+copy or rewrite only presentation code that fits this boundary. NOOP's `AppModel`, `Repository`,
+WHOOP packages, analytics, onboarding, widgets, HealthKit, and background machinery are not app
+dependencies here.
 
 ## Building the core for iOS
 
@@ -25,5 +32,5 @@ the app then calls `coreVersion()` and `runCapture(manifestJson:captureJson:)` d
 render availability reasons from the analytics JSON rather than reconstructing capability rules in
 Swift.
 
-The Rust surface and the bindgen step are verified in CI. Linking the framework into a simulator
-build needs Xcode and is a local step until the app milestone.
+The Rust surface and bindgen step are verified in CI. PL-P3 replaces these manual commands with the
+reproducible XCFramework build used by local development and release CI.

@@ -100,8 +100,8 @@ maverick/
                           separate maverick-connectors repo (ADR-011)
   fixtures/            golden fixtures, versioned; README explains naming and the rules
   apps/
-    ios/README.md      binding shell; the real app is a later milestone
-    android/README.md
+    ios/               native iOS app and its platform tests
+    android/           native Android app and its platform tests
   tools/
     check_docs.sh      links resolve, CLAUDE.md == AGENTS.md, every plan is indexed
     check_deps.py      crate dependency edges match architecture.md
@@ -183,12 +183,19 @@ Milestones are gated by exit criteria, not dates. A milestone is done when its e
 | M7 | Cloud connector | A manifest of kind `cloud`, an ingest adapter, the same pipeline, proving the connector abstraction covers non-BLE sources too | A cloud source streams through the same pipeline the straps use, with no core edits |
 | M8 | Hardening | Observability audit demonstrating the walk-back requirement, the error-report UX, a fixture-coverage audit, doc gardening, a dependency-edge audit, and ADR backfill | Walk-back is demonstrated end to end, coverage gaps are closed or documented, and the docs match the code |
 
-Alongside the numbered milestones there is a standing checklist that is not a milestone because it has no fixed place in the sequence: the hardware epoch. When the straps arrive, every fact currently marked as code-inferred gets verified or corrected against live captures, its ledger tag flips from code-inferred to hardware-verified, and the fixtures that were built from surveyed captures are regenerated from our own real captures. This lives as a running checklist in `docs/protocol/whoop.md`. It is written down now, before the hardware exists, so that the day a strap goes on a wrist the work is a list to tick through rather than a question of where to even start.
+Two standing lanes sit beside the numbered milestones because neither belongs at one point in the
+data sequence. The [platform lane](plans/active/platform.md) packages the core, migrates the existing
+Aura product shell without its old internals, plumbs admitted values into it, adds connector import,
+and produces signed release candidates. It starts as soon as the first read model exists; later
+milestones turn unavailable cards into real ones through the same contract. The hardware epoch
+starts when the straps arrive. Every fact currently marked as code-inferred then gets verified or
+corrected against live captures, its ledger tag flips to hardware-verified, and fixtures are
+regenerated from our own captures. The hardware checklist lives in `docs/protocol/whoop.md`.
 
 ## What we are explicitly not building
 
 Some things are out of scope on purpose, and naming them is as useful as naming the scope, because it stops an agent from helpfully building something nobody asked for.
 
-There is no plugin marketplace or store, and no community plugin ecosystem. There is no WASM and no in-app code execution of any kind; connectors are data and a narrow Rust trait, not sandboxed programs, and they get no network, filesystem, or BLE access of their own. ML inference does not run in Rust — it runs natively on CoreML and TFLite, with Rust owning only the deterministic preprocessing. BLE transport does not live in Rust either; the native platforms own the radios, and the Rust core receives bytes through one bounded channel. There are no event buses, which is principle 1 restated as a boundary. There are no speculative algorithms without fixtures, and no analytics knowledge baked into manifests. The timeline does not interpolate. HealthKit, Health Connect, widgets, and notifications are not built until after M8. And the apps stay thin snapshot-rendering shells; there is no UI work beyond that until the platform underneath it is real.
+There is no plugin marketplace or store, and no community plugin ecosystem. There is no WASM and no in-app code execution of any kind; connectors are data and a narrow Rust trait, not sandboxed programs, and they get no network, filesystem, or BLE access of their own. ML inference does not run in Rust — it runs natively on CoreML and TFLite, with Rust owning only the deterministic preprocessing. BLE transport does not live in Rust either; the native platforms own the radios, and the Rust core receives bytes through one bounded channel. There are no event buses, which is principle 1 restated as a boundary. There are no speculative algorithms without fixtures, and no analytics knowledge baked into manifests. The timeline does not interpolate. HealthKit, Health Connect, widgets, and notifications are not built until after M8. The native apps are real product shells, but they stay thin: they render immutable core read models, own radio and platform presentation concerns, and never become a second analytics implementation.
 
 A note honest enough to write down: neither surveyed codebase actually shipped a neural model. Everything they computed was classical DSP and statistics. The native-inference boundary in `docs/ml.md` is kept as architecture for the day a real model with a golden vector exists, but we do not add a CoreML or TFLite dependency until that day comes. Building the runway before there is a plane is exactly the speculative work the admission rule exists to prevent.

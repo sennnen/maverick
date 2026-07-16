@@ -45,7 +45,7 @@ maverick/
   connectors/             development-only connector fixtures; real connectors live in the
                           separate sennnen/maverick-connectors repo (see ADR-011)
   fixtures/               golden fixtures, versioned; see fixtures/README for the naming rules
-  apps/ios, apps/android  thin binding shells; the real app work is a later milestone
+  apps/ios, apps/android  thin native apps; migration/release work lives in platform plan
   tools/                  check_docs.sh and check_deps.py, the mechanical gates
 ```
 

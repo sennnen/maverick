@@ -1,8 +1,15 @@
-# Android shell
+# Android app
 
-The thin native layer for Android: BLE stack ownership, the UniFFI binding to the core, and
-eventually the UI that renders snapshots. Deliberately kept as small as possible; anything worth
-getting wrong belongs in `core/`.
+The native Android application owns Android BLE, platform presentation, and the UniFFI binding to
+the core. It renders immutable read models and does not contain decoding, timeline, storage, or
+analytics logic. Its implementation sequence is defined in the
+[platform lane](../../docs/plans/active/platform.md).
+
+The UI specification is the current Aura Android shell from the prior NOOP workspace: Today,
+Recovery, Strain, and Sleep hubs, platform-appropriate bottom navigation, and one app-wide settings
+sheet. We will copy or rewrite only presentation code that fits this boundary. NOOP's
+`AppViewModel`, Room repositories, WHOOP BLE client, analytics, onboarding, Health Connect, ML
+assets, services, widgets, and notification machinery are not app dependencies here.
 
 ## Building the core for Android
 
@@ -26,5 +33,5 @@ binding.
 render availability reasons from the analytics JSON rather than reconstructing capability rules in
 Kotlin.
 
-The Rust surface and the bindgen step are verified in CI. Linking into an emulator build needs the
-Android toolchain and is a local step until the app milestone.
+The Rust surface and bindgen step are verified in CI. PL-P3 replaces these manual commands with the
+reproducible Android library build used by local development and release CI.

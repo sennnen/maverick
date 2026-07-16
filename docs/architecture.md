@@ -55,8 +55,19 @@ vector exists, and until then it carries no CoreML or TFLite dependency at all.
 
 Everything else is Rust: reassembly, CRC checking, frame decode, signal quality, the timeline,
 storage, features, the ML preprocessing, metrics, and the immutable snapshots the UI reads. The
-apps under `apps/ios` and `apps/android` are binding shells; real UI work is a later milestone and
-is deliberately kept thin so that almost nothing worth getting wrong lives outside the core.
+apps under `apps/ios` and `apps/android` are native product shells. Their visual and interaction
+specification comes from the existing Aura screens in the prior NOOP workspace, but only the
+presentation layer crosses: design tokens, reusable visual components, the four-hub navigation,
+settings placement, and screen composition. NOOP's repositories, BLE clients, analytics, storage,
+ML wrappers, and platform view models do not cross. Maverick replaces those with one small native
+presentation store fed by immutable core read models. The exact migration and release sequence is
+the [platform lane](plans/active/platform.md).
+
+A native shell may format units, dates, localized strings, and accessibility copy. It may not
+compute a health metric, infer why one is unavailable, query the core database directly, or repair
+missing data. Every field presented to a screen is explicitly a value, collecting, unavailable, or
+failed. That makes an unfinished analytic a truthful UI state instead of an excuse for a platform
+fallback.
 
 There is exactly one place where the system is asynchronous, and it is the seam between the native
 radio and the core. The native BLE layer pushes received bytes into a bounded channel, and the
