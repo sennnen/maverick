@@ -16,25 +16,32 @@ The tags:
 - **[ONE]** — only one codebase asserts it. Medium confidence; the source is named where it matters.
 - **[JUDES]** — from the third source's round-tripped MG capture. Strong for the gen5 wire, one unit.
 - **[SERIES]** — from the fourth source's sniffed 4.0 and decoded MG buffer. Corpus-pinned, one setup.
+- **[FIELD]** — from the fifth source, real worn-MG sessions. The closest thing to ground truth here,
+  and it earns precedence over code-inferred claims where they collide; strongest on what it refutes.
 - **[PROV]** — provisional, uncalibrated, or self-admittedly guessed. Treat as an approximation.
 - **[HW]** — can only be confirmed with a physical strap, which we do not have.
 - **[CONFLICT]** — the sources disagree. Must be resolved on hardware; do not hardcode a guess.
 
-There are four sources. Two are surveyed codebases: one a Rust core with real capture fixtures,
-the other a Swift and Kotlin implementation, also with real fixtures and honest provenance comments.
-The third, tagged **[JUDES]** below, is a June 2026 writeup of cracking the 5.0 (judes.club), built
-on an HCI capture of the official app talking to a real MG and validated by round-tripping all 8,031
+There are five sources. Two are surveyed codebases: one a Rust core with real capture fixtures, the
+other a Swift and Kotlin implementation, also with real fixtures and honest provenance comments. The
+third, tagged **[JUDES]** below, is a June 2026 writeup of cracking the 5.0 (judes.club), built on an
+HCI capture of the official app talking to a real MG and validated by round-tripping all 8,031
 captured frames byte for byte. The fourth, tagged **[SERIES]**, is a multi-part writeup that took a
 4.0 apart with a hardware sniffer (nRF52840 plus BlueZ), then moved to the MG and decoded its
-overnight buffer record by record, pinning every offset against a large stored corpus. The third and
-fourth agree with each other and with the surveyed repos on the gen5 envelope and the command bytes,
-which is about as much corroboration as reverse-engineering gets, but all of it is still someone
-else's hardware and owes the same check on ours. A standing rule for this document, learned from all
-four: a protocol claim must cite a code location or a fixture, because prose docs drifted from code
-in the surveyed repos (one had a wrong gen5 frame layout and a UUID typo, the other referenced a
-manifest file that did not exist) and the fourth source is itself a catalogue of plausible field
-labels that turned out wrong. `tools/check_docs.sh` fails on dead cross-references for the same
-reason.
+overnight buffer record by record, pinning every offset against a large stored corpus. The fifth,
+tagged **[FIELD]**, is ongoing work on a real worn MG: it wears the band through full sessions and
+correlates candidate fields against known state, so it is the only source that can tell a real signal
+from a plausible-looking coincidence, and several of its results are refutations of the fourth
+source's labels. Where [FIELD] and a code-inferred claim collide, [FIELD] wins.
+
+The third, fourth, and fifth sources agree with the surveyed repos on the gen5 envelope and the
+command bytes, which is about as much corroboration as reverse-engineering gets, but all of it is
+still someone else's hardware and owes the same check on ours. A standing rule for this document,
+learned from all five: a protocol claim must cite a code location or a fixture, because prose docs
+drifted from code in the surveyed repos (one had a wrong gen5 frame layout and a UUID typo, the
+other referenced a manifest file that did not exist), the fourth source is itself a catalogue of
+plausible field labels that turned out wrong, and the fifth source's main product is disproving
+some of the fourth's. `tools/check_docs.sh` fails on dead cross-references for the same reason.
 
 ## Device families
 
@@ -281,8 +288,11 @@ Each of these is asserted by one codebase, at medium confidence. [ONE each]
   step counter, `skin_temp_raw` in centidegrees, and a sleep-state nibble. The Rust repo notes that
   the HR offset was corrected after cross-validation against a Garmin, because an earlier offset was
   reading a dead zero region; the offsets here were partly guessed. [PROV on the exact offsets]
-- **gen5 v20 / v21:** bulk multi-channel optical data (100-sample `i16` groups, or presence-gated
-  50-sample `i32` blocks). Raw channels, with no asserted LED mapping.
+- **gen5 v20 / v21:** bulk multi-channel data. The v20 optical layout is **unknown**; nothing is
+  decoded from it. [FIELD] The v21 IMU block is decoded but **unverified against a real fill**,
+  because a full v21 buffer needs the R22 deep-data stream running on a worn band, and that has not
+  been captured (see the subscription-gating note below). Treat v21 as [PROV] until a real fill
+  confirms it. [FIELD]
 - **gen5 v26:** a 24 Hz optical PPG waveform, 24 `i16` LE per record, one record per second. Raw
   ADC, with no invented scale.
 - **Unmapped versions:** fall back to the V24 layout, then **reject** if the gravity magnitude or HR
@@ -304,19 +314,32 @@ increments once per record and resets on reboot, a `u32` LE unix timestamp at `b
 zero when the strap has no optical lock, so the same byte doubles as a validity flag. A secondary HR
 sits at `body[26]` and tracks the primary at correlation +0.94. Skin temperature is an `i16` LE at
 `body[62:64]` scaled by 0.01 to give degrees Celsius, traceable to the strap's ams AS6221 sensor.
-Motion lives at `body[104]`, and its polarity is **inverted** relative to Harvard: high means still,
-low means movement, so a Harvard rest gate ported straight across gates on the wrong records. A
-packed state byte at `body[70]` carries an on-wire sleep state in bits 5–4, decoding to `{0 STILL,
+A packed state byte at `body[70]` carries an on-wire sleep state in bits 5–4, decoding to `{0 STILL,
 1 WAKE, 2 SLEEP, 3 UP}` (the STILL/SLEEP split is decisive in the data; WAKE versus UP cannot be
 told apart from passive captures, so treat that half as [PROV]). SpO2 is a single tri-mode byte at
 `body[71]`: real percentages in one range, saturation sentinels with bit 7 set, and low-value
-diagnostic codes, so a naive mask reads a `0x08` diagnostic code as "8 %". A block of internal AGC
-and quality channels sits at `body[29:45]`, and three of its channels at `body[33:45]` are `f32`
-**big-endian**, not little; read little-endian they are noise. `body[96]` looks like a second heart
-rate and is not, it is an AGC readback whose correlation with real HR is about zero. All of the
-`body[96]`, byte-order, and SpO2-sentinel corrections were caught only by checking a candidate label
-against a known-good value across the whole corpus, which is the discipline this document keeps
-preaching. [SERIES, HIGH confidence on HR/motion/skin-temp/sleep-state, [PROV] on the rest]
+diagnostic codes, so a naive mask reads a `0x08` diagnostic code as "8 %". `body[96]` looks like a
+second heart rate and is not, it is an AGC readback whose correlation with real HR is about zero.
+[SERIES for these, HIGH confidence on HR/skin-temp/sleep-state, [PROV] on the rest]
+
+Two of the fourth source's labels here are **refuted** by the fifth, which correlated them against
+worn-session ground truth and found no signal. Do not re-chase either. The "inverted motion" byte at
+`body[104]` (frame offset 115) reads a float-mantissa byte that averages about 140 in both sleep and
+wake and does not discriminate state; there is no motion byte at `body[104]`. And the "big-endian
+`f32` fusion channels" at `body[33:45]` are a byte-misaligned view of the little-endian gravity floats
+at `body[45]`/`49`/`53`, not a separate channel: read that way the first "channel" tracks HR at only
++0.11, not the +0.42 the fourth source claimed. [FIELD refutes [SERIES]] These are textbook
+plausible-but-wrong readings, exactly what this document keeps warning about, caught only because the
+fifth source could hold the bytes against a real body.
+
+Residual K=18 bytes that are decoded but not pinned, meaning not stored and not asserted: a
+`cardiac_flags` byte at `body[33]` (see the ECG section for what it is and is not), `rr_packed` at
+`body[38]`, `cardiac_status` at `body[40]`, `step_cadence` at `body[59]`, status words at
+`body[75]`/`77`/`79`, and an `f32` at `body[113]`. [FIELD] Do not build features on any of them.
+
+One open lead worth a capture rather than a guess: a dense unmapped field at inner offset 27 of a
+frame-35 record tracked sleep at +0.73 across one night (71 asleep, 12 wake). It is not in the field
+map and not yet identified. [FIELD]
 
 **K=26, the raw-PPG burst (73 bytes).** After the ten-byte header and a two-byte per-burst index at
 `body[10:12]`, `body[16:64]` holds 24 `i16` LE photodiode samples, one record per second, giving a
@@ -385,12 +408,29 @@ in Maverick are not purely declarative.
 ## Raw sensor streaming
 
 - **Type-43 raw realtime (R10/R11):** controlled by command 63. Send `[0x00]` on connect to stop the
-  flood, or the strap will keep streaming raw samples.
+  flood, or the strap will keep streaming raw samples. A real type-43 live raw capture is still
+  pending; it needs a research tap alongside the bond, which has not been set up. [FIELD]
 - **gen5 raw 6-axis IMU offload:** roughly a 1244-byte buffer of 100 accelerometer `i16` and 100
   gyroscope `i16`, columnar, at 100 Hz. A live IMU request (command 106) is refused by the firmware;
   the offload path is what actually yields data. [ONE, Swift/Kotlin repo]
 - **PPG:** gen5 v26 gives 24 Hz; gen4 raw optical is roughly 437 Hz on a single green channel as
   `s24` LE. [ONE each]
+
+### The R22 deep stream may be unreachable over BLE alone
+
+This is the fifth source's sharpest finding, and it changes what the enable sequence is worth. On a
+real worn MG, the fifteen or sixteen `SET_CONFIG` feature-flag writes are accepted byte for byte and
+fully acknowledged, exactly as the third source captured. But acceptance is not activation: across
+five worn sessions of up to 4.1 hours after a full ACK, the strap produced **zero** deep-data frames
+(no type 51–56), only plain type-40 heart rate. The deep optical stream appears to be
+subscription- or server-gated, not BLE-flag-gated, so on a strap without an active WHOOP subscription
+the deep buffer may simply be unreachable no matter what flags are set. [FIELD]
+
+For Maverick this is a caution, not a decode. The `enable_sequence` in the connectors is still worth
+carrying, because the flags are real and correct, but the connector documents that setting them does
+not by itself guarantee deep data; the honest expectation on a no-subscription strap is standard
+heart rate and whatever the ordinary sync buffer holds, not the R22 firehose. Whether a subscription,
+a specific server handshake, or a research bond unlocks it is an open `[HW]` question.
 
 ### There is no live optical stream on the gen5 straps
 
@@ -419,14 +459,26 @@ the only MG-only behaviour at the BLE level. [SERIES] The hardware behind the by
 because every decoded field traces to one of these: an Ambiq Apollo4 Blue MCU, a Maxim MAX86176
 optical front-end, a TDK ICM45686 six-axis IMU, and an ams AS6221 skin-temperature sensor. [SERIES]
 
-None of the four sources has decoded the ECG. Every available writeup that reaches the MG buffer
-maps the optical metrics (K=18) and the raw PPG burst (K=26) and stops there; the ECG waveform is
-not in any mapped record, and no source has found the command or the record type that carries it.
-So the honest state is: **the MG has ECG hardware, and reading it over Bluetooth is unsolved as far
-as we know.** It is very likely gated behind a config key like the rest of the MG-only paths, and
-finding it will need our own MG, an on-wrist ECG session captured while the official app records one,
-and the same labelled-capture, corpus-pinning method the fourth source used on the optical records.
-This is an `[HW]` item on the hardware checklist, not something to design a decoder for now.
+None of the five sources has decoded the ECG waveform. It is not in any mapped record, and no source
+has found the command or the record type that carries it. So the honest state is: **the MG has ECG
+hardware, and reading its waveform over Bluetooth is unsolved as far as we know.** Finding it will
+need our own MG, an on-wrist ECG session captured while the official app records one, and the same
+labelled-capture, corpus-pinning method the other sources used on the optical records. This is an
+`[HW]` item on the hardware checklist, not something to design a decoder for now.
+
+The fifth source did pin down where it lives, which narrows the search. Genuine AFib and rhythm
+detection is on WHOOP's ECG/HeartKey path (the firmware carries strings like `HK … Afib %d … #ECG %d`),
+it is electrode-gated, and it is MG-only: the 5.0 firmware explicitly blocks it (`ECG Control not
+supported on Goose hardware`, where Goose is the PPG-only 5.0). [FIELD] So the 5.0 will never yield
+ECG no matter what, and on the MG the ECG path is gated behind the electrodes and its config key.
+
+A related correction, because it is the kind of claim that would mislead a medical reading of this
+data: **there is no cardiac or arrhythmia detector on the 5.0's optical path.** The K=18 bytes once
+labelled `cardiac_flags` (`body[33]`) and `cardiac_status` (`body[40]`) are not an arrest or AFib
+alarm. `body[33]` is a PPG signal-processing status bitfield (AGC, HR-channel switch, wear detect,
+SNR) and `body[40]` is a signal-confidence byte; neither is an event code, and across 590 event and
+pairing frames none matched any arrhythmia pattern. [FIELD] Do not surface either byte as a health
+alert.
 
 ## Historical sync and backfill
 
@@ -487,15 +539,20 @@ SpO2 constants and the MG's tri-mode SpO2 byte, the resp scale, the guessed gen5
 the WAKE-versus-UP half of the MG sleep-state enum. Every [HW] assumption is checked, MG capability
 parity with the 5.0 among them.
 
-Two items on this list need a specific capture rather than a spot-check. **The MG ECG** is unsolved
-in every source; finding it needs an on-wrist ECG session recorded while the official app captures
-one, then the labelled-capture method against stored raw bytes. **The MG sleep SpO2** is the same
-shape of gap: the strap computes a 0–100 SpO2 scalar on-wrist during sleep and exports it, but every
-capture anyone has drained so far was taken awake, so the byte that carries it has not been seen
-changing. A real multi-hour sleep drain, diffed at `body[71]` (`inner[74]`) against the console SpO2
-oracle across sleep versus wake, is what pins it. Both are why the connector system is built to run
-without hardware now and absorb these facts as data later, rather than blocking on devices we do not
-yet have.
+Several items need a specific capture rather than a spot-check. **The MG ECG** is unsolved in every
+source; finding it needs an on-wrist ECG session recorded while the official app captures one, with
+the electrodes engaged, then the labelled-capture method against stored raw bytes. **The MG sleep
+SpO2** is the same shape of gap: the strap computes a 0–100 SpO2 scalar on-wrist during sleep and
+exports it, but every capture anyone has drained so far was taken awake, so the byte that carries it
+has not been seen changing. A real multi-hour sleep drain, diffed at `body[71]` (`inner[74]`) against
+the console SpO2 oracle across sleep versus wake, is what pins it. **The R22 deep stream** is the
+open question the fifth source raised: the flags ACK but the deep frames never came on a
+no-subscription strap, so the checklist item is to find whether a subscription, a server handshake,
+or a research bond is what actually unlocks it. **The v20 optical layout** is unknown and **the v21
+IMU fill** is unverified, and both wait on that same deep stream running on a worn band. And the
+**frame-35 offset-27 sleep lead** (+0.73 across one night) wants a labelled multi-night capture to
+confirm or drop. All of these are why the connector system is built to run without hardware now and
+absorb these facts as data later, rather than blocking on devices we do not yet have.
 
 Every [XVAL] fact is still spot-checked, because agreement between reverse-engineered sources is a
 strong prior, not a measurement. Fixtures are regenerated from our own captures, and the tags in
