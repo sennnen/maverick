@@ -26,7 +26,10 @@ Use JDK 17 and set `ANDROID_HOME` or `ANDROID_SDK_ROOT`, then run:
 Gradle builds the Rust package first, compiles the generated Kotlin binding, runs the strict host
 snapshot decoder tests, and emits `app/build/outputs/apk/debug/app-debug.apk`. The APK contains only
 the shipped arm64-v8a and x86_64 libraries. The same gate builds the minified release variant through
-R8; signing is reserved for the release-candidate workflow. The launch surface is the Aura shell;
+R8; local release builds remain unsigned. CI pushes to `main` decode and use the Android release
+keystore, verify its signature with `apksigner`, and publish the signed APK. Required GitHub Actions
+secrets are `ANDROID_KEYSTORE_BASE64` (single-line Base64 JKS), `ANDROID_KEYSTORE_PASSWORD`,
+`ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`. The launch surface is the Aura shell;
 the strict snapshot-decoder tests and the ported NOOP helper tests (logical day, widget anchor,
 stage segments, zone parsing) run in the same gate.
 

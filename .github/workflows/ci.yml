@@ -119,6 +119,28 @@ jobs:
           path: ${{ steps.android-sdk.outputs.root }}/ndk/29.0.14206865
           key: ${{ runner.os }}-ndk-29.0.14206865
       - run: sdkmanager "ndk;29.0.14206865"
+      - name: Prepare Android release signing
+        if: github.event_name == 'push'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          : "${ANDROID_KEYSTORE_BASE64:?}"
+          : "${ANDROID_KEYSTORE_PASSWORD:?}"
+          : "${ANDROID_KEY_ALIAS:?}"
+          : "${ANDROID_KEY_PASSWORD:?}"
+          keystore="$RUNNER_TEMP/maverick-release.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          test -s "$keystore"
+          chmod 600 "$keystore"
+          {
+            echo "ANDROID_KEYSTORE_PATH=$keystore"
+            echo "ANDROID_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD"
+            echo "ANDROID_KEY_ALIAS=$ANDROID_KEY_ALIAS"
+            echo "ANDROID_KEY_PASSWORD=$ANDROID_KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
       - run: ./gradlew lintDebug testDebugUnitTest assembleDebug assembleRelease
         working-directory: apps/android
       - run: test -f apps/android/build/mav-core/jniLibs/arm64-v8a/libmav_ffi.so
@@ -126,13 +148,22 @@ jobs:
       - run: test -f apps/android/build/mav-core/Sources/uniffi/mav_ffi/mav_ffi.kt
       - run: test -f apps/android/build/mav-core/SHA256SUMS
       - run: test -f apps/android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Verify signed Android release APK
+        if: github.event_name == 'push'
+        run: |
+          apk=apps/android/app/build/outputs/apk/release/app-release.apk
+          test -f "$apk"
+          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
+          test -n "$apksigner"
+          "$apksigner" verify --verbose --print-certs "$apk"
       - run: test -f apps/android/app/build/outputs/apk/release/app-release-unsigned.apk
+        if: github.event_name != 'push'
       - name: Upload Android release APK
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v6
         with:
           name: mav-android-release-${{ github.sha }}
-          path: apps/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          path: apps/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -159,4 +190,4 @@ jobs:
             --title "Maverick edge ${GITHUB_SHA::7}" \
             --prerelease \
             --latest=false \
-            --notes "Automated unsigned native builds from ${GITHUB_SHA}."
+            --notes "Automated Android-signed and iOS-unsigned native builds from ${GITHUB_SHA}."

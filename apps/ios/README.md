@@ -49,4 +49,4 @@ after changing the project specification.
 
 Set `MAV_BUILD_RELEASE=1` to also produce an unsigned generic-device Release app at
 `build/release/Build/Products/Release-iphoneos/Mav.app`. CI archives it and publishes an
-`edge-<commit>` prerelease with Android's unsigned release APK after pushes to `main`.
+`edge-<commit>` prerelease with Android's signed release APK after pushes to `main`.

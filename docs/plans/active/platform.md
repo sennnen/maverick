@@ -384,7 +384,9 @@ permits it.
 **Exit:** one pushed commit produces verified private `.ipa` and `.apk` release-candidate artifacts
 after signing secrets are configured.
 
-**Status: pending.**
+**Status: in progress.** Android `main` builds decode the configured private keystore, produce a
+signed APK, and verify it with `apksigner` before publishing an edge prerelease. iOS distribution
+signing, IPA export, manifests, and install verification remain pending.
 
 ---
 
