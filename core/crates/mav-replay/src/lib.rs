@@ -6,22 +6,9 @@
 
 use mav_engine::{run_realtime, Capture, Manifest, Snapshot, Store};
 use mav_model::error::{codes, MavError, Result};
-use mav_model::ids::DeviceId;
-use mav_model::time::WallTime;
 use mav_obs::ring::{RingEntry, RingLog, RingLogTap};
-use serde::Deserialize;
 use std::path::Path;
 use std::sync::Arc;
-
-const CAPTURE_SCHEMA: &str = "capture/v1";
-
-#[derive(Deserialize)]
-struct CaptureFile {
-    schema: String,
-    device_id: u64,
-    capture_wall_unix: i64,
-    chunks_hex: Vec<String>,
-}
 
 /// The result of a replay: the snapshot, its canonical hash, and the ordered stage-boundary dump.
 pub struct Replay {
@@ -55,25 +42,7 @@ pub fn replay(manifest: &Manifest, capture: &Capture) -> Result<Replay> {
 }
 
 pub fn load_capture(path: &Path) -> Result<Capture> {
-    let file: CaptureFile = serde_json::from_str(&read(path)?).map_err(|e| {
-        MavError::new(codes::STORAGE_SERIALIZE, "capture file does not parse")
-            .context(e.to_string())
-    })?;
-    if file.schema != CAPTURE_SCHEMA {
-        return Err(
-            MavError::new(codes::STORAGE_SERIALIZE, "unsupported capture schema")
-                .context(format!("got {:?}, want {CAPTURE_SCHEMA:?}", file.schema)),
-        );
-    }
-    let mut chunks = Vec::with_capacity(file.chunks_hex.len());
-    for hex in &file.chunks_hex {
-        chunks.push(unhex(hex)?);
-    }
-    Ok(Capture {
-        device: DeviceId::new(file.device_id),
-        capture_wall: WallTime::from_unix_seconds(file.capture_wall_unix),
-        chunks,
-    })
+    Capture::from_json(&read(path)?)
 }
 
 fn read(path: &Path) -> Result<String> {
@@ -82,24 +51,6 @@ fn read(path: &Path) -> Result<String> {
             .context(path.display().to_string())
             .context(e.to_string())
     })
-}
-
-fn unhex(s: &str) -> Result<Vec<u8>> {
-    if !s.len().is_multiple_of(2) {
-        return Err(MavError::new(
-            codes::STORAGE_SERIALIZE,
-            "hex string has an odd length",
-        ));
-    }
-    (0..s.len())
-        .step_by(2)
-        .map(|i| {
-            u8::from_str_radix(&s[i..i + 2], 16).map_err(|e| {
-                MavError::new(codes::STORAGE_SERIALIZE, "invalid hex in capture")
-                    .context(e.to_string())
-            })
-        })
-        .collect()
 }
 
 #[cfg(test)]

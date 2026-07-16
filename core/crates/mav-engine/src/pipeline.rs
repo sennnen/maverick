@@ -19,10 +19,13 @@ use mav_obs::stage::Stage;
 use mav_obs::tap::{Ids, Tap, TapEvent};
 use mav_store::{Provenance, Store};
 use mav_timeline::{place_on_wall, Timeline};
+use serde::Deserialize;
 
 /// Fixed provenance ids for the M1 slice, so the snapshot is byte-for-byte reproducible.
 const SQI_PROVENANCE: MetadataId = MetadataId::new(1);
 const HR_PROVENANCE: MetadataId = MetadataId::new(2);
+
+const CAPTURE_SCHEMA: &str = "capture/v1";
 
 /// A capture of raw notification bytes to replay through the pipeline. The chunks are exactly what
 /// the radio delivered, so a real sniffed capture and a synthetic one run the same way.
@@ -33,6 +36,57 @@ pub struct Capture {
     /// implausible and the timeline has to fall back.
     pub capture_wall: WallTime,
     pub chunks: Vec<Vec<u8>>,
+}
+
+#[derive(Deserialize)]
+struct CaptureFile {
+    schema: String,
+    device_id: u64,
+    capture_wall_unix: i64,
+    chunks_hex: Vec<String>,
+}
+
+impl Capture {
+    /// Parse a `capture/v1` file: a device id, a capture wall time, and hex notification chunks.
+    /// Both `mav-replay` and the FFI parse captures through here, so the two agree by construction.
+    pub fn from_json(json: &str) -> Result<Self> {
+        let file: CaptureFile = serde_json::from_str(json).map_err(|e| {
+            MavError::new(codes::STORAGE_SERIALIZE, "capture does not parse").context(e.to_string())
+        })?;
+        if file.schema != CAPTURE_SCHEMA {
+            return Err(
+                MavError::new(codes::STORAGE_SERIALIZE, "unsupported capture schema")
+                    .context(format!("got {:?}, want {CAPTURE_SCHEMA:?}", file.schema)),
+            );
+        }
+        let mut chunks = Vec::with_capacity(file.chunks_hex.len());
+        for hex in &file.chunks_hex {
+            chunks.push(unhex(hex)?);
+        }
+        Ok(Capture {
+            device: DeviceId::new(file.device_id),
+            capture_wall: WallTime::from_unix_seconds(file.capture_wall_unix),
+            chunks,
+        })
+    }
+}
+
+fn unhex(s: &str) -> Result<Vec<u8>> {
+    if !s.len().is_multiple_of(2) {
+        return Err(MavError::new(
+            codes::STORAGE_SERIALIZE,
+            "hex string has an odd length",
+        ));
+    }
+    (0..s.len())
+        .step_by(2)
+        .map(|i| {
+            u8::from_str_radix(&s[i..i + 2], 16).map_err(|e| {
+                MavError::new(codes::STORAGE_SERIALIZE, "invalid hex in capture")
+                    .context(e.to_string())
+            })
+        })
+        .collect()
 }
 
 /// Run one realtime capture through the pipeline against a device manifest, writing into `store`
@@ -153,6 +207,20 @@ pub fn run_realtime(
         },
     );
     Ok(snapshot)
+}
+
+/// Parse a manifest and a capture from JSON, run them through a fresh in-memory store, and return
+/// the snapshot. This is the stateless entry the FFI calls; a replay against a persistent store
+/// uses [`run_realtime`] directly.
+pub fn run_realtime_json(
+    manifest_json: &str,
+    capture_json: &str,
+    tap: &dyn Tap,
+) -> Result<Snapshot> {
+    let manifest = Manifest::from_json(manifest_json)?;
+    let capture = Capture::from_json(capture_json)?;
+    let store = Store::open_in_memory()?;
+    run_realtime(&manifest, &capture, &store, tap)
 }
 
 fn wire_format(manifest: &Manifest) -> Result<WireFormat> {
@@ -290,6 +358,47 @@ mod tests {
         assert_eq!(provenance.source_stream, StreamKind::HeartRate);
         assert_eq!(provenance.algorithm_id, "hr_summary");
         assert_eq!(provenance.sample_count, 1);
+    }
+
+    #[test]
+    fn capture_parses_from_json() {
+        let json = r#"{
+            "schema": "capture/v1",
+            "device_id": 7,
+            "capture_wall_unix": 1752600500,
+            "chunks_hex": ["aabb", "ccdd"]
+        }"#;
+        let capture = Capture::from_json(json).unwrap();
+        assert_eq!(capture.device, DeviceId::new(7));
+        assert_eq!(capture.chunks, vec![vec![0xaa, 0xbb], vec![0xcc, 0xdd]]);
+    }
+
+    #[test]
+    fn capture_rejects_a_wrong_schema_and_odd_hex() {
+        assert!(Capture::from_json(
+            r#"{"schema":"capture/v9","device_id":1,"capture_wall_unix":0,"chunks_hex":[]}"#
+        )
+        .is_err());
+        assert!(Capture::from_json(
+            r#"{"schema":"capture/v1","device_id":1,"capture_wall_unix":0,"chunks_hex":["abc"]}"#
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn run_realtime_json_matches_the_struct_path() {
+        let manifest = realtime_manifest();
+        let manifest_json = serde_json::to_string(&manifest).unwrap();
+        let capture_json = r#"{
+            "schema": "capture/v1",
+            "device_id": 1,
+            "capture_wall_unix": 1752600500,
+            "chunks_hex": []
+        }"#;
+        // An empty capture yields an all-none snapshot, which both paths must agree on.
+        let via_json = run_realtime_json(&manifest_json, capture_json, &NullTap).unwrap();
+        assert_eq!(via_json.current_bpm, None);
+        assert_eq!(via_json.in_range_samples, 0);
     }
 
     #[test]

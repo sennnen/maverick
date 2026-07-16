@@ -11,7 +11,7 @@ pub mod pipeline;
 pub mod snapshot;
 
 pub use acquisition::{Acquisition, Command, Event, HandshakeConfig, State, StepOutcome};
-pub use pipeline::{run_realtime, Capture};
+pub use pipeline::{run_realtime, run_realtime_json, Capture};
 pub use snapshot::{Snapshot, SNAPSHOT_SCHEMA};
 
 /// Re-exported so `mav-replay` and the FFI can name a device manifest without depending on
