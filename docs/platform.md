@@ -66,31 +66,32 @@ though its package ships with the app. Proprietary connectors do not.
 
 ## Native transport events
 
-The runtime accepts a closed UniFFI `TransportEvent` enum. It is not JSON and it is not an open RPC
-method. The initial variants are:
+The runtime accepts a closed set of typed UniFFI methods. It is not JSON and it is not an open RPC
+surface. Named methods keep invalid payload combinations unrepresentable in Swift and Kotlin:
 
 ```text
-ScanStarted { at_unix_ms }
-DeviceDiscovered { connector_id, native_device_id, model, name, at_unix_ms }
-Connected { native_device_id, at_unix_ms }
-BondReady { native_device_id, at_unix_ms }
-Subscribed { characteristic, at_unix_ms }
-WriteCompleted { characteristic, sequence, at_unix_ms }
-CommandResponse { characteristic, bytes, at_unix_ms }
-Notification { characteristic, bytes, at_unix_ms }
-TransportFailed { operation, native_code, safe_message, at_unix_ms }
-Disconnected { native_device_id, reason, at_unix_ms }
-Tick { at_unix_ms }
+start_scan(connector_id, device_id)
+device_discovered(connector_id, native_device_id, display_name)
+connected(native_device_id)
+subscribed(characteristic)
+notification(characteristic, bytes, at_unix_ms)
+transport_failed(operation, native_code, safe_message, at_unix_ms)
+disconnected(native_device_id)
 ```
 
 Byte payloads cross as `Vec<u8>`, never hex strings. `native_device_id` is an opaque identifier used
 only to route the current native connection; it is not treated as a stable physiological-device id.
-Every event carries host time. The runtime validates state and rejects an impossible event with a
-stable transport error instead of attempting to repair the sequence.
+Events that persist samples or diagnostics carry host time. Pure transport transitions do not read
+the clock. The runtime validates state and rejects an impossible event with a stable transport error
+instead of attempting to repair the sequence.
 
-`Notification` is the only entry for sensor and protocol bytes. It runs reassembly, decode, SQI,
+`notification` is the only entry for sensor and protocol bytes. It runs reassembly, decode, SQI,
 timeline, storage, features, analytics, and snapshot publication in core-defined order. Native code
 cannot call those stages individually.
+
+Bond readiness, command completion, command responses, ticks, and reason-bearing disconnects are
+added only when a real connector requires them. They must be narrow typed methods, not a generic
+event map.
 
 ## Core transport actions
 
@@ -260,4 +261,3 @@ Every schema has:
 
 Parity proves binding consistency, not physiological validity. Analytic validation still follows
 [testing.md](testing.md): real capture or published reference first, platform parity second.
-

@@ -16,6 +16,9 @@ mav-engine = { workspace = true }
 uniffi = { version = "0.28" }
 thiserror = { workspace = true }
 
+[dev-dependencies]
+serde_json = { workspace = true }
+
 [features]
 cli = ["uniffi/cli"]
 

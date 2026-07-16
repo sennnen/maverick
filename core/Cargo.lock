@@ -460,6 +460,7 @@ dependencies = [
  "mav-engine",
  "mav-model",
  "mav-obs",
+ "serde_json",
  "thiserror",
  "uniffi",
 ]

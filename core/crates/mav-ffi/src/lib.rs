@@ -1,7 +1,7 @@
 //! The UniFFI facade: the single surface iOS and Android call into (ADR-010). It exposes only what
 //! an app needs and nothing of the pipeline's internals, so the types behind it can keep moving
-//! while the boundary stays small. The two functions here are the Milestone 1 surface: the core
-//! version, and running a capture through the pipeline to canonical read models plus parity hashes.
+//! while the boundary stays small. Stateless capture replay provides parity fixtures; `MavRuntime`
+//! owns persistent product state and the ordered live-data pipeline.
 //!
 //! Generating the Swift and Kotlin bindings and linking them on each platform is documented in
 //! apps/ios/README.md and apps/android/README.md; the Rust side and the bindgen step are verified
@@ -11,21 +11,31 @@
 use mav_model::error::MavError;
 use mav_obs::stage::Stage;
 use mav_obs::tap::{Tap, TapEvent};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 uniffi::setup_scaffolding!();
 
-/// The error the FFI hands back. Flattened to its message across the boundary, because a host app
-/// wants a readable reason and the stable numeric code is already inside it (`MAV-<code>`).
 #[derive(Debug, thiserror::Error, uniffi::Error)]
-#[uniffi(flat_error)]
 pub enum FfiError {
-    #[error("{0}")]
-    Core(String),
+    #[error("MAV-{code} [{category}/{severity}] {message}")]
+    Core {
+        code: u16,
+        category: String,
+        severity: String,
+        message: String,
+        context: Vec<String>,
+    },
 }
 
 impl From<MavError> for FfiError {
     fn from(error: MavError) -> Self {
-        FfiError::Core(error.to_string())
+        FfiError::Core {
+            code: error.code,
+            category: format!("{:?}", error.category).to_lowercase(),
+            severity: format!("{:?}", error.severity).to_lowercase(),
+            message: error.message,
+            context: error.context,
+        }
     }
 }
 
@@ -36,6 +46,243 @@ pub struct RunResult {
     pub hash: String,
     pub analytics_json: String,
     pub analytics_hash: String,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct RuntimeConfig {
+    pub database_path: String,
+    pub timezone_id: String,
+    pub transport_capacity: u32,
+    pub app_version: String,
+    pub app_build: String,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct ConnectorRegistration {
+    pub connector_id: String,
+    pub connector_version: String,
+    pub manifest_json: String,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug, uniffi::Enum)]
+pub enum RuntimeConnectionState {
+    Disconnected,
+    Scanning,
+    Connecting,
+    Subscribing,
+    Streaming,
+    Failed,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, uniffi::Enum)]
+pub enum TransportAction {
+    StartScan {
+        service_filters: Vec<String>,
+    },
+    StopScan,
+    Connect {
+        native_device_id: String,
+    },
+    Subscribe {
+        characteristic: String,
+    },
+    Write {
+        characteristic: String,
+        bytes: Vec<u8>,
+        with_response: bool,
+        sequence: u8,
+    },
+    Disconnect {
+        native_device_id: String,
+        reason: String,
+    },
+}
+
+#[derive(Clone, Copy, Debug, uniffi::Record)]
+pub struct IngestResult {
+    pub inserted: u32,
+    pub duplicates: u32,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct HostSnapshotResult {
+    pub json: String,
+    pub hash: String,
+    pub revision: u64,
+}
+
+#[derive(uniffi::Object)]
+pub struct MavRuntime {
+    inner: Mutex<mav_engine::HostRuntime>,
+}
+
+#[uniffi::export]
+impl MavRuntime {
+    #[uniffi::constructor]
+    pub fn new(config: RuntimeConfig) -> Result<Arc<Self>, FfiError> {
+        let runtime = mav_engine::HostRuntime::open(mav_engine::RuntimeConfig {
+            database_path: config.database_path,
+            timezone_id: config.timezone_id,
+            transport_capacity: config.transport_capacity,
+            app_version: config.app_version,
+            app_build: config.app_build,
+        })?;
+        Ok(Arc::new(Self {
+            inner: Mutex::new(runtime),
+        }))
+    }
+
+    pub fn install_connector(&self, registration: ConnectorRegistration) -> Result<(), FfiError> {
+        self.lock()?
+            .install_connector(mav_engine::ConnectorRegistration {
+                connector_id: registration.connector_id,
+                connector_version: registration.connector_version,
+                manifest_json: registration.manifest_json,
+            })?;
+        Ok(())
+    }
+
+    pub fn start_scan(&self, connector_id: String, device_id: u64) -> Result<(), FfiError> {
+        self.lock()?.start_scan(&connector_id, device_id)?;
+        Ok(())
+    }
+
+    pub fn device_discovered(
+        &self,
+        connector_id: String,
+        native_device_id: String,
+        display_name: Option<String>,
+    ) -> Result<(), FfiError> {
+        self.lock()?
+            .device_discovered(&connector_id, native_device_id, display_name)?;
+        Ok(())
+    }
+
+    pub fn connected(&self, native_device_id: String) -> Result<(), FfiError> {
+        self.lock()?.connected(&native_device_id)?;
+        Ok(())
+    }
+
+    pub fn subscribed(&self, characteristic: String) -> Result<(), FfiError> {
+        self.lock()?.subscribed(&characteristic)?;
+        Ok(())
+    }
+
+    pub fn notification(
+        &self,
+        characteristic: String,
+        bytes: Vec<u8>,
+        at_unix_ms: i64,
+    ) -> Result<IngestResult, FfiError> {
+        let stats = self
+            .lock()?
+            .notification(&characteristic, &bytes, at_unix_ms)?;
+        Ok(IngestResult {
+            inserted: stats.inserted,
+            duplicates: stats.duplicates,
+        })
+    }
+
+    pub fn transport_failed(
+        &self,
+        operation: String,
+        native_code: String,
+        safe_message: String,
+        at_unix_ms: i64,
+    ) -> Result<(), FfiError> {
+        self.lock()?
+            .transport_failed(&operation, &native_code, &safe_message, at_unix_ms)?;
+        Ok(())
+    }
+
+    pub fn disconnected(&self, native_device_id: String) -> Result<(), FfiError> {
+        self.lock()?.disconnected(&native_device_id)?;
+        Ok(())
+    }
+
+    pub fn drain_actions(&self, limit: u32) -> Result<Vec<TransportAction>, FfiError> {
+        Ok(self
+            .lock()?
+            .drain_actions(limit)
+            .into_iter()
+            .map(TransportAction::from)
+            .collect())
+    }
+
+    pub fn connection_state(&self) -> Result<RuntimeConnectionState, FfiError> {
+        Ok(RuntimeConnectionState::from(
+            self.lock()?.connection_state(),
+        ))
+    }
+
+    pub fn host_snapshot(&self, at_unix_ms: i64) -> Result<HostSnapshotResult, FfiError> {
+        let result = self.lock()?.host_snapshot(at_unix_ms)?;
+        Ok(HostSnapshotResult {
+            json: result.json,
+            hash: result.hash,
+            revision: result.revision,
+        })
+    }
+}
+
+impl MavRuntime {
+    fn lock(&self) -> Result<MutexGuard<'_, mav_engine::HostRuntime>, FfiError> {
+        self.inner.lock().map_err(|_| {
+            MavError::fatal(
+                mav_model::error::codes::INTERNAL_INVARIANT,
+                "host runtime lock is poisoned",
+            )
+            .into()
+        })
+    }
+}
+
+impl From<mav_engine::ConnectionState> for RuntimeConnectionState {
+    fn from(state: mav_engine::ConnectionState) -> Self {
+        match state {
+            mav_engine::ConnectionState::Disconnected => Self::Disconnected,
+            mav_engine::ConnectionState::Scanning => Self::Scanning,
+            mav_engine::ConnectionState::Connecting => Self::Connecting,
+            mav_engine::ConnectionState::Subscribing => Self::Subscribing,
+            mav_engine::ConnectionState::Streaming => Self::Streaming,
+            mav_engine::ConnectionState::Failed => Self::Failed,
+        }
+    }
+}
+
+impl From<mav_engine::TransportAction> for TransportAction {
+    fn from(action: mav_engine::TransportAction) -> Self {
+        match action {
+            mav_engine::TransportAction::StartScan { service_filters } => {
+                Self::StartScan { service_filters }
+            }
+            mav_engine::TransportAction::StopScan => Self::StopScan,
+            mav_engine::TransportAction::Connect { native_device_id } => {
+                Self::Connect { native_device_id }
+            }
+            mav_engine::TransportAction::Subscribe { characteristic } => {
+                Self::Subscribe { characteristic }
+            }
+            mav_engine::TransportAction::Write {
+                characteristic,
+                bytes,
+                with_response,
+                sequence,
+            } => Self::Write {
+                characteristic,
+                bytes,
+                with_response,
+                sequence,
+            },
+            mav_engine::TransportAction::Disconnect {
+                native_device_id,
+                reason,
+            } => Self::Disconnect {
+                native_device_id,
+                reason,
+            },
+        }
+    }
 }
 
 /// A tap that keeps nothing. A host that wants the boundary dump uses `mav-replay` or a future
@@ -70,13 +317,23 @@ pub fn run_capture(manifest_json: String, capture_json: String) -> Result<RunRes
 mod tests {
     use super::*;
     use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
 
+    static NEXT_DB: AtomicU64 = AtomicU64::new(1);
     fn fixture(name: &str) -> String {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../../fixtures/replay")
             .join(name);
         std::fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()))
+    }
+
+    fn db_path() -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "mav-ffi-runtime-{}-{}.sqlite",
+            std::process::id(),
+            NEXT_DB.fetch_add(1, Ordering::Relaxed)
+        ))
     }
 
     #[test]
@@ -116,7 +373,74 @@ mod tests {
     #[test]
     fn a_broken_capture_is_a_readable_error() {
         let err = run_capture("{}".to_owned(), "{}".to_owned()).unwrap_err();
-        let FfiError::Core(message) = err;
-        assert!(message.starts_with("MAV-"), "{message}");
+        let FfiError::Core {
+            code,
+            category,
+            message,
+            ..
+        } = err;
+        assert_eq!(code, mav_model::error::codes::DECODE_LAYOUT_INVALID);
+        assert_eq!(category, "decode");
+        assert_eq!(message, "manifest does not parse");
+    }
+
+    #[test]
+    fn stateful_runtime_reproduces_the_frozen_snapshot() {
+        let path = db_path();
+        let _ = std::fs::remove_file(&path);
+        let runtime = MavRuntime::new(RuntimeConfig {
+            database_path: path.to_string_lossy().into_owned(),
+            timezone_id: "Europe/London".to_owned(),
+            transport_capacity: 16,
+            app_version: "0.1.0".to_owned(),
+            app_build: "test".to_owned(),
+        })
+        .unwrap();
+        runtime
+            .install_connector(ConnectorRegistration {
+                connector_id: "fixture".to_owned(),
+                connector_version: "1.0.0".to_owned(),
+                manifest_json: fixture("realtime_hr_v1.manifest.json"),
+            })
+            .unwrap();
+        runtime.start_scan("fixture".to_owned(), 1).unwrap();
+        assert!(matches!(
+            runtime.drain_actions(8).unwrap().as_slice(),
+            [TransportAction::StartScan { .. }]
+        ));
+        runtime
+            .device_discovered(
+                "fixture".to_owned(),
+                "native-1".to_owned(),
+                Some("MG".to_owned()),
+            )
+            .unwrap();
+        assert_eq!(runtime.drain_actions(8).unwrap().len(), 2);
+        runtime.connected("native-1".to_owned()).unwrap();
+        let actions = runtime.drain_actions(8).unwrap();
+        assert_eq!(
+            actions,
+            vec![TransportAction::Subscribe {
+                characteristic: "n".to_owned()
+            }]
+        );
+        runtime.subscribed("n".to_owned()).unwrap();
+
+        let capture =
+            mav_engine::Capture::from_json(&fixture("realtime_hr_v1.capture.json")).unwrap();
+        for chunk in capture.chunks {
+            runtime
+                .notification("n".to_owned(), chunk, 1_752_600_500_000)
+                .unwrap();
+        }
+        let result = runtime.host_snapshot(1_752_600_500_000).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&result.json).unwrap();
+        assert_eq!(value["session"]["current_bpm"], 63);
+        assert_eq!(value["connection"]["display_name"], "MG");
+        assert_eq!(
+            runtime.connection_state().unwrap(),
+            RuntimeConnectionState::Streaming
+        );
+        let _ = std::fs::remove_file(path);
     }
 }

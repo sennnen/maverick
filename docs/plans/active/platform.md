@@ -103,10 +103,11 @@ stateful object; it does not replay a growing JSON capture on every notification
 **Exit:** one in-memory host-runtime test drives bytes to read model, plus one SQLite-backed restart
 test proves state survives process death.
 
-**Status: partial.** The engine-side runtime is real: persistent SQLite, versioned connector
+**Status: done.** The engine runtime and UniFFI object provide persistent SQLite, versioned connector
 registration, bounded scan/connect/subscribe actions, incremental notification processing, durable
-rejection journalling, restart survival, canonical `host-snapshot/v1`, and exact queue/state errors.
-The UniFFI object and generated-binding assertions remain before this packet is done.
+rejection journalling, restart survival, canonical `host-snapshot/v1`, structured FFI errors, and
+exact queue/state failures. Rust tests drive a frozen capture through the object. CI generates Swift
+and Kotlin bindings, asserts every required public symbol, and rejects leaked pipeline/store types.
 
 ---
 

@@ -28,6 +28,22 @@ jobs:
           done
           test -f target/bindings/mav_ffi.swift
           test -f target/bindings/uniffi/mav_ffi/mav_ffi.kt
+      - name: verify public FFI surface
+        run: |
+          swift=target/bindings/mav_ffi.swift
+          kotlin=target/bindings/uniffi/mav_ffi/mav_ffi.kt
+          grep -q 'open class MavRuntime' "$swift"
+          grep -q 'public enum TransportAction' "$swift"
+          grep -q 'func hostSnapshot' "$swift"
+          grep -q 'func notification' "$swift"
+          grep -q 'open class MavRuntime' "$kotlin"
+          grep -q 'sealed class TransportAction' "$kotlin"
+          grep -q 'hostSnapshot' "$kotlin"
+          grep -q 'notification' "$kotlin"
+          if grep -Eq 'RealtimeProcessor|RawSample|ManifestCodec|PipelineOutput|Store' "$swift" "$kotlin"; then
+            echo "internal core type leaked into generated bindings"
+            exit 1
+          fi
 
   docs:
     runs-on: ubuntu-latest
