@@ -192,7 +192,11 @@ dependencies = [
 
 [[package]]
 name = "mav-feature"
-version = "0.0.0"
+version = "0.1.0"
+dependencies = [
+ "mav-model",
+ "serde",
+]
 
 [[package]]
 name = "mav-ffi"
