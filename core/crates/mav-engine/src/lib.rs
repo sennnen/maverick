@@ -18,7 +18,7 @@ pub use historical::{
 };
 pub use pipeline::{
     run_realtime, run_realtime_json, run_realtime_output, run_realtime_output_json, Capture,
-    PipelineOutput,
+    IngestStats, PipelineOutput, RealtimeProcessor,
 };
 pub use snapshot::{AnalyticsSnapshot, Snapshot, ANALYTICS_SNAPSHOT_SCHEMA, SNAPSHOT_SCHEMA};
 

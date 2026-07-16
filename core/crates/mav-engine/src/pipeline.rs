@@ -17,8 +17,8 @@ use mav_model::stream::StreamKind;
 use mav_model::time::WallTime;
 use mav_obs::stage::Stage;
 use mav_obs::tap::{Ids, Tap, TapEvent};
-use mav_store::{Provenance, Store};
-use mav_timeline::{place_on_wall, Timeline};
+use mav_store::{InsertOutcome as StoreInsertOutcome, Provenance, Store};
+use mav_timeline::{place_on_wall, InsertOutcome as TimelineInsertOutcome, Timeline};
 use serde::Deserialize;
 
 /// Fixed provenance ids for the M1 slice, so the snapshot is byte-for-byte reproducible.
@@ -43,6 +43,193 @@ pub struct Capture {
 pub struct PipelineOutput {
     pub snapshot: Snapshot,
     pub analytics: AnalyticsSnapshot,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct IngestStats {
+    pub inserted: u32,
+    pub duplicates: u32,
+}
+
+/// Incremental realtime pipeline state for one device session. It preserves frame fragments,
+/// codec state, and timeline dedup across notification callbacks while the durable store remains
+/// owned by the caller.
+pub struct RealtimeProcessor {
+    manifest: Manifest,
+    device: DeviceId,
+    reassembler: Reassembler,
+    codec: ManifestCodec,
+    kv: MemoryKv,
+    timeline: Timeline,
+}
+
+impl RealtimeProcessor {
+    pub fn new(manifest: Manifest, device: DeviceId) -> Result<Self> {
+        let reassembler = Reassembler::with_spec(manifest.frame.to_spec()?);
+        Ok(Self {
+            manifest,
+            device,
+            reassembler,
+            codec: ManifestCodec::new(),
+            kv: MemoryKv::new(),
+            timeline: Timeline::new(),
+        })
+    }
+
+    pub fn ingest_chunk(
+        &mut self,
+        bytes: &[u8],
+        capture_wall: WallTime,
+        store: &Store,
+        tap: &dyn Tap,
+    ) -> Result<IngestStats> {
+        let ids = self.ids();
+        let mut stats = IngestStats::default();
+        for event in self.reassembler.push(bytes) {
+            let frame = match event {
+                ReassemblyEvent::Frame(frame) => frame,
+                ReassemblyEvent::InvalidFrame(error) => {
+                    tap.on_stage(Stage::Acquisition, TapEvent::Rejected { error, ids });
+                    continue;
+                }
+                ReassemblyEvent::SkippedGarbage { bytes } => {
+                    let error = MavError::warning(
+                        codes::FRAME_GARBAGE_SKIPPED,
+                        "bytes discarded while resynchronising",
+                    )
+                    .context(format!("{bytes} bytes"));
+                    tap.on_stage(Stage::Acquisition, TapEvent::Rejected { error, ids });
+                    continue;
+                }
+            };
+
+            let decoded = self.codec.decode(&frame, &self.manifest, &mut self.kv)?;
+            if decoded.is_empty() {
+                continue;
+            }
+            tap.on_stage(
+                Stage::Decode,
+                TapEvent::Produced {
+                    count: decoded.len(),
+                    ids,
+                    summary: None,
+                },
+            );
+
+            let batch = RawSampleBatch {
+                device: self.device,
+                samples: decoded,
+            };
+            let scored = mav_sqi::score_batch(&batch, SQI_PROVENANCE);
+            tap.on_stage(
+                Stage::Sqi,
+                TapEvent::Produced {
+                    count: scored.len(),
+                    ids,
+                    summary: None,
+                },
+            );
+
+            for mut sample in scored {
+                place_on_wall(&mut sample, capture_wall);
+                if self.timeline.insert(sample) == TimelineInsertOutcome::Duplicate {
+                    stats.duplicates += 1;
+                }
+            }
+        }
+
+        for sample in self.timeline.drain_ordered() {
+            match store.insert_sample(self.device, &sample)? {
+                StoreInsertOutcome::Inserted => stats.inserted += 1,
+                StoreInsertOutcome::Duplicate => stats.duplicates += 1,
+            }
+        }
+        if stats.inserted > 0 {
+            tap.on_stage(
+                Stage::Store,
+                TapEvent::Produced {
+                    count: stats.inserted as usize,
+                    ids,
+                    summary: None,
+                },
+            );
+        }
+        Ok(stats)
+    }
+
+    pub fn output(&self, store: &Store, tap: &dyn Tap) -> Result<PipelineOutput> {
+        let ids = self.ids();
+        let hr_samples = store.samples(self.device, StreamKind::HeartRate)?;
+        let summary = hr_summary(&hr_samples, HR_PROVENANCE);
+        tap.on_stage(
+            Stage::Features,
+            TapEvent::Produced {
+                count: 1,
+                ids,
+                summary: None,
+            },
+        );
+
+        store.upsert_provenance(&Provenance {
+            metadata: HR_PROVENANCE,
+            source_stream: StreamKind::HeartRate,
+            quality: 1.0,
+            algorithm_id: HR_FEATURE_ALGORITHM.to_owned(),
+            algorithm_version: HR_FEATURE_VERSION,
+            sample_count: summary.sample_count,
+        })?;
+
+        let snapshot = Snapshot::from_hr(self.device, &summary);
+        let interval_source = match self.manifest.interval_source {
+            IntervalSourceConfig::Ecg => IntervalSource::Ecg,
+            IntervalSourceConfig::Ppg => IntervalSource::Ppg,
+            IntervalSourceConfig::Unknown => IntervalSource::Unknown,
+        };
+        let rr_samples = store.samples(self.device, StreamKind::RrInterval)?;
+        let variability = time_domain(&rr_samples, interval_source, HRV_PROVENANCE);
+        if let Some(value) = &variability {
+            store.upsert_provenance(&Provenance {
+                metadata: HRV_PROVENANCE,
+                source_stream: StreamKind::RrInterval,
+                quality: 1.0,
+                algorithm_id: HRV_ALGORITHM.to_owned(),
+                algorithm_version: HRV_VERSION,
+                sample_count: value.interval_count,
+            })?;
+            tap.on_stage(
+                Stage::Metrics,
+                TapEvent::Produced {
+                    count: 1,
+                    ids,
+                    summary: None,
+                },
+            );
+        }
+        let analytics = AnalyticsSnapshot::new(
+            interval_source,
+            variability.as_ref(),
+            negotiate(&self.manifest.capabilities),
+        );
+        tap.on_stage(
+            Stage::Snapshots,
+            TapEvent::Produced {
+                count: 2,
+                ids,
+                summary: None,
+            },
+        );
+        Ok(PipelineOutput {
+            snapshot,
+            analytics,
+        })
+    }
+
+    fn ids(&self) -> Ids {
+        Ids {
+            device: Some(self.device),
+            ..Ids::default()
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -114,147 +301,11 @@ pub fn run_realtime_output(
     store: &Store,
     tap: &dyn Tap,
 ) -> Result<PipelineOutput> {
-    let mut reassembler = Reassembler::with_spec(manifest.frame.to_spec()?);
-    let mut codec = ManifestCodec::new();
-    let mut kv = MemoryKv::new();
-    let mut timeline = Timeline::new();
-    let ids = Ids {
-        device: Some(capture.device),
-        ..Ids::default()
-    };
-
+    let mut processor = RealtimeProcessor::new(manifest.clone(), capture.device)?;
     for chunk in &capture.chunks {
-        for event in reassembler.push(chunk) {
-            let frame = match event {
-                ReassemblyEvent::Frame(frame) => frame,
-                ReassemblyEvent::InvalidFrame(error) => {
-                    tap.on_stage(Stage::Acquisition, TapEvent::Rejected { error, ids });
-                    continue;
-                }
-                ReassemblyEvent::SkippedGarbage { bytes } => {
-                    let error = MavError::warning(
-                        codes::FRAME_GARBAGE_SKIPPED,
-                        "bytes discarded while resynchronising",
-                    )
-                    .context(format!("{bytes} bytes"));
-                    tap.on_stage(Stage::Acquisition, TapEvent::Rejected { error, ids });
-                    continue;
-                }
-            };
-
-            let decoded = codec.decode(&frame, manifest, &mut kv)?;
-            if decoded.is_empty() {
-                continue;
-            }
-            tap.on_stage(
-                Stage::Decode,
-                TapEvent::Produced {
-                    count: decoded.len(),
-                    ids,
-                    summary: None,
-                },
-            );
-
-            let batch = RawSampleBatch {
-                device: capture.device,
-                samples: decoded,
-            };
-            let scored = mav_sqi::score_batch(&batch, SQI_PROVENANCE);
-            tap.on_stage(
-                Stage::Sqi,
-                TapEvent::Produced {
-                    count: scored.len(),
-                    ids,
-                    summary: None,
-                },
-            );
-
-            for mut sample in scored {
-                place_on_wall(&mut sample, capture.capture_wall);
-                timeline.insert(sample);
-            }
-        }
+        processor.ingest_chunk(chunk, capture.capture_wall, store, tap)?;
     }
-
-    let mut stored = 0usize;
-    for sample in timeline.drain_ordered() {
-        store.insert_sample(capture.device, &sample)?;
-        stored += 1;
-    }
-    if stored > 0 {
-        tap.on_stage(
-            Stage::Store,
-            TapEvent::Produced {
-                count: stored,
-                ids,
-                summary: None,
-            },
-        );
-    }
-
-    let hr_samples = store.samples(capture.device, StreamKind::HeartRate)?;
-    let summary = hr_summary(&hr_samples, HR_PROVENANCE);
-    tap.on_stage(
-        Stage::Features,
-        TapEvent::Produced {
-            count: 1,
-            ids,
-            summary: None,
-        },
-    );
-
-    store.upsert_provenance(&Provenance {
-        metadata: HR_PROVENANCE,
-        source_stream: StreamKind::HeartRate,
-        quality: 1.0,
-        algorithm_id: HR_FEATURE_ALGORITHM.to_owned(),
-        algorithm_version: HR_FEATURE_VERSION,
-        sample_count: summary.sample_count,
-    })?;
-
-    let snapshot = Snapshot::from_hr(capture.device, &summary);
-    let interval_source = match manifest.interval_source {
-        IntervalSourceConfig::Ecg => IntervalSource::Ecg,
-        IntervalSourceConfig::Ppg => IntervalSource::Ppg,
-        IntervalSourceConfig::Unknown => IntervalSource::Unknown,
-    };
-    let rr_samples = store.samples(capture.device, StreamKind::RrInterval)?;
-    let variability = time_domain(&rr_samples, interval_source, HRV_PROVENANCE);
-    if let Some(value) = &variability {
-        store.upsert_provenance(&Provenance {
-            metadata: HRV_PROVENANCE,
-            source_stream: StreamKind::RrInterval,
-            quality: 1.0,
-            algorithm_id: HRV_ALGORITHM.to_owned(),
-            algorithm_version: HRV_VERSION,
-            sample_count: value.interval_count,
-        })?;
-        tap.on_stage(
-            Stage::Metrics,
-            TapEvent::Produced {
-                count: 1,
-                ids,
-                summary: None,
-            },
-        );
-    }
-    let analytics = AnalyticsSnapshot::new(
-        interval_source,
-        variability.as_ref(),
-        negotiate(&manifest.capabilities),
-    );
-    tap.on_stage(
-        Stage::Snapshots,
-        TapEvent::Produced {
-            count: 2,
-            ids,
-            summary: None,
-        },
-    );
-    Ok(PipelineOutput {
-        snapshot,
-        analytics,
-    })
+    processor.output(store, tap)
 }
 
 /// Parse a manifest and a capture from JSON, run them through a fresh in-memory store, and return
@@ -390,6 +441,72 @@ mod tests {
 
         assert_eq!(a, b);
         assert_eq!(a.canonical_hash().unwrap(), b.canonical_hash().unwrap());
+    }
+
+    #[test]
+    fn every_notification_split_produces_the_same_snapshot() {
+        let manifest = realtime_manifest();
+        let frame = realtime_frame_with_rr(1_752_600_000, 72, &[800, 800, 850, 790, 900]);
+        let reference_store = Store::open_in_memory().unwrap();
+        let mut reference = RealtimeProcessor::new(manifest.clone(), DeviceId::new(1)).unwrap();
+        reference
+            .ingest_chunk(
+                &frame,
+                WallTime::from_unix_seconds(1_752_600_500),
+                &reference_store,
+                &NullTap,
+            )
+            .unwrap();
+        let expected = reference.output(&reference_store, &NullTap).unwrap();
+
+        for split in 0..=frame.len() {
+            let store = Store::open_in_memory().unwrap();
+            let mut processor = RealtimeProcessor::new(manifest.clone(), DeviceId::new(1)).unwrap();
+            processor
+                .ingest_chunk(
+                    &frame[..split],
+                    WallTime::from_unix_seconds(1_752_600_500),
+                    &store,
+                    &NullTap,
+                )
+                .unwrap();
+            processor
+                .ingest_chunk(
+                    &frame[split..],
+                    WallTime::from_unix_seconds(1_752_600_500),
+                    &store,
+                    &NullTap,
+                )
+                .unwrap();
+            let actual = processor.output(&store, &NullTap).unwrap();
+            assert_eq!(actual, expected, "split at byte {split}");
+        }
+    }
+
+    #[test]
+    fn redelivered_notification_is_counted_as_duplicate() {
+        let store = Store::open_in_memory().unwrap();
+        let mut processor = RealtimeProcessor::new(realtime_manifest(), DeviceId::new(1)).unwrap();
+        let frame = realtime_frame(1_752_600_000, 62);
+        let wall = WallTime::from_unix_seconds(1_752_600_500);
+
+        let first = processor
+            .ingest_chunk(&frame, wall, &store, &NullTap)
+            .unwrap();
+        let second = processor
+            .ingest_chunk(&frame, wall, &store, &NullTap)
+            .unwrap();
+
+        assert_eq!(first.inserted, 1);
+        assert_eq!(first.duplicates, 0);
+        assert_eq!(second.inserted, 0);
+        assert_eq!(second.duplicates, 1);
+        assert_eq!(
+            store
+                .count_samples(DeviceId::new(1), StreamKind::HeartRate)
+                .unwrap(),
+            1
+        );
     }
 
     #[test]
