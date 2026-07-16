@@ -1,4 +1,4 @@
-package com.sennnen.mav.aura
+package com.sennnen.mav.ui.aura
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
@@ -14,6 +14,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sennnen.mav.ui.AppearanceMode
+import com.sennnen.mav.ui.AppearancePrefs
+import com.sennnen.mav.ui.UnitPrefs
+import com.sennnen.mav.ui.effortDisplayFactor
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -206,7 +210,7 @@ object AuraEffort {
     /** Factor from the user's Effort-scale preference (mirrors `UnitPrefs.currentEffortDisplayFactor`). */
     @Composable
     fun displayFactor(): Double =
-        1.0
+        effortDisplayFactor(UnitPrefs.effortScale(LocalContext.current))
 
     @Composable
     fun text(stored: Double?): String = text(stored, displayFactor())
@@ -310,7 +314,11 @@ fun auraColorScheme(p: AuraPalette): androidx.compose.material3.ColorScheme {
 /** Provides the Aura palette + the Material scheme derived from it. */
 @Composable
 fun AuraTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
+    val dark = when (AppearancePrefs.mode) {
+        AppearanceMode.LIGHT -> false
+        AppearanceMode.DARK -> true
+        AppearanceMode.SYSTEM -> isSystemInDarkTheme()
+    }
     val palette = if (dark) AuraDarkPalette else AuraLightPalette
     CompositionLocalProvider(LocalAuraPalette provides palette) {
         androidx.compose.material3.MaterialTheme(

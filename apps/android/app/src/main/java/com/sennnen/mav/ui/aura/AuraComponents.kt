@@ -1,4 +1,4 @@
-package com.sennnen.mav.aura
+package com.sennnen.mav.ui.aura
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -69,6 +69,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sennnen.mav.ui.NoopPrefs
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -424,12 +425,10 @@ object AuraHubCards {
     fun encode(hidden: Set<String>): String = hidden.sorted().joinToString(",")
 
     fun load(context: android.content.Context, hub: String): String =
-        context.getSharedPreferences("mav", android.content.Context.MODE_PRIVATE)
-            .getString(storageKey(hub), "") ?: ""
+        NoopPrefs.of(context).getString(storageKey(hub), "") ?: ""
 
     fun save(context: android.content.Context, hub: String, csv: String) {
-        context.getSharedPreferences("mav", android.content.Context.MODE_PRIVATE)
-            .edit().putString(storageKey(hub), csv).apply()
+        NoopPrefs.of(context).edit().putString(storageKey(hub), csv).apply()
     }
 }
 

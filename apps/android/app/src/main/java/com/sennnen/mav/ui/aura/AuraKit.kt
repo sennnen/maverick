@@ -1,4 +1,4 @@
-package com.sennnen.mav.aura
+package com.sennnen.mav.ui.aura
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode

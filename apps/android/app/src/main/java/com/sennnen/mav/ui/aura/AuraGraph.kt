@@ -1,4 +1,4 @@
-package com.sennnen.mav.aura
+package com.sennnen.mav.ui.aura
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sennnen.mav.analytics.StageSegment
 import kotlinx.coroutines.delay
 import java.text.DateFormat
 import java.time.LocalDate
@@ -76,7 +77,6 @@ import kotlin.math.roundToInt
 // contrast tokens.
 
 data class AuraPoint(val day: String, val value: Double)
-data class StageSegment(val start: Long, val end: Long, val stage: String)
 
 private val inFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US)
 private val shortFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM")
