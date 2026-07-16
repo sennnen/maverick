@@ -60,3 +60,7 @@ targets:
       - path: MaverickTests
     dependencies:
       - target: Maverick
+    settings:
+      base:
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Maverick.app/Maverick"
+        BUNDLE_LOADER: "$(TEST_HOST)"
