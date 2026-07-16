@@ -53,10 +53,12 @@ rustup target add "$ARM_TARGET" "$X86_TARGET"
   CC_aarch64_linux_android="$ARM_CLANG" \
     AR_aarch64_linux_android="$LLVM_AR" \
     CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$ARM_CLANG" \
+    CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS="-C link-arg=-Wl,-z,max-page-size=16384" \
     cargo build --locked --release -p mav-ffi --target "$ARM_TARGET"
   CC_x86_64_linux_android="$X86_CLANG" \
     AR_x86_64_linux_android="$LLVM_AR" \
     CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$X86_CLANG" \
+    CARGO_TARGET_X86_64_LINUX_ANDROID_RUSTFLAGS="-C link-arg=-Wl,-z,max-page-size=16384" \
     cargo build --locked --release -p mav-ffi --target "$X86_TARGET"
 )
 
