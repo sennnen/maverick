@@ -142,8 +142,9 @@ whole generated package atomically so stale slices cannot survive.
 **Status: in progress.** Reproducible scripts now build a device/simulator XCFramework and Android
 arm64-v8a/x86_64 shared libraries from pinned Rust targets, generate language bindings, replace
 their ignored package directories without retaining stale slices, and emit SHA-256 inventories.
-Dedicated macOS and Linux CI jobs execute both real cross-builds. Native compile/link parity tests
-remain and land with the minimal application projects in PL-P4.
+Dedicated macOS and Linux CI jobs execute both real cross-builds. Android now compiles the generated
+Kotlin, links both ABIs, opens the runtime, runs decoder tests, passes lint, and builds debug plus
+minified release APKs. The iOS compile/link parity test remains with its minimal project in PL-P4.
 
 ---
 
@@ -172,7 +173,11 @@ fixture parity.
 
 **Exit:** both clean projects build and launch before any Aura screen is migrated.
 
-**Status: pending.**
+**Status: in progress.** The Android application is a clean new project with Maverick package ids,
+JDK 17, API 26–36 support, the generated core package wired into Gradle, a stateful runtime opened
+off the UI thread, strict `host-snapshot/v1` decoding, structured startup failure display, real JVM
+decoder tests, clean Android lint, a signed debug APK containing only the shipped ABIs, and a
+minified R8 release build. The iOS diagnostic project and both fixture parity launch tests remain.
 
 ---
 

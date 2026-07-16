@@ -13,6 +13,19 @@ sheet. We will copy or rewrite only presentation code that fits this boundary. N
 `AppViewModel`, Room repositories, WHOOP BLE client, analytics, onboarding, Health Connect, ML
 assets, services, widgets, and notification machinery are not app dependencies here.
 
+## Build and test
+
+Use JDK 17 and set `ANDROID_HOME` or `ANDROID_SDK_ROOT`, then run:
+
+    ./gradlew lintDebug testDebugUnitTest assembleDebug assembleRelease
+
+Gradle builds the Rust package first, compiles the generated Kotlin binding, runs the strict host
+snapshot decoder tests, and emits `app/build/outputs/apk/debug/app-debug.apk`. The APK contains only
+the shipped arm64-v8a and x86_64 libraries. The same gate builds the minified release variant through
+R8; signing is reserved for the release-candidate workflow. The current launch surface is
+deliberately diagnostic: it proves the database, stateful runtime, generated binding, canonical
+snapshot decoder, and APK packaging before Aura presentation code lands.
+
 ## Building the core for Android
 
 Install the pinned NDK once:
