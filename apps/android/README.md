@@ -22,5 +22,9 @@ the app then calls `coreVersion()` and `runCapture(manifestJson, captureJson)` d
 NDK cross-compile per ABI and the Gradle packaging is a step for the app milestone, not the M0
 binding.
 
+`runCapture` returns canonical session and analytics JSON plus one parity hash for each. Hosts should
+render availability reasons from the analytics JSON rather than reconstructing capability rules in
+Kotlin.
+
 The Rust surface and the bindgen step are verified in CI. Linking into an emulator build needs the
 Android toolchain and is a local step until the app milestone.

@@ -265,10 +265,18 @@ pub fn run_realtime_json(
     capture_json: &str,
     tap: &dyn Tap,
 ) -> Result<Snapshot> {
+    Ok(run_realtime_output_json(manifest_json, capture_json, tap)?.snapshot)
+}
+
+pub fn run_realtime_output_json(
+    manifest_json: &str,
+    capture_json: &str,
+    tap: &dyn Tap,
+) -> Result<PipelineOutput> {
     let manifest = Manifest::from_json(manifest_json)?;
     let capture = Capture::from_json(capture_json)?;
     let store = Store::open_in_memory()?;
-    run_realtime(&manifest, &capture, &store, tap)
+    run_realtime_output(&manifest, &capture, &store, tap)
 }
 
 #[cfg(test)]

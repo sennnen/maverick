@@ -21,5 +21,9 @@ library and the modulemap into an `.xcframework` and add the generated Swift fil
 the app then calls `coreVersion()` and `runCapture(manifestJson:captureJson:)` directly. The exact
 `.xcframework` packaging is a step for the app milestone, not the M0 binding.
 
+`runCapture` returns canonical session and analytics JSON plus one parity hash for each. Hosts should
+render availability reasons from the analytics JSON rather than reconstructing capability rules in
+Swift.
+
 The Rust surface and the bindgen step are verified in CI. Linking the framework into a simulator
 build needs Xcode and is a local step until the app milestone.
