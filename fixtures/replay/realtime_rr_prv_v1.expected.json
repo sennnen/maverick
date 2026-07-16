@@ -1,0 +1,38 @@
+{
+  "analytics": {
+    "schema": "analytics-snapshot/v1",
+    "interval_source": "ppg",
+    "variability_label": "pulse_rate_variability",
+    "mean_interval_micros": 828000,
+    "rmssd_micros": 67454,
+    "sdnn_micros": 46583,
+    "nn50_count": 2,
+    "pnn50_milli_percent": 50000,
+    "interval_count": 5,
+    "excluded_interval_count": 1,
+    "algorithm": "time_domain_interval_variability",
+    "algorithm_version": "1.0.0",
+    "availability": [
+      {
+        "analytic": "time_domain_hrv",
+        "available": true,
+        "reason": null
+      },
+      {
+        "analytic": "recovery",
+        "available": false,
+        "reason": {
+          "kind": "algorithm_not_admitted"
+        }
+      }
+    ],
+    "provenance_id": 3
+  },
+  "analytics_hash": "e77c7b04c7fceb2c",
+  "evidence": {
+    "packet_layout": "docs/protocol/whoop.md REALTIME_DATA packet 40 [XVAL]",
+    "frame_generator": "independent Python CRC-16/MODBUS and zlib CRC-32",
+    "formula_reference": "1996 ESC/NASPE Task Force",
+    "algorithm_version": "1.0.0"
+  }
+}

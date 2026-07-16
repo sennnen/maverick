@@ -1,0 +1,38 @@
+{
+  "schema": "connector-manifest/v1",
+  "identity": {
+    "family": "fixture-gen5",
+    "display_name": "Fixture gen5 realtime RR",
+    "models": ["FIXTURE"]
+  },
+  "gatt": { "service": "s", "command": "c", "notify": ["n"] },
+  "frame": { "wire_format": "gen5", "max_frame_bytes": 8192 },
+  "interval_source": "ppg",
+  "packets": { "40": "realtime_data" },
+  "layouts": {
+    "realtime_data": {
+      "time": {
+        "seconds_offset": 10,
+        "subseconds_offset": 14,
+        "subseconds_unit": "milliseconds"
+      },
+      "fields": [
+        { "name": "heart_rate", "stream": "heart_rate", "type": "u8", "offset": 16 }
+      ],
+      "repeats": [
+        {
+          "name": "rr_interval",
+          "stream": "rr_interval",
+          "type": "u16_le",
+          "count_offset": 17,
+          "start_offset": 18,
+          "stride": 2,
+          "max_count": 16,
+          "drop_zero": true
+        }
+      ]
+    }
+  },
+  "capabilities": ["heart_rate", "rr_interval"],
+  "confidence_note": "Source-derived fixture manifest. The gen5 packet-40 timestamp, HR, RR count, and u16-le RR offsets are XVAL in docs/protocol/whoop.md. interval_source is ppg because WHOOP derives RR from optical pulse timing."
+}

@@ -4,7 +4,7 @@
 //! does, a capture replayed here runs the identical code a live device would. See docs/pipeline.md.
 #![forbid(unsafe_code)]
 
-use mav_engine::{run_realtime, Capture, Manifest, Snapshot, Store};
+use mav_engine::{run_realtime_output, AnalyticsSnapshot, Capture, Manifest, Snapshot, Store};
 use mav_model::error::{codes, MavError, Result};
 use mav_obs::ring::{RingEntry, RingLog, RingLogTap};
 use std::path::Path;
@@ -14,6 +14,8 @@ use std::sync::Arc;
 pub struct Replay {
     pub snapshot: Snapshot,
     pub hash: String,
+    pub analytics: AnalyticsSnapshot,
+    pub analytics_hash: String,
     pub boundary: Vec<RingEntry>,
 }
 
@@ -31,12 +33,15 @@ pub fn replay(manifest: &Manifest, capture: &Capture) -> Result<Replay> {
     let tap = RingLogTap(log.clone());
     let store = Store::open_in_memory()?;
 
-    let snapshot = run_realtime(manifest, capture, &store, &tap)?;
-    let hash = snapshot.canonical_hash()?;
+    let output = run_realtime_output(manifest, capture, &store, &tap)?;
+    let hash = output.snapshot.canonical_hash()?;
+    let analytics_hash = output.analytics.canonical_hash()?;
     let boundary = log.recent(4096);
     Ok(Replay {
-        snapshot,
+        snapshot: output.snapshot,
         hash,
+        analytics: output.analytics,
+        analytics_hash,
         boundary,
     })
 }
@@ -114,5 +119,27 @@ mod tests {
         assert!(stages.contains(&Stage::Decode));
         assert!(stages.contains(&Stage::Sqi));
         assert_eq!(stages.last(), Some(&Stage::Snapshots));
+    }
+
+    #[test]
+    fn rr_fixture_reproduces_the_frozen_prv_snapshot() {
+        let replay = replay_files(
+            &fixture("realtime_rr_prv_v1.manifest.json"),
+            &fixture("realtime_rr_prv_v1.capture.json"),
+        )
+        .unwrap();
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(fixture("realtime_rr_prv_v1.expected.json")).unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            serde_json::to_value(&replay.analytics).unwrap(),
+            expected["analytics"]
+        );
+        assert_eq!(
+            replay.analytics_hash,
+            expected["analytics_hash"].as_str().unwrap()
+        );
     }
 }

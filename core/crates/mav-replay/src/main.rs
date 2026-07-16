@@ -22,6 +22,14 @@ fn main() -> ExitCode {
                 }
             }
             println!("hash: {}", replay.hash);
+            match replay.analytics.canonical_json() {
+                Ok(json) => println!("analytics: {json}"),
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    return ExitCode::FAILURE;
+                }
+            }
+            println!("analytics hash: {}", replay.analytics_hash);
             println!("boundary:");
             for entry in &replay.boundary {
                 match serde_json::to_string(entry) {

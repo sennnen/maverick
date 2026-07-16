@@ -15,3 +15,9 @@ A capture, a manifest, and the snapshot they produce, for `mav-replay` and the p
   produced by the code, so a change to any algorithm version changes this file, which is exactly the
   regression signal a golden fixture is for. Produced with the algorithm versions recorded inside
   it; a version bump means a new expected file, per [testing.md](../../docs/testing.md).
+
+`realtime_rr_prv_v1` exercises the ledger-backed gen5 packet-40 RR layout: count at offset 17 and
+`u16` little-endian intervals from offset 18. Its sequence is `800, 800, 850, 790, 900, 0, 50` ms.
+The decoder drops the zero placeholder, SQI rejects 50 ms, and the two equal 800 ms intervals remain
+distinct through their `seq` values. Frame CRCs and the expected time-domain values were generated
+with an independent Python implementation, not Maverick.
