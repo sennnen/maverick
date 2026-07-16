@@ -19,6 +19,7 @@ maverick/
     PLAN.md               master plan: principles, milestone table, work-packet protocol
     architecture.md       crate ownership and the dependency edges allowed to exist
     pipeline.md           the stage-by-stage contracts data moves through
+    platform.md           native runtime, transport events/actions, host snapshots, compatibility
     analytics.md          admitted formulas, HRV/PRV distinction, capability availability
     connectors.md         manifest schema, the DeviceCodec contract, how to add a device
     protocol/whoop.md     every known WHOOP fact, each carrying a confidence tag

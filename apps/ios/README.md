@@ -4,6 +4,8 @@ The native iOS application owns CoreBluetooth, Apple platform presentation, and 
 to the core. It renders immutable read models and does not contain decoding, timeline, storage, or
 analytics logic. Its implementation sequence is defined in the
 [platform lane](../../docs/plans/active/platform.md).
+The exact runtime, event, action, snapshot, threading, and compatibility rules are in
+[the platform contract](../../docs/platform.md).
 
 The UI specification is the current Aura iOS shell from the prior NOOP workspace: Today, Recovery,
 Strain, and Sleep hubs behind the floating glass tab bar, with one app-wide settings sheet. We will

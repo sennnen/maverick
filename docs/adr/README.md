@@ -12,3 +12,4 @@
 - [ADR-010](ADR-010.md) — UniFFI for the bindings
 - [ADR-011](ADR-011.md) — Connectors are a separate importable package, not bundled in the app
 - [ADR-012](ADR-012.md) — Frame parameters become manifest data
+- [ADR-013](ADR-013.md) — One stateful host runtime beside the stateless fixture runner

@@ -61,7 +61,8 @@ presentation layer crosses: design tokens, reusable visual components, the four-
 settings placement, and screen composition. NOOP's repositories, BLE clients, analytics, storage,
 ML wrappers, and platform view models do not cross. Maverick replaces those with one small native
 presentation store fed by immutable core read models. The exact migration and release sequence is
-the [platform lane](plans/active/platform.md).
+the [platform lane](plans/active/platform.md), and the binding contract is
+[platform.md](platform.md).
 
 A native shell may format units, dates, localized strings, and accessibility copy. It may not
 compute a health metric, infer why one is unavailable, query the core database directly, or repair

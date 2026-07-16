@@ -57,7 +57,11 @@ states which calls may block, which thread owns the runtime, and how backpressur
 
 **Exit:** one document defines the complete app/core seam and both platform READMEs point to it.
 
-**Status: pending.**
+**Status: done.** The boundary is frozen in `docs/platform.md`. ADR-013 keeps the stateless fixture
+runner and adds one serialized stateful runtime for product use. The contract fixes construction,
+connector registration, transport events and actions, canonical `host-snapshot/v1`, historical
+cursor redaction, threading, error shape, native presentation limits, and compatibility tests before
+the object is implemented.
 
 ---
 

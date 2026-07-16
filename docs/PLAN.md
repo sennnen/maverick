@@ -65,6 +65,7 @@ maverick/
     PLAN.md            this file: principles, milestone table, packet protocol
     architecture.md    system map, crate ownership, the allowed dependency edges
     pipeline.md        stage-by-stage contracts of the data pipeline
+    platform.md        native runtime, transport-event, read-model, and compatibility contract
     connectors.md      manifest schema, the DeviceCodec contract, how to add a device
     protocol/
       whoop.md         every known WHOOP protocol fact, each with a confidence tag
