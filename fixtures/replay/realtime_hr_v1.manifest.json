@@ -1,0 +1,27 @@
+{
+  "schema": "connector-manifest/v1",
+  "identity": {
+    "family": "fixture-gen5",
+    "display_name": "Fixture gen5 realtime",
+    "models": ["FIXTURE"]
+  },
+  "gatt": { "service": "s", "command": "c", "notify": ["n"] },
+  "frame": { "wire_format": "gen5", "max_frame_bytes": 8192 },
+  "packets": { "40": "realtime_data" },
+  "layouts": {
+    "realtime_data": {
+      "time": { "seconds_offset": 10, "subseconds_offset": 14 },
+      "fields": [
+        { "name": "heart_rate", "stream": "heart_rate", "type": "u8", "offset": 16 }
+      ],
+      "repeats": [
+        {
+          "name": "rr_interval", "stream": "rr_interval", "type": "u16_le",
+          "count_offset": 17, "start_offset": 18, "stride": 2,
+          "max_count": 16, "drop_zero": true
+        }
+      ]
+    }
+  },
+  "capabilities": ["heart_rate", "rr_interval"]
+}

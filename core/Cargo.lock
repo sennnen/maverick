@@ -240,7 +240,14 @@ dependencies = [
 
 [[package]]
 name = "mav-replay"
-version = "0.0.0"
+version = "0.1.0"
+dependencies = [
+ "mav-engine",
+ "mav-model",
+ "mav-obs",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "mav-sqi"

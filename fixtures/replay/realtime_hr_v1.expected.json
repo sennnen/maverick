@@ -1,0 +1,17 @@
+{
+  "produced_with": {
+    "hr_summary": "1.0.0",
+    "snapshot": "snapshot/v1",
+    "storage_schema": 1
+  },
+  "hash": "33143ef069a85a38",
+  "snapshot": {
+    "schema": "snapshot/v1",
+    "device_id": 1,
+    "current_bpm": 63,
+    "mean_milli_bpm": 60667,
+    "in_range_samples": 3,
+    "excluded_samples": 0,
+    "provenance_id": 2
+  }
+}
