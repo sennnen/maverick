@@ -7,5 +7,9 @@
 #![forbid(unsafe_code)]
 
 pub mod acquisition;
+pub mod pipeline;
+pub mod snapshot;
 
 pub use acquisition::{Acquisition, Command, Event, HandshakeConfig, State, StepOutcome};
+pub use pipeline::{run_realtime, Capture};
+pub use snapshot::{Snapshot, SNAPSHOT_SCHEMA};

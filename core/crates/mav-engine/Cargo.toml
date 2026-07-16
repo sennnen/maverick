@@ -9,7 +9,14 @@ publish.workspace = true
 [dependencies]
 mav-model = { workspace = true }
 mav-frame = { workspace = true }
+mav-codec = { workspace = true }
+mav-sqi = { workspace = true }
+mav-timeline = { workspace = true }
+mav-feature = { workspace = true }
+mav-store = { workspace = true }
 mav-obs = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [lints]
 workspace = true
