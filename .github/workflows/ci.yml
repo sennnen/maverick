@@ -19,6 +19,15 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
+      - name: generate FFI bindings
+        run: |
+          cargo build -p mav-ffi
+          for lang in swift kotlin; do
+            cargo run -q -p mav-ffi --features cli --bin uniffi-bindgen -- \
+              generate --library target/debug/libmav_ffi.so --language "$lang" --out-dir target/bindings
+          done
+          test -f target/bindings/mav_ffi.swift
+          test -f target/bindings/uniffi/mav_ffi/mav_ffi.kt
 
   docs:
     runs-on: ubuntu-latest

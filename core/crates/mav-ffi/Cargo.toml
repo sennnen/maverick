@@ -1,12 +1,27 @@
 [package]
 name = "mav-ffi"
-version = "0.0.0"
+version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[lib]
+crate-type = ["lib", "cdylib", "staticlib"]
+
 [dependencies]
+mav-model = { workspace = true }
+mav-obs = { workspace = true }
+mav-engine = { workspace = true }
+uniffi = { version = "0.28" }
+thiserror = { workspace = true }
+
+[features]
+cli = ["uniffi/cli"]
+
+[[bin]]
+name = "uniffi-bindgen"
+required-features = ["cli"]
 
 [lints]
 workspace = true
