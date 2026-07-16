@@ -18,9 +18,9 @@ struct MavTodayView: View {
       .auraGlowTile(.heart)
       AuraSectionHeader(title: "Daily signals")
       HStack(spacing: 12) {
-        AuraMiniStat(value: "--", label: "Recovery", level: 0, tint: .charge.glow)
-        AuraMiniStat(value: "--", label: "Strain", level: 0, tint: .effort.glow)
-        AuraMiniStat(value: "--", label: "Sleep", level: 0, tint: .rest.glow)
+        AuraMiniStat(value: "--", label: "Recovery", level: 0, tint: AuraDesign.Family.charge.glow)
+        AuraMiniStat(value: "--", label: "Strain", level: 0, tint: AuraDesign.Family.effort.glow)
+        AuraMiniStat(value: "--", label: "Sleep", level: 0, tint: AuraDesign.Family.rest.glow)
       }
       .auraGlowTile(nil, padding: AuraDesign.tilePadding)
       Text("Scores appear after admitted streams are stored and analysed.").font(AuraDesign.sub).foregroundStyle(AuraDesign.ink.opacity(0.62))
@@ -32,7 +32,7 @@ struct MavRecoveryView: View {
   var body: some View {
     MavHub(title: "Recovery", subtitle: "Readiness from overnight data", family: .charge) { snapshot in
       HStack(spacing: 22) {
-        AuraRing(progress: 0, text: "--", tint: .charge.glow, size: 144, lineWidth: 8)
+        AuraRing(progress: 0, text: "--", tint: AuraDesign.Family.charge.glow, size: 144, lineWidth: 8)
         VStack(alignment: .leading, spacing: 8) {
           Text("Recovery").font(AuraDesign.title).foregroundStyle(AuraDesign.ink)
           Text(snapshot?.recoveryUnavailableReason ?? "No recovery result yet.").font(AuraDesign.sub).foregroundStyle(AuraDesign.ink.opacity(0.72))
@@ -48,7 +48,7 @@ struct MavStrainView: View {
   var body: some View {
     MavHub(title: "Strain", subtitle: "Daily load and activity", family: .effort) { _ in
       HStack(spacing: 22) {
-        AuraRing(progress: 0, text: "--", tint: .effort.glow, size: 144, lineWidth: 8)
+        AuraRing(progress: 0, text: "--", tint: AuraDesign.Family.effort.glow, size: 144, lineWidth: 8)
         VStack(alignment: .leading, spacing: 8) {
           Text("Strain").font(AuraDesign.title).foregroundStyle(AuraDesign.ink)
           Text("No admitted strain algorithm in current core schema.").font(AuraDesign.sub).foregroundStyle(AuraDesign.ink.opacity(0.72))
@@ -64,7 +64,7 @@ struct MavSleepView: View {
   var body: some View {
     MavHub(title: "Sleep", subtitle: "Overnight timing and stages", family: .rest) { _ in
       HStack(spacing: 22) {
-        AuraRing(progress: 0, text: "--", tint: .rest.glow, size: 144, lineWidth: 8)
+        AuraRing(progress: 0, text: "--", tint: AuraDesign.Family.rest.glow, size: 144, lineWidth: 8)
         VStack(alignment: .leading, spacing: 8) {
           Text("Sleep").font(AuraDesign.title).foregroundStyle(AuraDesign.ink)
           Text("No admitted sleep result in current core schema.").font(AuraDesign.sub).foregroundStyle(AuraDesign.ink.opacity(0.72))
@@ -84,7 +84,7 @@ private struct MavHub<Content: View>: View {
   @ViewBuilder var content: (MavSnapshot?) -> Content
 
   var body: some View {
-    let snapshot = if case let .ready(snapshot) = store.state { snapshot } else { nil }
+    let snapshot: MavSnapshot? = if case let .ready(snapshot) = store.state { snapshot } else { nil }
     ScrollView {
       VStack(alignment: .leading, spacing: AuraDesign.cardSpacing) {
         AuraHubHeader(title: title, subtitle: subtitle)
