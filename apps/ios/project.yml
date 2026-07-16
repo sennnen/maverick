@@ -62,5 +62,6 @@ targets:
       - target: Maverick
     settings:
       base:
+        GENERATE_INFOPLIST_FILE: YES
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Mav.app/Mav"
         BUNDLE_LOADER: "$(TEST_HOST)"
