@@ -46,3 +46,6 @@ Run the complete, reproducible app build from the repository root:
 It first rebuilds the ignored core package, then generates `Maverick.xcodeproj` from `project.yml`
 and runs the first available iPhone simulator's unit tests. The project itself is committed; run XcodeGen again
 after changing the project specification.
+
+Set `MAV_BUILD_RELEASE=1` to also produce an unsigned generic-device Release app at
+`build/release/Build/Products/Release-iphoneos/Mav.app`. CI uploads that app after pushes to `main`.

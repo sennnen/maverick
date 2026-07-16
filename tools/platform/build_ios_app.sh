@@ -24,4 +24,16 @@ SIMULATOR_ID="$({
     -sdk iphonesimulator \
     -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
     test
+
+  if [[ "${MAV_BUILD_RELEASE:-0}" == "1" ]]; then
+    xcodebuild \
+      -project Maverick.xcodeproj \
+      -scheme Maverick \
+      -sdk iphoneos \
+      -configuration Release \
+      -destination 'generic/platform=iOS' \
+      -derivedDataPath build/release \
+      CODE_SIGNING_ALLOWED=NO \
+      build
+  fi
 )

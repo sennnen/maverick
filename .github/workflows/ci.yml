@@ -12,7 +12,7 @@ jobs:
       run:
         working-directory: core
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: core
@@ -48,43 +48,80 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: bash tools/check_docs.sh
       - run: python3 tools/check_deps.py
 
   package-ios:
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@1.96.1
         with:
           targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - name: Remove unrelated Homebrew tap
+        run: |
+          if brew tap | grep -Fxq aws/tap; then
+            brew untap aws/tap
+          fi
       - run: brew install xcodegen
+      - run: MAV_BUILD_RELEASE=1 bash tools/platform/build_ios_app.sh
+        if: github.event_name == 'push'
       - run: bash tools/platform/build_ios_app.sh
+        if: github.event_name != 'push'
       - run: test -f apps/ios/build/mav-core/MavCore.xcframework/Info.plist
       - run: test -f apps/ios/build/mav-core/Sources/mav_ffi.swift
       - run: test -f apps/ios/build/mav-core/SHA256SUMS
+      - name: Upload iOS release app
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v6
+        with:
+          name: mav-ios-release-${{ github.sha }}
+          path: apps/ios/build/release/Build/Products/Release-iphoneos/Mav.app
+          if-no-files-found: error
+          retention-days: 14
 
   package-android:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
-          cache: gradle
+      - uses: gradle/actions/setup-gradle@v6
       - uses: dtolnay/rust-toolchain@1.96.1
         with:
           targets: aarch64-linux-android,x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
       - uses: android-actions/setup-android@v3
+      - name: Locate Android SDK
+        id: android-sdk
+        run: echo "root=${ANDROID_SDK_ROOT:?}" >> "$GITHUB_OUTPUT"
+      - name: Cache Android NDK
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.android-sdk.outputs.root }}/ndk/29.0.14206865
+          key: ${{ runner.os }}-ndk-29.0.14206865
       - run: sdkmanager "ndk;29.0.14206865"
-      - run: bash tools/platform/build_android.sh
+      - run: ./gradlew lintDebug testDebugUnitTest assembleDebug assembleRelease
+        working-directory: apps/android
       - run: test -f apps/android/build/mav-core/jniLibs/arm64-v8a/libmav_ffi.so
       - run: test -f apps/android/build/mav-core/jniLibs/x86_64/libmav_ffi.so
       - run: test -f apps/android/build/mav-core/Sources/uniffi/mav_ffi/mav_ffi.kt
       - run: test -f apps/android/build/mav-core/SHA256SUMS
-      - run: ./gradlew lintDebug testDebugUnitTest assembleDebug assembleRelease
-        working-directory: apps/android
       - run: test -f apps/android/app/build/outputs/apk/debug/app-debug.apk
       - run: test -f apps/android/app/build/outputs/apk/release/app-release-unsigned.apk
+      - name: Upload Android release APK
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v6
+        with:
+          name: mav-android-release-${{ github.sha }}
+          path: apps/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 14

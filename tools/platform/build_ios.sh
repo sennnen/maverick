@@ -20,7 +20,7 @@ xcrun --sdk iphonesimulator --show-sdk-path >/dev/null 2>&1 ||
 readonly CORE="$MAV_ROOT/core"
 readonly BUILD_ROOT="$MAV_ROOT/apps/ios/build"
 readonly DESTINATION="$BUILD_ROOT/mav-core"
-readonly DEPLOYMENT_TARGET="${MAV_IOS_DEPLOYMENT_TARGET:-17.0}"
+readonly DEPLOYMENT_TARGET="${MAV_IOS_DEPLOYMENT_TARGET:-26.0}"
 readonly DEVICE_TARGET="aarch64-apple-ios"
 readonly SIM_ARM_TARGET="aarch64-apple-ios-sim"
 readonly SIM_INTEL_TARGET="x86_64-apple-ios"
