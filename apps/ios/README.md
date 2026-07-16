@@ -7,15 +7,19 @@ analytics logic. Its implementation sequence is defined in the
 The exact runtime, event, action, snapshot, threading, and compatibility rules are in
 [the platform contract](../../docs/platform.md).
 
-The UI specification is the current Aura iOS shell from the prior NOOP workspace: Today, Recovery,
-Strain, and Sleep hubs behind the floating glass tab bar, with one app-wide settings sheet. We will
-copy or rewrite only presentation code that fits this boundary. NOOP's `AppModel`, `Repository`,
-WHOOP packages, analytics, onboarding, widgets, HealthKit, and background machinery are not app
-dependencies here.
+The app preserves Aura's four hubs—Today, Recovery, Strain, and Sleep—behind its floating glass tab
+bar, with one app-wide settings sheet. Its `Maverick/` sources copy only visual Aura code and use a
+small `MavStore` for immutable `host-snapshot/v1` values. NOOP's `AppModel`, `Repository`, WHOOP
+packages, analytics, onboarding, widgets, HealthKit, and background machinery are not dependencies.
+
+Unavailable metrics remain unavailable. The app does not reuse old scores or manufacture temporary
+values: Recovery shows the structured core reason; Strain and Sleep become numeric only when their
+Maverick analytics are admitted.
 
 ## Building the core for iOS
 
-Install full Xcode, select it with `xcode-select`, then run:
+Install full Xcode, select it with `xcode-select`, install XcodeGen (`brew install xcodegen`), then
+run:
 
     bash tools/platform/build_ios.sh
 
@@ -27,3 +31,13 @@ by Git and must never be edited.
 
 The app target links `MavCore.xcframework` and compiles `mav_ffi.swift`. Product code constructs
 `MavRuntime`; `runCapture` remains the debug parity surface.
+
+## Building the app
+
+Run the complete, reproducible app build from the repository root:
+
+    bash tools/platform/build_ios_app.sh
+
+It first rebuilds the ignored core package, then generates `Maverick.xcodeproj` from `project.yml`
+and runs the iPhone 16 Pro simulator unit tests. The project itself is committed; run XcodeGen again
+after changing the project specification.

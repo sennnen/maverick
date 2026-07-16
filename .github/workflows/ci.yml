@@ -59,7 +59,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.96.1
         with:
           targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
-      - run: bash tools/platform/build_ios.sh
+      - run: brew install xcodegen
+      - run: bash tools/platform/build_ios_app.sh
       - run: test -f apps/ios/build/mav-core/MavCore.xcframework/Info.plist
       - run: test -f apps/ios/build/mav-core/Sources/mav_ffi.swift
       - run: test -f apps/ios/build/mav-core/SHA256SUMS

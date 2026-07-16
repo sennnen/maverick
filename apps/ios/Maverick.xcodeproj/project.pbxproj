@@ -1,0 +1,490 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		05D3048EA9DD86841C3FCA43 /* MavAuraRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FA7DF3C514AC667AAFABDF1 /* MavAuraRootView.swift */; };
+		18C5BEAFD9996AB002547688 /* AuraComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA00D522495863EFB8987CF /* AuraComponents.swift */; };
+		1AD6A9A1DCBB8FD7DF2BBCD8 /* MavSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D81BB132E15FD138D990D171 /* MavSnapshot.swift */; };
+		376C89B847C31944735D126F /* AuraKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7968D3E476D4DE0CDBBFC17D /* AuraKit.swift */; };
+		553E9AE6D0DF7E745B7DA739 /* MavStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F54528C914D0CBF2B09C338 /* MavStore.swift */; };
+		619577474C9D1261A3C6F7BA /* MavCore.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = BC4DDC7FE63A5BD0D9B52928 /* MavCore.xcframework */; };
+		622250487F22746FEC740FBA /* MavHubs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EE758863A6FF8E87595554B /* MavHubs.swift */; };
+		6B0CCD0F533DB8A4AD46E59E /* MaverickApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC45713B7650201F3BBA999F /* MaverickApp.swift */; };
+		6BCBAF9BA454C7DCF71CABD0 /* AuraDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E0CAC252656618C0DF01FCB /* AuraDesign.swift */; };
+		77362AB71856E5DA0C7FFD16 /* AuraHubHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA09DD8405B97E8A57FDC556 /* AuraHubHeader.swift */; };
+		9344A42D3645B6F6A7CCD831 /* MavSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14A49EDDB7C36481A91500DC /* MavSnapshotTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A91F3819C193E6A082BE4764 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 52F1BE0A143BF1B4318C4815 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B7AB589C45DFAC129547CB2B;
+			remoteInfo = Maverick;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		14A49EDDB7C36481A91500DC /* MavSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavSnapshotTests.swift; sourceTree = "<group>"; };
+		3E0CAC252656618C0DF01FCB /* AuraDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraDesign.swift; sourceTree = "<group>"; };
+		52796BE429CD38DE8B914F0D /* MaverickTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MaverickTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		628E74D0BF2F152EC0E9409D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		6FA0C0D2F36FCAB853951588 /* Maverick.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Maverick.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6FA7DF3C514AC667AAFABDF1 /* MavAuraRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavAuraRootView.swift; sourceTree = "<group>"; };
+		7968D3E476D4DE0CDBBFC17D /* AuraKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraKit.swift; sourceTree = "<group>"; };
+		8EE758863A6FF8E87595554B /* MavHubs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavHubs.swift; sourceTree = "<group>"; };
+		9F54528C914D0CBF2B09C338 /* MavStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavStore.swift; sourceTree = "<group>"; };
+		BC45713B7650201F3BBA999F /* MaverickApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaverickApp.swift; sourceTree = "<group>"; };
+		BC4DDC7FE63A5BD0D9B52928 /* MavCore.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = MavCore.xcframework; path = "build/mav-core/MavCore.xcframework"; sourceTree = "<group>"; };
+		CEA00D522495863EFB8987CF /* AuraComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraComponents.swift; sourceTree = "<group>"; };
+		D81BB132E15FD138D990D171 /* MavSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavSnapshot.swift; sourceTree = "<group>"; };
+		DA09DD8405B97E8A57FDC556 /* AuraHubHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraHubHeader.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		CBC697C6A7076D8B9B331629 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				619577474C9D1261A3C6F7BA /* MavCore.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0529A7B1BF16A83A5D7EBED5 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				6FA0C0D2F36FCAB853951588 /* Maverick.app */,
+				52796BE429CD38DE8B914F0D /* MaverickTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		0E6D5211144C68BEFD4707A9 /* build */ = {
+			isa = PBXGroup;
+			children = (
+				243B2DF66FF42FCD4247B2B0 /* mav-core */,
+			);
+			path = build;
+			sourceTree = "<group>";
+		};
+		243B2DF66FF42FCD4247B2B0 /* mav-core */ = {
+			isa = PBXGroup;
+			children = (
+				3AD1D44A04FB95111BADB420 /* Sources */,
+			);
+			path = "mav-core";
+			sourceTree = "<group>";
+		};
+		3AD1D44A04FB95111BADB420 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		4B78B393B733F73BFC1A1181 /* Maverick */ = {
+			isa = PBXGroup;
+			children = (
+				CEA00D522495863EFB8987CF /* AuraComponents.swift */,
+				3E0CAC252656618C0DF01FCB /* AuraDesign.swift */,
+				DA09DD8405B97E8A57FDC556 /* AuraHubHeader.swift */,
+				7968D3E476D4DE0CDBBFC17D /* AuraKit.swift */,
+				628E74D0BF2F152EC0E9409D /* Info.plist */,
+				6FA7DF3C514AC667AAFABDF1 /* MavAuraRootView.swift */,
+				BC45713B7650201F3BBA999F /* MaverickApp.swift */,
+				8EE758863A6FF8E87595554B /* MavHubs.swift */,
+				D81BB132E15FD138D990D171 /* MavSnapshot.swift */,
+				9F54528C914D0CBF2B09C338 /* MavStore.swift */,
+			);
+			path = Maverick;
+			sourceTree = "<group>";
+		};
+		7F9449A3C0F7AA7ABACD3626 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				BC4DDC7FE63A5BD0D9B52928 /* MavCore.xcframework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		975D0A4DF28DF66F623AF717 = {
+			isa = PBXGroup;
+			children = (
+				0E6D5211144C68BEFD4707A9 /* build */,
+				4B78B393B733F73BFC1A1181 /* Maverick */,
+				DBF7846C5AB3FB7F01CA3F28 /* MaverickTests */,
+				7F9449A3C0F7AA7ABACD3626 /* Frameworks */,
+				0529A7B1BF16A83A5D7EBED5 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		DBF7846C5AB3FB7F01CA3F28 /* MaverickTests */ = {
+			isa = PBXGroup;
+			children = (
+				14A49EDDB7C36481A91500DC /* MavSnapshotTests.swift */,
+			);
+			path = MaverickTests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		02787A519A893E825ED32C6B /* MaverickTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C16522AA8A0DE0F9F8F89D68 /* Build configuration list for PBXNativeTarget "MaverickTests" */;
+			buildPhases = (
+				04F84BFBE7C703FBE79D4B20 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A48357E4ECB9F4D48D4E589A /* PBXTargetDependency */,
+			);
+			name = MaverickTests;
+			packageProductDependencies = (
+			);
+			productName = MaverickTests;
+			productReference = 52796BE429CD38DE8B914F0D /* MaverickTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		B7AB589C45DFAC129547CB2B /* Maverick */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 87A32B25DD70260A350B441E /* Build configuration list for PBXNativeTarget "Maverick" */;
+			buildPhases = (
+				1B1025560BA342BD7A7D7FFC /* Sources */,
+				CBC697C6A7076D8B9B331629 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Maverick;
+			packageProductDependencies = (
+			);
+			productName = Maverick;
+			productReference = 6FA0C0D2F36FCAB853951588 /* Maverick.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		52F1BE0A143BF1B4318C4815 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					02787A519A893E825ED32C6B = {
+						ProvisioningStyle = Automatic;
+					};
+					B7AB589C45DFAC129547CB2B = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = CCD9D29A4B569C984F1EB29B /* Build configuration list for PBXProject "Maverick" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 975D0A4DF28DF66F623AF717;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 0529A7B1BF16A83A5D7EBED5 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B7AB589C45DFAC129547CB2B /* Maverick */,
+				02787A519A893E825ED32C6B /* MaverickTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		04F84BFBE7C703FBE79D4B20 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9344A42D3645B6F6A7CCD831 /* MavSnapshotTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1B1025560BA342BD7A7D7FFC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				18C5BEAFD9996AB002547688 /* AuraComponents.swift in Sources */,
+				6BCBAF9BA454C7DCF71CABD0 /* AuraDesign.swift in Sources */,
+				77362AB71856E5DA0C7FFD16 /* AuraHubHeader.swift in Sources */,
+				376C89B847C31944735D126F /* AuraKit.swift in Sources */,
+				05D3048EA9DD86841C3FCA43 /* MavAuraRootView.swift in Sources */,
+				622250487F22746FEC740FBA /* MavHubs.swift in Sources */,
+				1AD6A9A1DCBB8FD7DF2BBCD8 /* MavSnapshot.swift in Sources */,
+				553E9AE6D0DF7E745B7DA739 /* MavStore.swift in Sources */,
+				6B0CCD0F533DB8A4AD46E59E /* MaverickApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A48357E4ECB9F4D48D4E589A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B7AB589C45DFAC129547CB2B /* Maverick */;
+			targetProxy = A91F3819C193E6A082BE4764 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1CD2D3672AE4F8FC4D99F16F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"build/mav-core\"",
+				);
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Maverick/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.sennnen.mav;
+				PRODUCT_NAME = Mav;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		249C564AB878441D05D8584A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"build/mav-core\"",
+				);
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Maverick/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.sennnen.mav;
+				PRODUCT_NAME = Mav;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		66DA1BCE2849459C2CED32D2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.sennnen.MaverickTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Maverick.app/Maverick";
+			};
+			name = Debug;
+		};
+		AE327928D1FB88C48F238926 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
+		};
+		EBCE24AFF3D7D1E7A0F0168D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.sennnen.MaverickTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Maverick.app/Maverick";
+			};
+			name = Release;
+		};
+		FE03B7E66A58767481497BD8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		87A32B25DD70260A350B441E /* Build configuration list for PBXNativeTarget "Maverick" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				249C564AB878441D05D8584A /* Debug */,
+				1CD2D3672AE4F8FC4D99F16F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C16522AA8A0DE0F9F8F89D68 /* Build configuration list for PBXNativeTarget "MaverickTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				66DA1BCE2849459C2CED32D2 /* Debug */,
+				EBCE24AFF3D7D1E7A0F0168D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CCD9D29A4B569C984F1EB29B /* Build configuration list for PBXProject "Maverick" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FE03B7E66A58767481497BD8 /* Debug */,
+				AE327928D1FB88C48F238926 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 52F1BE0A143BF1B4318C4815 /* Project object */;
+}

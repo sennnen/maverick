@@ -177,7 +177,9 @@ fixture parity.
 JDK 17, API 26–36 support, the generated core package wired into Gradle, a stateful runtime opened
 off the UI thread, strict `host-snapshot/v1` decoding, structured startup failure display, real JVM
 decoder tests, clean Android lint, a signed debug APK containing only the shipped ABIs, and a
-minified R8 release build. The iOS diagnostic project and both fixture parity launch tests remain.
+minified R8 release build. The iOS app now has the same `MavRuntime` read boundary, strict snapshot
+decoder tests, and no NOOP domain dependency; macOS CI builds it after generating the core
+XCFramework. Fixture parity launch tests remain.
 
 ---
 
@@ -208,7 +210,8 @@ unit conversion, locale formatting, refresh coalescing, and error redaction.
 
 **Exit:** screens can depend only on the platform store and pure presentation models.
 
-**Status: pending.**
+**Status: in progress.** Both shells now render typed runtime state and explicit unavailable fields.
+More complete per-field presentation state lands with the admitted analytics.
 
 ---
 
@@ -244,7 +247,8 @@ agreed phone sizes.
 
 **Exit:** both apps show the cleaned Aura shell and compile without any NOOP domain package.
 
-**Status: pending.**
+**Status: in progress.** Both apps have the cleaned four-hub Aura shell, settings sheet, horizontal
+switching, and honest unavailable states. Visual regression fixtures still need a CI simulator lane.
 
 ---
 
