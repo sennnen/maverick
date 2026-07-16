@@ -7,10 +7,15 @@
 #![forbid(unsafe_code)]
 
 pub mod acquisition;
+pub mod historical;
 pub mod pipeline;
 pub mod snapshot;
 
 pub use acquisition::{Acquisition, Command, Event, HandshakeConfig, State, StepOutcome};
+pub use historical::{
+    CommandTemplate, HistoricalConfig, HistoricalController, HistoricalEvent, HistoricalOutcome,
+    HistoricalState, ResponseResult,
+};
 pub use pipeline::{
     run_realtime, run_realtime_json, run_realtime_output, run_realtime_output_json, Capture,
     PipelineOutput,
