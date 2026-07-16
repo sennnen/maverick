@@ -62,5 +62,5 @@ targets:
       - target: Maverick
     settings:
       base:
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Maverick.app/Maverick"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Mav.app/Mav"
         BUNDLE_LOADER: "$(TEST_HOST)"
