@@ -75,12 +75,18 @@ jobs:
       - run: test -f apps/ios/build/mav-core/MavCore.xcframework/Info.plist
       - run: test -f apps/ios/build/mav-core/Sources/mav_ffi.swift
       - run: test -f apps/ios/build/mav-core/SHA256SUMS
+      - name: Archive iOS release app
+        if: github.event_name == 'push'
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent \
+            apps/ios/build/release/Build/Products/Release-iphoneos/Mav.app \
+            apps/ios/build/release/mav-ios-release.zip
       - name: Upload iOS release app
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v6
         with:
           name: mav-ios-release-${{ github.sha }}
-          path: apps/ios/build/release/Build/Products/Release-iphoneos/Mav.app
+          path: apps/ios/build/release/mav-ios-release.zip
           if-no-files-found: error
           retention-days: 14
 
@@ -99,7 +105,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: core
-      - uses: android-actions/setup-android@v3
+      - name: Configure Android SDK
+        run: |
+          : "${ANDROID_HOME:?}"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
       - name: Locate Android SDK
         id: android-sdk
         run: echo "root=${ANDROID_SDK_ROOT:?}" >> "$GITHUB_OUTPUT"
@@ -125,3 +135,28 @@ jobs:
           path: apps/android/app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
           retention-days: 14
+
+  publish-release:
+    if: github.event_name == 'push'
+    needs: [core, docs, package-ios, package-android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: mav-*-release-${{ github.sha }}
+          path: release
+          merge-multiple: true
+      - name: Publish edge prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="edge-${GITHUB_SHA::7}"
+          gh release create "$tag" release/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Maverick edge ${GITHUB_SHA::7}" \
+            --prerelease \
+            --latest=false \
+            --notes "Automated unsigned native builds from ${GITHUB_SHA}."
