@@ -1,12 +1,16 @@
 [package]
 name = "mav-store"
-version = "0.0.0"
+version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
 [dependencies]
+mav-model = { workspace = true }
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [lints]
 workspace = true

@@ -56,6 +56,11 @@ fails the build.
 | 3003 | DECODE_FIELD_UNREADABLE | a manifest-declared field could not be read from the payload |
 | 3004 | DECODE_NO_MANIFEST_FOR_MODEL | no registered manifest matches a device model string |
 | 4001 | TIMELINE_IMPLAUSIBLE_TIMESTAMP | a device timestamp fell outside the plausible window and the sample was placed on capture time |
+| 5001 | STORAGE_OPEN | the database could not be opened or initialised |
+| 5002 | STORAGE_MIGRATION | a schema migration failed to apply |
+| 5003 | STORAGE_NEWER_SCHEMA | the database schema version is newer than the code understands |
+| 5004 | STORAGE_QUERY | a storage read or write failed |
+| 5005 | STORAGE_SERIALIZE | a value could not be serialised for storage or read back |
 | 10000 | INTERNAL_INVARIANT | a state the code treats as impossible was reached |
 
 Library code does not panic. `unwrap`, `expect`, and `panic!` are denied by the clippy

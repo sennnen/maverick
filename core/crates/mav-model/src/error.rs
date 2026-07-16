@@ -76,6 +76,12 @@ pub mod codes {
 
     pub const TIMELINE_IMPLAUSIBLE_TIMESTAMP: u16 = 4001;
 
+    pub const STORAGE_OPEN: u16 = 5001;
+    pub const STORAGE_MIGRATION: u16 = 5002;
+    pub const STORAGE_NEWER_SCHEMA: u16 = 5003;
+    pub const STORAGE_QUERY: u16 = 5004;
+    pub const STORAGE_SERIALIZE: u16 = 5005;
+
     pub const INTERNAL_INVARIANT: u16 = 10_000;
 
     pub const ALL: &[(u16, &str)] = &[
@@ -99,6 +105,11 @@ pub mod codes {
             TIMELINE_IMPLAUSIBLE_TIMESTAMP,
             "TIMELINE_IMPLAUSIBLE_TIMESTAMP",
         ),
+        (STORAGE_OPEN, "STORAGE_OPEN"),
+        (STORAGE_MIGRATION, "STORAGE_MIGRATION"),
+        (STORAGE_NEWER_SCHEMA, "STORAGE_NEWER_SCHEMA"),
+        (STORAGE_QUERY, "STORAGE_QUERY"),
+        (STORAGE_SERIALIZE, "STORAGE_SERIALIZE"),
         (INTERNAL_INVARIANT, "INTERNAL_INVARIANT"),
     ];
 }
