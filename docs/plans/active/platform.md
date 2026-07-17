@@ -282,7 +282,19 @@ snapshot hashes displayed only in diagnostics.
 **Exit:** changing a core fixture changes the corresponding values on both platforms through the
 same seam; no UI test seeds a platform database.
 
-**Status: pending.**
+**Status: in progress.** The parity seam is real: `fixtures/platform/host_snapshot_v1.expected.json`
+pins the canonical bytes the runtime produces from the `realtime_rr_prv_v1` capture (a `mav-engine`
+test regenerates it under `MAV_BLESS=1`), and Swift and Kotlin decode tests assert exact values from
+that one file. Both decoders now carry the session summary, battery/charging, last-sample time,
+snapshot age, and the PRV read model with structured availability. Decision log: the runtime has no
+`connected` state — link-up is `subscribing`/`streaming`, and the old `state == "connected"` check
+left the UI disconnected while streaming; stored HR/battery are cleared rather than shown live once
+the link drops. Session PRV surfaces on the live sheet under its provisional
+`pulse_rate_variability` label (never the overnight HRV vital, whose copy promises a sleep-window
+figure the core has not computed); the Recovery hub's empty state speaks the core reason; emptiness
+guards on both platforms pin that live values never leak into Strain or Sleep. Remaining: metric
+detail views, stale-age labels, historical-sync progress once M5-P7 lands, and the screen-level
+UI/screenshot tests.
 
 ---
 
