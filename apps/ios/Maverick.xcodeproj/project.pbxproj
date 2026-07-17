@@ -36,10 +36,12 @@
 		BA28C3D83D81CD014D987B45 /* HonestEmptinessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 049341216358E81CCDC3044B /* HonestEmptinessTests.swift */; };
 		C263D86C965501A11430223C /* AppModelApplyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B3A80484C0D2EBE2A641896 /* AppModelApplyTests.swift */; };
 		C32B8C52A8CC41B4EF385659 /* AuraKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9153FCF75B63AE80DEC03486 /* AuraKit.swift */; };
+		C7C7C75EE912047AFAF132AB /* MavPresent.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0EEC1686C819DFDDDE874B /* MavPresent.swift */; };
 		C7E950C8D717EB6627408530 /* Appearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C308EF1E54DE57286D0D95 /* Appearance.swift */; };
 		CAF8E3A53AAF761504B1A1BD /* MavStandins.swift in Sources */ = {isa = PBXBuildFile; fileRef = 949AEBF0671C3B8EF4A6A1D3 /* MavStandins.swift */; };
 		CC362DE599DD7DA18CFE1339 /* AuraHubHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06175A030CF83F9ADC88E4B9 /* AuraHubHeader.swift */; };
 		CD161B5CF23338BF80749B0C /* AuraSleepHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92C070832BB99631789D4731 /* AuraSleepHubView.swift */; };
+		D130625DDBC84502720729E5 /* MavPresentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22E83E1E5CE372E1D15D8A2F /* MavPresentTests.swift */; };
 		D801172ADD9543DED4A50BCF /* AuraDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8271E24213177A8CCA6A4B57 /* AuraDesign.swift */; };
 		D8764DE30F25A170827D584A /* NavRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EDBE2184C3A41D1A0BE599A /* NavRouter.swift */; };
 		E3E51251BDEDD1881B74BC8B /* TrainingTargets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DB9A882C4DE52613D3F964C /* TrainingTargets.swift */; };
@@ -79,6 +81,7 @@
 		20DD728BFA39E9918A058CD9 /* Repository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repository.swift; sourceTree = "<group>"; };
 		2142FDE4257BF0BF9F8BAF62 /* ReadModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadModels.swift; sourceTree = "<group>"; };
 		216A2D51C2F5A4AFA7E58359 /* AnalyticsShims.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsShims.swift; sourceTree = "<group>"; };
+		22E83E1E5CE372E1D15D8A2F /* MavPresentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavPresentTests.swift; sourceTree = "<group>"; };
 		2471D0FFBE74F673839C2559 /* CountdownTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountdownTimer.swift; sourceTree = "<group>"; };
 		32966D295C38E3DD4B2FD078 /* AuraReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraReportsView.swift; sourceTree = "<group>"; };
 		458ABBE60B3413C9594CF92F /* AuraJournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraJournalView.swift; sourceTree = "<group>"; };
@@ -104,6 +107,7 @@
 		D81BB132E15FD138D990D171 /* MavSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavSnapshot.swift; sourceTree = "<group>"; };
 		D93CFCF7FFB51503B675A857 /* AuraPrivacyAndReminders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraPrivacyAndReminders.swift; sourceTree = "<group>"; };
 		DBAA41987E4FDBAE6506ADE1 /* AuraDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraDiagnosticsView.swift; sourceTree = "<group>"; };
+		DE0EEC1686C819DFDDDE874B /* MavPresent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavPresent.swift; sourceTree = "<group>"; };
 		E43401383DF23421DD8A7A61 /* AuraMetricDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraMetricDetailView.swift; sourceTree = "<group>"; };
 		E5C0ACFC5483F357F3E50E52 /* JournalCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalCatalog.swift; sourceTree = "<group>"; };
 		E5CC4D752270D3E077DB9AF3 /* Stores.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stores.swift; sourceTree = "<group>"; };
@@ -223,6 +227,7 @@
 				D93CFCF7FFB51503B675A857 /* AuraPrivacyAndReminders.swift */,
 				2471D0FFBE74F673839C2559 /* CountdownTimer.swift */,
 				E5C0ACFC5483F357F3E50E52 /* JournalCatalog.swift */,
+				DE0EEC1686C819DFDDDE874B /* MavPresent.swift */,
 				949AEBF0671C3B8EF4A6A1D3 /* MavStandins.swift */,
 				0EDBE2184C3A41D1A0BE599A /* NavRouter.swift */,
 				2142FDE4257BF0BF9F8BAF62 /* ReadModels.swift */,
@@ -272,6 +277,7 @@
 			children = (
 				7B3A80484C0D2EBE2A641896 /* AppModelApplyTests.swift */,
 				049341216358E81CCDC3044B /* HonestEmptinessTests.swift */,
+				22E83E1E5CE372E1D15D8A2F /* MavPresentTests.swift */,
 				14A49EDDB7C36481A91500DC /* MavSnapshotTests.swift */,
 				186BBE0388C59C875F86413D /* WidgetAnchorTests.swift */,
 			);
@@ -373,6 +379,7 @@
 			files = (
 				C263D86C965501A11430223C /* AppModelApplyTests.swift in Sources */,
 				BA28C3D83D81CD014D987B45 /* HonestEmptinessTests.swift in Sources */,
+				D130625DDBC84502720729E5 /* MavPresentTests.swift in Sources */,
 				9344A42D3645B6F6A7CCD831 /* MavSnapshotTests.swift in Sources */,
 				603A65AB3D6EF0ADA2B83EBD /* WidgetAnchorTests.swift in Sources */,
 			);
@@ -406,6 +413,7 @@
 				3BCF0B190991191920AE22D1 /* CountdownTimer.swift in Sources */,
 				F6C2EFE83D77D679E91FAE4F /* JournalCatalog.swift in Sources */,
 				AF57F90448635067359EF047 /* LoopingTimePicker.swift in Sources */,
+				C7C7C75EE912047AFAF132AB /* MavPresent.swift in Sources */,
 				1AD6A9A1DCBB8FD7DF2BBCD8 /* MavSnapshot.swift in Sources */,
 				CAF8E3A53AAF761504B1A1BD /* MavStandins.swift in Sources */,
 				553E9AE6D0DF7E745B7DA739 /* MavStore.swift in Sources */,

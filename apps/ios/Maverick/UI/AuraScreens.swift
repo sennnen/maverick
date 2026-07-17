@@ -39,10 +39,21 @@ private func screenTitle(_ t: String) -> some View {
 struct AuraLiveView: View {
   @EnvironmentObject private var live: LiveState
   @EnvironmentObject private var model: AppModel
+  @EnvironmentObject private var store: MavStore
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var pulse = false
+  @State private var showPrvDetail = false
 
   private var bpm: Int? { model.bpm ?? live.heartRate }
+
+  private var staleLabel: String? {
+    guard case let .ready(snapshot) = store.state else { return nil }
+    return MavPresent.sampleAgeLabel(
+      asOfUnixMs: snapshot.asOfUnixMs,
+      lastSampleUnixMs: snapshot.lastSampleUnixMs,
+      connected: live.connected
+    )
+  }
 
   var body: some View {
     ScrollView {
@@ -63,6 +74,9 @@ struct AuraLiveView: View {
             Text(bpm.map { "\($0)" } ?? "--").font(AuraDesign.mega(96)).foregroundStyle(AuraDesign.ink)
             Text("bpm").font(AuraDesign.number(26)).foregroundStyle(AuraDesign.ink.opacity(0.5))
           }
+          if let staleLabel {
+            Text(staleLabel).font(AuraDesign.sub).foregroundStyle(AuraDesign.ink.opacity(0.55))
+          }
         }
         .frame(maxWidth: .infinity, minHeight: 300)
         .auraGlowTile(.heart, padding: 22, radius: 34)
@@ -73,11 +87,28 @@ struct AuraLiveView: View {
           AuraInfoRow(label: "Battery", value: live.batteryPct.map { "\(Int($0.rounded()))%" } ?? "--")
           RowDivider()
           if let prv = model.prv {
-            AuraInfoRow(label: "PRV · RMSSD",
-                        value: String(format: "%.1f ms", Double(prv.rmssdMicros) / 1000))
-            RowDivider()
-            AuraInfoRow(label: "PRV intervals",
-                        value: "\(prv.intervalCount) used · \(prv.excludedIntervalCount) excluded")
+            // Tap for the small PRV detail: the full admitted metric set + provenance.
+            VStack(spacing: 0) {
+              AuraInfoRow(label: "PRV · RMSSD", value: MavPresent.microsAsMs(prv.rmssdMicros))
+              RowDivider()
+              AuraInfoRow(label: "PRV intervals",
+                          value: "\(prv.intervalCount) used · \(prv.excludedIntervalCount) excluded")
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { withAnimation { showPrvDetail.toggle() } }
+            if showPrvDetail {
+              RowDivider()
+              AuraInfoRow(label: "SDNN", value: MavPresent.microsAsMs(prv.sdnnMicros))
+              RowDivider()
+              AuraInfoRow(label: "Mean interval", value: MavPresent.microsAsMs(prv.meanIntervalMicros))
+              RowDivider()
+              AuraInfoRow(label: "pNN50",
+                          value: "\(MavPresent.milliPercentAsPercent(prv.pnn50MilliPercent)) · NN50 \(prv.nn50Count)")
+              RowDivider()
+              AuraInfoRow(label: "Algorithm", value: "\(prv.algorithm) v\(prv.algorithmVersion)")
+              RowDivider()
+              AuraInfoRow(label: "Provenance", value: "#\(prv.provenanceId) · \(prv.intervalSource)")
+            }
           } else {
             // The core's structured reason; the platform never invents availability.
             AuraInfoRow(label: "PRV", value: model.prvUnavailableReason ?? "--")

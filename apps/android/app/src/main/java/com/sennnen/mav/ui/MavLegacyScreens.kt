@@ -1,5 +1,6 @@
 package com.sennnen.mav.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -39,7 +43,6 @@ import com.sennnen.mav.ui.aura.AuraScreen
 import com.sennnen.mav.ui.aura.AuraSectionHeader
 import com.sennnen.mav.ui.aura.AuraStatusChip
 import com.sennnen.mav.ui.aura.AuraType
-import java.util.Locale
 import kotlin.math.roundToInt
 
 // The destinations AuraRoot routes to that Maverick backs with its own on-device subsystems
@@ -86,6 +89,13 @@ fun LiveScreen(vm: AppViewModel, onManageDevices: () -> Unit) {
                         Spacer(Modifier.width(6.dp))
                         Text("bpm", style = AuraType.number(24.sp), color = p.ink.copy(alpha = 0.5f))
                     }
+                    val stale = snapshot?.let {
+                        sampleAgeLabel(it.asOfUnixMs, it.lastSampleUnixMs, live.connected)
+                    }
+                    if (stale != null) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(stale, style = AuraType.sub, color = p.ink.copy(alpha = 0.55f))
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
             }
@@ -95,8 +105,19 @@ fun LiveScreen(vm: AppViewModel, onManageDevices: () -> Unit) {
                     InfoRow("Battery", live.batteryPct?.let { "${it.roundToInt()}%" } ?: "--")
                     val prv = snapshot?.prv
                     if (prv != null) {
-                        InfoRow("PRV · RMSSD", String.format(Locale.getDefault(), "%.1f ms", prv.rmssdMicros / 1000.0))
-                        InfoRow("PRV intervals", "${prv.intervalCount} used · ${prv.excludedIntervalCount} excluded")
+                        // Tap for the small PRV detail: the full admitted metric set + provenance.
+                        var showPrvDetail by remember { mutableStateOf(false) }
+                        Column(Modifier.clickable { showPrvDetail = !showPrvDetail }) {
+                            InfoRow("PRV · RMSSD", microsAsMs(prv.rmssdMicros))
+                            InfoRow("PRV intervals", "${prv.intervalCount} used · ${prv.excludedIntervalCount} excluded")
+                        }
+                        if (showPrvDetail) {
+                            InfoRow("SDNN", microsAsMs(prv.sdnnMicros))
+                            InfoRow("Mean interval", microsAsMs(prv.meanIntervalMicros))
+                            InfoRow("pNN50", "${milliPercentAsPercent(prv.pnn50MilliPercent)} · NN50 ${prv.nn50Count}")
+                            InfoRow("Algorithm", "${prv.algorithm} v${prv.algorithmVersion}")
+                            InfoRow("Provenance", "#${prv.provenanceId} · ${prv.intervalSource}")
+                        }
                     } else {
                         // The core's structured reason; the platform never invents availability.
                         InfoRow("PRV", snapshot?.prvUnavailableReason ?: "--")
