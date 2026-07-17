@@ -7,7 +7,9 @@
 use mav_codec::codec::{DeviceCodec, ManifestCodec};
 use mav_codec::kv::MemoryKv;
 use mav_codec::manifest::Manifest;
-use mav_codec::records::{decode_record, R20_K18_MIN_BODY_LEN, R20_K26_MIN_BODY_LEN};
+use mav_codec::records::{
+    decode_record, GEN4_V24_MIN_BODY_LEN, R20_K18_MIN_BODY_LEN, R20_K26_MIN_BODY_LEN,
+};
 use mav_frame::reassembler::{Reassembler, ReassemblyEvent};
 use mav_frame::WireFormat;
 use mav_model::error::codes;
@@ -19,6 +21,7 @@ use std::path::PathBuf;
 #[derive(Deserialize)]
 struct RecordFixture {
     schema: String,
+    wire_format: String,
     confidence: String,
     input_hex: String,
     expected_samples: serde_json::Value,
@@ -62,11 +65,35 @@ fn manifest() -> Manifest {
     .unwrap()
 }
 
+fn gen4_manifest() -> Manifest {
+    Manifest::from_json(
+        r#"{
+            "schema": "connector-manifest/v1",
+            "identity": {
+                "family": "fixture-4",
+                "display_name": "Fixture 4.0 history",
+                "models": ["FIXTURE4"]
+            },
+            "gatt": { "service": "s", "command": "c", "notify": ["n"] },
+            "frame": { "wire_format": "gen4", "max_frame_bytes": 8192 },
+            "packets": { "47": "historical_data" },
+            "record_versions": { "5": "gen4_v5", "7": "gen4_v5", "9": "gen4_v5", "12": "gen4_v24", "24": "gen4_v24", "25": "gen4_v25" },
+            "capabilities": ["heart_rate", "rr_interval", "gravity", "spo2_raw", "skin_temp", "resp_raw"]
+        }"#,
+    )
+    .unwrap()
+}
+
 /// Reassemble the fixture frame and decode it through the same ManifestCodec path the engine
 /// uses, so the packet-47 routing is part of what the fixture pins.
 fn decode_fixture(name: &str) -> Vec<RawSample> {
     let fixture = load(name);
-    let mut reassembler = Reassembler::new(WireFormat::Gen5);
+    let (wire, manifest) = match fixture.wire_format.as_str() {
+        "gen5" => (WireFormat::Gen5, manifest()),
+        "gen4" => (WireFormat::Gen4, gen4_manifest()),
+        other => panic!("{name}: unknown wire_format {other}"),
+    };
+    let mut reassembler = Reassembler::new(wire);
     let frames: Vec<_> = reassembler
         .push(&unhex(&fixture.input_hex))
         .into_iter()
@@ -76,7 +103,6 @@ fn decode_fixture(name: &str) -> Vec<RawSample> {
         })
         .collect();
     assert_eq!(frames.len(), 1, "{name} must reassemble to one frame");
-    let manifest = manifest();
     let samples = ManifestCodec::new()
         .decode(&frames[0], &manifest, &mut MemoryKv::new())
         .unwrap();
@@ -215,7 +241,7 @@ fn k18_gravity_rejects_implausible_magnitude() {
     );
     assert_eq!(
         serde_json::to_value(gravity[0].value).unwrap(),
-        serde_json::json!({ "f32": 1.0 })
+        serde_json::json!({ "converted": 1.0 })
     );
 }
 
@@ -243,4 +269,90 @@ fn unknown_versions_produce_no_samples_and_a_typed_error() {
     let error = decode_record(&manifest(), &payload).unwrap_err();
     assert_eq!(error.code, codes::DECODE_UNKNOWN_RECORD_VERSION);
     assert!(error.context.iter().any(|c| c.contains("20")));
+}
+
+#[test]
+fn gen4_v24_decodes_the_real_worn_record() {
+    let samples = decode_fixture("gen4_v24_v1.json");
+    let kinds: Vec<_> = samples.iter().map(|s| s.kind).collect();
+    // HR, two R-R, the gravity triplet, the SpO2 red/IR raw pair, the skin-temp register, and
+    // respiration — the full DSP block and nothing else.
+    assert_eq!(
+        kinds,
+        vec![
+            StreamKind::HeartRate,
+            StreamKind::RrInterval,
+            StreamKind::RrInterval,
+            StreamKind::Gravity,
+            StreamKind::Gravity,
+            StreamKind::Gravity,
+            StreamKind::Spo2Raw,
+            StreamKind::Spo2Raw,
+            StreamKind::SkinTemp,
+            StreamKind::RespRaw,
+        ]
+    );
+    // The SpO2 pair keeps red (seq 0) and IR (seq 1) distinct.
+    let spo2: Vec<_> = samples
+        .iter()
+        .filter(|s| s.kind == StreamKind::Spo2Raw)
+        .map(|s| (s.seq, serde_json::to_value(s.value).unwrap()))
+        .collect();
+    assert_eq!(
+        spo2,
+        vec![
+            (0, serde_json::json!({ "u16": 592 })),
+            (1, serde_json::json!({ "u16": 612 })),
+        ]
+    );
+}
+
+#[test]
+fn gen4_v25_decodes_gravity_only() {
+    let samples = decode_fixture("gen4_v25_v1.json");
+    assert_eq!(samples.len(), 3);
+    assert!(samples.iter().all(|s| s.kind == StreamKind::Gravity));
+    assert_eq!(
+        samples.iter().map(|s| s.seq).collect::<Vec<_>>(),
+        vec![0, 1, 2]
+    );
+}
+
+#[test]
+fn gen4_v5_round_trips_hr_and_rr() {
+    // No real v5 capture exists, so pin the offsets with an invariant round-trip: place HR and two
+    // R-R intervals at the header offsets and require the decoder to recover exactly them.
+    let mut body = vec![0u8; 24];
+    body[14] = 88; // HR
+    body[15] = 2; // R-R slot count
+    body[16..18].copy_from_slice(&600u16.to_le_bytes());
+    body[18..20].copy_from_slice(&610u16.to_le_bytes());
+    let payload = [&[0x2F, 5, 0x00][..], &body].concat();
+    let samples = decode_record(&gen4_manifest(), &payload).unwrap();
+    let decoded: Vec<_> = samples
+        .iter()
+        .map(|s| (s.kind, serde_json::to_value(s.value).unwrap()))
+        .collect();
+    assert_eq!(
+        decoded,
+        vec![
+            (StreamKind::HeartRate, serde_json::json!({ "u8": 88 })),
+            (StreamKind::RrInterval, serde_json::json!({ "u16": 600 })),
+            (StreamKind::RrInterval, serde_json::json!({ "u16": 610 })),
+        ]
+    );
+}
+
+#[test]
+fn gen4_v24_truncated_fails_with_the_exact_boundary() {
+    let manifest = gen4_manifest();
+    let short = [
+        &[0x2F, 24, 0x00][..],
+        &vec![0u8; GEN4_V24_MIN_BODY_LEN - 1][..],
+    ]
+    .concat();
+    let error = decode_record(&manifest, &short).unwrap_err();
+    assert_eq!(error.code, codes::DECODE_FIELD_UNREADABLE);
+    let exact = [&[0x2F, 24, 0x00][..], &vec![0u8; GEN4_V24_MIN_BODY_LEN][..]].concat();
+    assert!(decode_record(&manifest, &exact).is_ok());
 }

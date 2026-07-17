@@ -41,7 +41,10 @@ mav-obs = { path = "crates/mav-obs" }
 mav-engine = { path = "crates/mav-engine" }
 
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+# float_roundtrip: parse floats with correct nearest-rounding so an f64 written as its shortest
+# decimal (e.g. a gravity component in a golden fixture) parses back to the exact same bits. Without
+# it serde_json's fast parser can land one ULP off, which would make exact float fixtures unmatchable.
+serde_json = { version = "1", features = ["float_roundtrip"] }
 thiserror = "1"
 proptest = "1"
 

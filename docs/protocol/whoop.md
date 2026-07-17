@@ -318,9 +318,24 @@ Each of these is asserted by one codebase, at medium confidence. [ONE each]
   confirms it. [FIELD]
 - **gen5 v26:** a 24 Hz optical PPG waveform, 24 `i16` LE per record, one record per second. Raw
   ADC, with no invented scale.
-- **Unmapped versions:** fall back to the V24 layout, then **reject** if the gravity magnitude or HR
-  is outside a physiological range. The device data is the arbiter; do not store garbage. [ONE,
-  Swift/Kotlin repo]
+- **Unmapped versions:** the upstream RE falls back to the V24 layout, then **rejects** if the
+  gravity magnitude or HR is outside a physiological range. Maverick does **not** carry that
+  guess-fallback: an unmapped version decodes to a typed `DECODE_UNKNOWN_RECORD_VERSION` and its
+  bytes stay raw evidence, because a speculative decode of an unknown layout is exactly the kind of
+  plausible-but-wrong reading this document keeps warning about. [ONE, Swift/Kotlin repo]
+
+**Admission status (WHOOP-P3).** Maverick's `mav-codec` admits three gen4 record decoders, each
+range-gated: `gen4_v24` (also v12) — HR `body[14]`, the R-R block `body[15]`/`body[16]`, gravity as
+three `f32` from `body[33]` (accepted at `|g|` in `[0.5,1.5)`), the SpO2 red/IR raw ADC pair
+`body[61]`/`body[63]` (seq 0/1 on `spo2_raw`), the skin-temp register `body[65:67]` as a raw `u16`,
+and respiration `body[73:75]`; `gen4_v5` (also v7/v9) — HR and the R-R block only; `gen4_v25` — the
+gravity triplet stored as `i16/16384` at `body[66]`/`body[68]`/`body[70]`. v24 and v25 are backed by
+real 4.0 goldens `[WRS]` (`fixtures/records/gen4_v24_v1.json`, `gen4_v25_v1.json`); v5 has no real
+capture and is pinned by an invariant round-trip test. The skin-temp raw register is admitted, but
+its absolute °C scale stays a deferred per-device learned anchor — the gen4 scale is in `[CONFLICT]`
+with no calibration golden (ADR-009), so no temperature is claimed. The `skin_contact`,
+`signal_quality`, second gravity triplet, `ppg_*`, `ambient`, and LED-drive fields above stay
+unadmitted, and the 4.0 offload path is not yet exercised on our own hardware.
 
 ### The MG buffer codec (R20: K=18 and K=26)
 

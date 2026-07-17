@@ -1,0 +1,93 @@
+{
+  "schema": "record/v1",
+  "wire_format": "gen4",
+  "confidence": "PROV/[WRS]. A real worn WHOOP 4.0 historical DSP record (type 47, version 24) from tanarchytan/whoop-rs, committed with only biometrics + timestamp. The offsets reproduce the author's pinned expects byte-for-byte (HR 109 body[14], R-R 555/564 body[15..], gravity |g|=1.06 three f32 from body[33], SpO2 red 592/ir 612 raw ADC body[61]/[63], skin-temp register 861 body[65:67], respiration 3073 body[73:75]). The bytes are real, but the 4.0 offload path is not yet exercised on our own hardware and the absolute skin-temp scale stays a per-device learned anchor (deferred, ADR-009), so treat physiological calibration as unproven; the decode itself is pinned.",
+  "source": "tanarchytan/whoop-rs, crates/whoop-protocol/tests/fixtures/real_frames.json, frame 'v24_real_whoop4_worn'. Real capture, author-validated; expected samples computed by an independent Python decode.",
+  "produced_with": {
+    "generator": "real hardware capture (WHOOP 4.0); independent Python decode",
+    "decoder": "gen4_v24"
+  },
+  "input_hex": "aa6400a12f18054c1c0a023ed0266a5037805418016d022b0234020000000000006b07ff0085593c1f65cebed7b3e63eb85a5f3f000080401f65cebed7b3e63eb85a5f3f500264025d03640229014009010c020c00000000000f0001c4020000000000008fdeb278",
+  "expected_samples": [
+    {
+      "kind": "heart_rate",
+      "device_time": 1780928574000000000,
+      "seq": 0,
+      "value": {
+        "u8": 109
+      }
+    },
+    {
+      "kind": "rr_interval",
+      "device_time": 1780928574000000000,
+      "seq": 0,
+      "value": {
+        "u16": 555
+      }
+    },
+    {
+      "kind": "rr_interval",
+      "device_time": 1780928574000000000,
+      "seq": 1,
+      "value": {
+        "u16": 564
+      }
+    },
+    {
+      "kind": "gravity",
+      "device_time": 1780928574000000000,
+      "seq": 0,
+      "value": {
+        "converted": -0.40311524271965027
+      }
+    },
+    {
+      "kind": "gravity",
+      "device_time": 1780928574000000000,
+      "seq": 1,
+      "value": {
+        "converted": 0.4505908191204071
+      }
+    },
+    {
+      "kind": "gravity",
+      "device_time": 1780928574000000000,
+      "seq": 2,
+      "value": {
+        "converted": 0.8724780082702637
+      }
+    },
+    {
+      "kind": "spo2_raw",
+      "device_time": 1780928574000000000,
+      "seq": 0,
+      "value": {
+        "u16": 592
+      }
+    },
+    {
+      "kind": "spo2_raw",
+      "device_time": 1780928574000000000,
+      "seq": 1,
+      "value": {
+        "u16": 612
+      }
+    },
+    {
+      "kind": "skin_temp",
+      "device_time": 1780928574000000000,
+      "seq": 0,
+      "value": {
+        "u16": 861
+      }
+    },
+    {
+      "kind": "resp_raw",
+      "device_time": 1780928574000000000,
+      "seq": 0,
+      "value": {
+        "u16": 3073
+      }
+    }
+  ]
+}
