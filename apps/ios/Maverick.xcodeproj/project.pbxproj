@@ -24,6 +24,7 @@
 		80D8107662E93D88B1E0C6D9 /* AuraMLSignalsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C492F56CD3FCD0D397982F67 /* AuraMLSignalsCard.swift */; };
 		83E9910722A3DB8A35E88BEB /* Units.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0773D80E2F6F94F0D2412C4 /* Units.swift */; };
 		851D19A9AEF12ECC33DB5F91 /* StoreDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7C7D073C4D7BBF3084890F5 /* StoreDiagnostics.swift */; };
+		8BB6C251B9D029A2DED3D107 /* host_snapshot_v1.expected.json in Resources */ = {isa = PBXBuildFile; fileRef = B3A85C0857CDA7DA5828E20D /* host_snapshot_v1.expected.json */; };
 		919DAAE1B11C6E0DD70145C1 /* AuraJournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 458ABBE60B3413C9594CF92F /* AuraJournalView.swift */; };
 		9344A42D3645B6F6A7CCD831 /* MavSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14A49EDDB7C36481A91500DC /* MavSnapshotTests.swift */; };
 		9B264E0D37BC2000DBF4DD15 /* AuraRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C95D1D514A93EC401555036 /* AuraRecoveryView.swift */; };
@@ -92,6 +93,7 @@
 		92C070832BB99631789D4731 /* AuraSleepHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraSleepHubView.swift; sourceTree = "<group>"; };
 		949AEBF0671C3B8EF4A6A1D3 /* MavStandins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavStandins.swift; sourceTree = "<group>"; };
 		9F54528C914D0CBF2B09C338 /* MavStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavStore.swift; sourceTree = "<group>"; };
+		B3A85C0857CDA7DA5828E20D /* host_snapshot_v1.expected.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = host_snapshot_v1.expected.json; sourceTree = "<group>"; };
 		BC45713B7650201F3BBA999F /* MaverickApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaverickApp.swift; sourceTree = "<group>"; };
 		BC4DDC7FE63A5BD0D9B52928 /* MavCore.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = MavCore.xcframework; path = "build/mav-core/MavCore.xcframework"; sourceTree = "<group>"; };
 		C492F56CD3FCD0D397982F67 /* AuraMLSignalsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraMLSignalsCard.swift; sourceTree = "<group>"; };
@@ -166,6 +168,14 @@
 			path = Maverick;
 			sourceTree = "<group>";
 		};
+		5FE2FEB250D72961F120A53B /* platform */ = {
+			isa = PBXGroup;
+			children = (
+				B3A85C0857CDA7DA5828E20D /* host_snapshot_v1.expected.json */,
+			);
+			path = platform;
+			sourceTree = "<group>";
+		};
 		7F9449A3C0F7AA7ABACD3626 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -229,10 +239,28 @@
 			children = (
 				0E6D5211144C68BEFD4707A9 /* build */,
 				4B78B393B733F73BFC1A1181 /* Maverick */,
+				98121E4551ADE3A324C31377 /* maverick */,
 				DBF7846C5AB3FB7F01CA3F28 /* MaverickTests */,
 				7F9449A3C0F7AA7ABACD3626 /* Frameworks */,
 				0529A7B1BF16A83A5D7EBED5 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		98121E4551ADE3A324C31377 /* maverick */ = {
+			isa = PBXGroup;
+			children = (
+				C1957C9D5FEA9E3E819D557C /* fixtures */,
+			);
+			name = maverick;
+			path = ../..;
+			sourceTree = "<group>";
+		};
+		C1957C9D5FEA9E3E819D557C /* fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				5FE2FEB250D72961F120A53B /* platform */,
+			);
+			path = fixtures;
 			sourceTree = "<group>";
 		};
 		DBF7846C5AB3FB7F01CA3F28 /* MaverickTests */ = {
@@ -252,6 +280,7 @@
 			buildConfigurationList = C16522AA8A0DE0F9F8F89D68 /* Build configuration list for PBXNativeTarget "MaverickTests" */;
 			buildPhases = (
 				04F84BFBE7C703FBE79D4B20 /* Sources */,
+				3669E5858BFC061342CB4BFF /* Resources */,
 			);
 			buildRules = (
 			);
@@ -319,6 +348,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		3669E5858BFC061342CB4BFF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8BB6C251B9D029A2DED3D107 /* host_snapshot_v1.expected.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		04F84BFBE7C703FBE79D4B20 /* Sources */ = {

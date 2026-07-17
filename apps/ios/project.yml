@@ -58,6 +58,8 @@ targets:
     deploymentTarget: "26.0"
     sources:
       - path: MaverickTests
+      - path: ../../fixtures/platform/host_snapshot_v1.expected.json
+        buildPhase: resources
     dependencies:
       - target: Maverick
     settings:
