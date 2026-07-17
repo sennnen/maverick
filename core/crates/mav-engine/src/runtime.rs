@@ -747,6 +747,68 @@ mod tests {
         let _ = std::fs::remove_file(path);
     }
 
+    /// Pins the exact canonical `host-snapshot/v1` bytes the platform decoders consume. The Swift
+    /// and Kotlin decode tests read the same fixture file, so a change here is a change on both
+    /// platforms through one seam. Regenerate with MAV_BLESS=1 (never edit by hand), then re-run
+    /// plain to confirm, and eyeball the values against fixtures/replay/realtime_rr_prv_v1.
+    #[test]
+    fn host_snapshot_reproduces_the_platform_fixture() {
+        let path = db_path();
+        let mut runtime = HostRuntime::open(RuntimeConfig {
+            database_path: path.to_string_lossy().into_owned(),
+            timezone_id: "Europe/London".to_owned(),
+            transport_capacity: 16,
+            app_version: "0.1.0".to_owned(),
+            app_build: "fixture".to_owned(),
+        })
+        .unwrap();
+        runtime
+            .install_connector(ConnectorRegistration {
+                connector_id: "fixture".to_owned(),
+                connector_version: "1.0.0".to_owned(),
+                manifest_json: fixture("realtime_rr_prv_v1.manifest.json"),
+            })
+            .unwrap();
+        reach_streaming(&mut runtime);
+        let capture = Capture::from_json(&fixture("realtime_rr_prv_v1.capture.json")).unwrap();
+        for chunk in capture.chunks {
+            runtime
+                .notification("n", &chunk, 1_752_600_500_000)
+                .unwrap();
+        }
+        let result = runtime.host_snapshot(1_752_600_500_000).unwrap();
+
+        let fixture_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../fixtures/platform/host_snapshot_v1.expected.json");
+        if std::env::var_os("MAV_BLESS").is_some() {
+            let body = serde_json::json!({
+                "schema": "host-snapshot-fixture/v1",
+                "source_capture": "fixtures/replay/realtime_rr_prv_v1.capture.json",
+                "generator": "MAV_BLESS=1 cargo test -p mav-engine host_snapshot_reproduces_the_platform_fixture",
+                "algorithm_versions": {
+                    "hr_feature": mav_feature::hr::HR_FEATURE_VERSION.to_string(),
+                    "time_domain_interval_variability": mav_analytic::HRV_VERSION.to_string(),
+                },
+                "json": result.json,
+                "hash": result.hash,
+            });
+            let mut text = serde_json::to_string_pretty(&body).unwrap();
+            text.push('\n');
+            std::fs::write(&fixture_path, text).unwrap();
+            let _ = std::fs::remove_file(path);
+            return;
+        }
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(&fixture_path)
+                .unwrap_or_else(|error| panic!("cannot read {}: {error}", fixture_path.display())),
+        )
+        .unwrap();
+        assert_eq!(expected["json"].as_str().unwrap(), result.json);
+        assert_eq!(expected["hash"].as_str().unwrap(), result.hash);
+        assert_eq!(result.revision, 1);
+        let _ = std::fs::remove_file(path);
+    }
+
     #[test]
     fn action_queue_overflow_changes_nothing() {
         let path = db_path();
