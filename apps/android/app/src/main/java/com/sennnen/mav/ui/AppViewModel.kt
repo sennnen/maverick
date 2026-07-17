@@ -79,7 +79,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun refresh() {
         if (refreshJob?.isActive == true) return
         refreshJob = viewModelScope.launch(Dispatchers.IO) {
-            mutableState.value = MavAppState.Loading
+            // Keep the last good snapshot on screen during a re-read; Loading only before the first.
+            if (mutableState.value !is MavAppState.Ready) mutableState.value = MavAppState.Loading
             mutableState.value = runCatching {
                 val active = runtime ?: openRuntime().also { runtime = it }
                 val result = active.hostSnapshot(System.currentTimeMillis())

@@ -13,7 +13,11 @@ final class Repository: ObservableObject {
   /// Bumped on every refresh so `.task(id:)` view reloads re-run.
   @Published private(set) var refreshSeq = 0
 
+  /// Set by the app shell: re-reads the core snapshot (pull-to-refresh, tab reselect).
+  var reload: @MainActor () -> Void = {}
+
   func refresh() async {
+    reload()
     refreshSeq += 1
   }
 

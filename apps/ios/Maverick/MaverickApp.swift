@@ -27,6 +27,7 @@ struct MaverickApp: App {
             model.apply(snapshot: snapshot, to: live)
           }
         }
+        .onAppear { repo.reload = { store.retry() } }
     }
   }
 }

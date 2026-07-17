@@ -6,14 +6,19 @@ final class MavStore: ObservableObject {
 
   @Published private(set) var state: State = .opening
   private let worker = MavRuntimeWorker()
+  private var inFlight = false
 
   init() { refresh() }
 
   func refresh() {
-    guard case .opening = state else { return }
+    guard !inFlight else { return }
+    inFlight = true
+    // Keep the last good snapshot on screen during a re-read; opening only before the first.
+    if case .ready = state {} else { state = .opening }
     worker.refresh(config: Self.config()) { [weak self] result in
       Task { @MainActor in
         guard let self else { return }
+        self.inFlight = false
         switch result {
         case let .success(snapshot): self.state = .ready(snapshot)
         case let .failure(message): self.state = .failed(message)
@@ -22,7 +27,7 @@ final class MavStore: ObservableObject {
     }
   }
 
-  func retry() { state = .opening; refresh() }
+  func retry() { refresh() }
 
   /// The core store's on-disk location — shared with the diagnostics size readout.
   nonisolated static func databaseURL() -> URL {
