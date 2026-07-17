@@ -1,0 +1,14 @@
+{
+  "schema": "control/v1",
+  "wire_format": "gen5",
+  "confidence": "PROV",
+  "source": "Synthetic: a gen5 METADATA HISTORY_COMPLETE (kind 3, seq 12) \u2014 the strap-only end of the exchange, constructed to the [XVAL] metadata kinds with an independent implementation.",
+  "produced_with": {
+    "generator": "independent Python (zlib crc32, CRC-16/Modbus, CRC-8 poly 0x07)"
+  },
+  "input_hex": "aa01080001002621310c03007feae44b",
+  "expected": {
+    "control": "metadata_complete",
+    "seq": 12
+  }
+}

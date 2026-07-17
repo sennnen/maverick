@@ -1,0 +1,26 @@
+{
+  "schema": "control/v1",
+  "wire_format": "gen5",
+  "confidence": "PROV",
+  "source": "Synthetic: a gen5 METADATA HISTORY_END (kind 2, seq 9) carrying eight opaque cursor bytes. The trailing pad byte the gen5 envelope adds is preserved too \u2014 the decoder must keep every acknowledgement byte and never parse or trim the cursor.",
+  "produced_with": {
+    "generator": "independent Python (zlib crc32, CRC-16/Modbus, CRC-8 poly 0x07)"
+  },
+  "input_hex": "aa01100001002081310902deadbeef0102030400863d7700",
+  "expected": {
+    "control": "metadata_end",
+    "seq": 9,
+    "ack_payload": [
+      222,
+      173,
+      190,
+      239,
+      1,
+      2,
+      3,
+      4,
+      0
+    ],
+    "record_count": null
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "schema": "control/v1",
+  "wire_format": "gen5",
+  "confidence": "PROV",
+  "source": "Synthetic: a gen5 COMMAND_RESPONSE to GET_DATA_RANGE (opcode 34, origin seq 3) with result ok (1), constructed to the [XVAL] inner header with an independent implementation.",
+  "produced_with": {
+    "generator": "independent Python (zlib crc32, CRC-16/Modbus, CRC-8 poly 0x07)"
+  },
+  "input_hex": "aa01080001002621240322019a2fe7dc",
+  "expected": {
+    "control": "response",
+    "to_opcode": 34,
+    "origin_seq": 3,
+    "result": {
+      "kind": "ok"
+    }
+  }
+}

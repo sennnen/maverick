@@ -1,0 +1,18 @@
+{
+  "schema": "control/v1",
+  "wire_format": "gen4",
+  "confidence": "PROV",
+  "source": "Synthetic: a gen4 COMMAND_RESPONSE to SEND_HISTORICAL_DATA (opcode 22, origin seq 7) with the sniffed pending result byte 0x02, constructed to the [XVAL] inner header (type, seq, k, body) with an independent implementation. Regenerate from a live capture in the hardware epoch.",
+  "produced_with": {
+    "generator": "independent Python (zlib crc32, CRC-16/Modbus, CRC-8 poly 0x07)"
+  },
+  "input_hex": "aa0800a8240716020b25cdf9",
+  "expected": {
+    "control": "response",
+    "to_opcode": 22,
+    "origin_seq": 7,
+    "result": {
+      "kind": "pending"
+    }
+  }
+}
