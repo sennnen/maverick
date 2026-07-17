@@ -1,0 +1,36 @@
+{
+  "schema": "record/v1",
+  "wire_format": "gen5",
+  "confidence": "PROV",
+  "source": "Synthetic: an MG R20 K=18 per-second record built to the corpus-pinned offsets (docs/protocol/whoop.md, fourth/fifth source, ~2M records): HR 64 at body[11], skin temp 33.20 C as i16 LE 3320 at body[62:64], sleep state SLEEP (2) in bits 5-4 of body[70]. Residual and refuted bytes carry non-zero noise so the decoder provably ignores them; the tri-mode SpO2 byte holds diagnostic code 0x08 that must never surface as a percentage. Regenerate from a real capture in the hardware epoch.",
+  "produced_with": {
+    "generator": "independent Python (struct, zlib crc32, CRC-16/Modbus)"
+  },
+  "input_hex": "aa01740001003fb12f0112e803000008827668070000405a5a5a5a5a5a5a5a5a5a5a5a5a5a425a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5af80c5a5a5a5a5a5a2f085a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a51eaef36",
+  "expected_samples": [
+    {
+      "kind": "heart_rate",
+      "device_time": 1752597000000000000,
+      "seq": 0,
+      "value": {
+        "u8": 64
+      }
+    },
+    {
+      "kind": "skin_temp",
+      "device_time": 1752597000000000000,
+      "seq": 0,
+      "value": {
+        "i16": 3320
+      }
+    },
+    {
+      "kind": "sleep_state_raw",
+      "device_time": 1752597000000000000,
+      "seq": 0,
+      "value": {
+        "u8": 2
+      }
+    }
+  ]
+}

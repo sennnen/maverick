@@ -47,7 +47,16 @@ impl DeviceCodec for ManifestCodec {
             .map_err(|e| e.context("reading packet type"))?;
         let layout = match manifest.layout_for_packet(packet_type)? {
             Some(layout) => layout,
-            None => return Ok(Vec::new()),
+            None => {
+                // Historical records route through the admitted per-version decoders rather than
+                // a manifest layout; every other layout-less packet is control or not-yet-decoded.
+                if manifest.packet_name(packet_type) == Some("historical_data")
+                    && !manifest.record_versions.is_empty()
+                {
+                    return crate::records::decode_record(manifest, &frame.payload);
+                }
+                return Ok(Vec::new());
+            }
         };
         decode_layout(&reader, layout, packet_type)
     }

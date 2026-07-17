@@ -348,6 +348,13 @@ with no exceptions). 24 Hz is coarse for PPG: a 41.7 ms sample period quantises 
 ±21 ms, which alone floors RMSSD around 30 ms even with flawless peak detection. That floor is a
 constraint to design around, not a bug to fix. [SERIES]
 
+**Admission status (M5-P4).** Maverick's `mav-codec` record decoders admit, from K=18: the primary
+HR at `body[11]` (zero treated as the no-lock sentinel), skin temperature at `body[62:64]` as i16
+LE centidegrees, and the packed sleep state in bits 5–4 of `body[70]` stored as the raw wire state;
+and from K=26 the 24-sample photodiode burst as raw ADC. Everything marked residual, refuted, or
+[PROV]-only above remains unadmitted, v20/v21 stay undecoded, and unknown version bytes produce a
+typed `DECODE_UNKNOWN_RECORD_VERSION` rather than a fallback decode.
+
 **The off-by-eleven trap.** Each MG record arrives inside an 8-byte frame header plus a 3-byte inner
 prefix (type, sequence, subtype) before the body, so a position measured from the frame start is 11
 bytes ahead of the same position measured from the body start. An early field map placed SpO2 at

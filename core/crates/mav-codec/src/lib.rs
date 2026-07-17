@@ -10,6 +10,7 @@ pub mod codec;
 pub mod control;
 pub mod kv;
 pub mod manifest;
+pub mod records;
 pub mod registry;
 
 pub use codec::{DeviceCodec, ManifestCodec};

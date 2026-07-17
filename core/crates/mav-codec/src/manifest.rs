@@ -42,7 +42,11 @@ pub struct Manifest {
     pub packets: BTreeMap<u8, String>,
     #[serde(default)]
     pub layouts: BTreeMap<String, Layout>,
-    /// Historical record version byte to layout key; filled in from M5.
+    /// Historical record version/subtype byte to an admitted decoder id (`r20_k18`, `r20_k26`).
+    /// These layouts carry bit fields and sentinel semantics the manifest DSL cannot express, so
+    /// each admitted version is a reviewed decoder module in `records`, and the manifest only
+    /// names which versions this family admits. A version byte absent from this map is unknown:
+    /// no samples, the raw bytes stay evidence, and the journal records the version (M5-P4).
     #[serde(default)]
     pub record_versions: BTreeMap<u8, String>,
     /// The stream kinds this device can produce. Capability negotiation intersects these with
@@ -397,13 +401,13 @@ impl Manifest {
                 "identity.models must not be empty",
             ));
         }
-        for layout_key in self.record_versions.values() {
-            if !self.layouts.contains_key(layout_key) {
+        for decoder_id in self.record_versions.values() {
+            if !crate::records::ADMITTED_DECODERS.contains(&decoder_id.as_str()) {
                 return Err(MavError::new(
                     codes::DECODE_LAYOUT_INVALID,
-                    "record_versions references a missing layout",
+                    "record_versions names a record decoder this build does not admit",
                 )
-                .context(layout_key.clone()));
+                .context(decoder_id.clone()));
             }
         }
         for (key, layout) in &self.layouts {
@@ -445,6 +449,11 @@ impl Manifest {
 
     /// The layout for a packet-type byte: `Ok(Some)` when it decodes to samples, `Ok(None)` for a
     /// known control packet, `Err` for a byte the manifest has never heard of.
+    /// The name this manifest gives a packet-type byte, if the byte is mapped at all.
+    pub fn packet_name(&self, packet_type: u8) -> Option<&str> {
+        self.packets.get(&packet_type).map(String::as_str)
+    }
+
     pub fn layout_for_packet(&self, packet_type: u8) -> Result<Option<&Layout>> {
         match self.packets.get(&packet_type) {
             None => Err(MavError::new(

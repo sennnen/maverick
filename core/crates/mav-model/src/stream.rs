@@ -24,6 +24,10 @@ pub enum StreamKind {
     SkinContact,
     SignalQuality,
     WristState,
+    /// The K=18 packed on-wire sleep state `{0 STILL, 1 WAKE, 2 SLEEP, 3 UP}`, stored as decoded —
+    /// the STILL/SLEEP split is corpus-pinned, the WAKE/UP half is provisional
+    /// (docs/protocol/whoop.md). Raw wire state, not a Maverick sleep-stage claim.
+    SleepStateRaw,
 }
 
 /// Why a sample was scored down or rejected. Carried with the sample so every downstream stage,

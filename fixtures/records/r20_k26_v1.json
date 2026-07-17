@@ -1,0 +1,204 @@
+{
+  "schema": "record/v1",
+  "wire_format": "gen5",
+  "confidence": "PROV",
+  "source": "Synthetic: an MG R20 K=26 raw-PPG burst built to the corpus-pinned offsets (docs/protocol/whoop.md, fourth source, 2,332 bursts): 24 i16 LE photodiode samples at body[16:64], raw ADC with no invented scale, spanning negative and positive values so signedness is pinned. Regenerate from a real capture in the hardware epoch.",
+  "produced_with": {
+    "generator": "independent Python (struct, zlib crc32, CRC-16/Modbus)"
+  },
+  "input_hex": "aa015000010035412f021ad007000008827668070005000000000018fc7cfce0fc44fda8fd0cfe70fed4fe38ff9cff00006400c8002c019001f4015802bc0220038403e8034c04b004140500000000000000000017ffd7a8",
+  "expected_samples": [
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 0,
+      "value": {
+        "i16": -1000
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 1,
+      "value": {
+        "i16": -900
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 2,
+      "value": {
+        "i16": -800
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 3,
+      "value": {
+        "i16": -700
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 4,
+      "value": {
+        "i16": -600
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 5,
+      "value": {
+        "i16": -500
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 6,
+      "value": {
+        "i16": -400
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 7,
+      "value": {
+        "i16": -300
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 8,
+      "value": {
+        "i16": -200
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 9,
+      "value": {
+        "i16": -100
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 10,
+      "value": {
+        "i16": 0
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 11,
+      "value": {
+        "i16": 100
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 12,
+      "value": {
+        "i16": 200
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 13,
+      "value": {
+        "i16": 300
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 14,
+      "value": {
+        "i16": 400
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 15,
+      "value": {
+        "i16": 500
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 16,
+      "value": {
+        "i16": 600
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 17,
+      "value": {
+        "i16": 700
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 18,
+      "value": {
+        "i16": 800
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 19,
+      "value": {
+        "i16": 900
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 20,
+      "value": {
+        "i16": 1000
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 21,
+      "value": {
+        "i16": 1100
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 22,
+      "value": {
+        "i16": 1200
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1752597000000000000,
+      "seq": 23,
+      "value": {
+        "i16": 1300
+      }
+    }
+  ]
+}
