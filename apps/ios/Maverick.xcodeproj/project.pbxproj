@@ -33,6 +33,7 @@
 		A758F0F46CE54ED26BA9117D /* AuraTodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5E9C32A0B6BB7C041B87B92 /* AuraTodayView.swift */; };
 		A8B6169C4DA6A9B2EED38404 /* AnalyticsShims.swift in Sources */ = {isa = PBXBuildFile; fileRef = 216A2D51C2F5A4AFA7E58359 /* AnalyticsShims.swift */; };
 		AF57F90448635067359EF047 /* LoopingTimePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E7855CD9B4096D278EABEFB /* LoopingTimePicker.swift */; };
+		C263D86C965501A11430223C /* AppModelApplyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B3A80484C0D2EBE2A641896 /* AppModelApplyTests.swift */; };
 		C32B8C52A8CC41B4EF385659 /* AuraKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9153FCF75B63AE80DEC03486 /* AuraKit.swift */; };
 		C7E950C8D717EB6627408530 /* Appearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C308EF1E54DE57286D0D95 /* Appearance.swift */; };
 		CAF8E3A53AAF761504B1A1BD /* MavStandins.swift in Sources */ = {isa = PBXBuildFile; fileRef = 949AEBF0671C3B8EF4A6A1D3 /* MavStandins.swift */; };
@@ -87,6 +88,7 @@
 		628E74D0BF2F152EC0E9409D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		6FA0C0D2F36FCAB853951588 /* Maverick.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Maverick.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7249FF52F9180D25C0115C9F /* AuraTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraTrendsView.swift; sourceTree = "<group>"; };
+		7B3A80484C0D2EBE2A641896 /* AppModelApplyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelApplyTests.swift; sourceTree = "<group>"; };
 		8271E24213177A8CCA6A4B57 /* AuraDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraDesign.swift; sourceTree = "<group>"; };
 		8B2CF897638B4C75BC7C1243 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
 		9153FCF75B63AE80DEC03486 /* AuraKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraKit.swift; sourceTree = "<group>"; };
@@ -266,6 +268,7 @@
 		DBF7846C5AB3FB7F01CA3F28 /* MaverickTests */ = {
 			isa = PBXGroup;
 			children = (
+				7B3A80484C0D2EBE2A641896 /* AppModelApplyTests.swift */,
 				14A49EDDB7C36481A91500DC /* MavSnapshotTests.swift */,
 				186BBE0388C59C875F86413D /* WidgetAnchorTests.swift */,
 			);
@@ -365,6 +368,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C263D86C965501A11430223C /* AppModelApplyTests.swift in Sources */,
 				9344A42D3645B6F6A7CCD831 /* MavSnapshotTests.swift in Sources */,
 				603A65AB3D6EF0ADA2B83EBD /* WidgetAnchorTests.swift in Sources */,
 			);

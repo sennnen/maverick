@@ -35,6 +35,10 @@ final class AppModel: ObservableObject {
   @Published var strengthSession: StrengthSession?
   @Published var illnessSignal: IllnessSignalEngine.Result?
   @Published var cyclePhase: CyclePhaseEngine.Result?
+  /// The admitted session PRV read model, when the core computed one. Never presented as HRV.
+  @Published var prv: MavPrv?
+  @Published var prvUnavailableReason: String?
+  @Published var recoveryUnavailableReason: String?
 
   let countdown = CountdownTimer()
   let behavior = BehaviorStore()
@@ -43,13 +47,21 @@ final class AppModel: ObservableObject {
   /// Wrist haptics — no transport wiring in the host yet, so this is inert.
   func buzz(loops: UInt8 = 2) {}
 
-  /// Republish the core snapshot into the live/model surfaces the views read.
+  /// Republish the core snapshot into the live/model surfaces the views read. The runtime's
+  /// link-up states are `subscribing` and `streaming` (there is no `connected` state in
+  /// `host-snapshot/v1`), and a stored heart rate or battery figure never outlives the link.
   func apply(snapshot: MavSnapshot, to live: LiveState) {
-    let connected = snapshot.connectionState == "connected"
-    bpm = snapshot.currentBpm
+    let connected = snapshot.connectionState == "subscribing"
+      || snapshot.connectionState == "streaming"
+    bpm = connected ? snapshot.currentBpm : nil
+    prv = snapshot.prv
+    prvUnavailableReason = snapshot.prvUnavailableReason
+    recoveryUnavailableReason = snapshot.recoveryUnavailableReason
     live.connected = connected
     live.bonded = connected
-    live.heartRate = snapshot.currentBpm
+    live.heartRate = connected ? snapshot.currentBpm : nil
+    live.batteryPct = connected ? snapshot.batteryPercent.map(Double.init) : nil
+    live.charging = connected ? snapshot.charging : nil
     live.advertisingName = snapshot.deviceName
   }
 }

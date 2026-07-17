@@ -110,16 +110,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun publishLive(snapshot: MavSnapshot) {
-        val connected = snapshot.connectionState == "connected"
-        mutableBpm.value = snapshot.currentBpm
-        mutableLive.value = LiveState(
-            connected = connected,
-            bonded = connected,
-            heartRate = snapshot.currentBpm,
-            advertisingName = snapshot.deviceName,
-            scanning = snapshot.connectionState == "scanning",
-            statusNote = snapshot.recoveryUnavailableReason,
-        )
+        val live = liveStateOf(snapshot)
+        mutableBpm.value = live.heartRate
+        mutableLive.value = live
     }
 
     private fun openRuntime(): MavRuntime {
@@ -147,6 +140,26 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 message = error.message ?: "Core startup failed",
             )
         }
+}
+
+/**
+ * The core connection block rendered as the live readout. The runtime's link-up states are
+ * `subscribing` and `streaming` (there is no `connected` state in `host-snapshot/v1`), and a stored
+ * heart rate or battery figure never outlives the link — a disconnected strap shows no live vitals.
+ */
+internal fun liveStateOf(snapshot: MavSnapshot): LiveState {
+    val connected =
+        snapshot.connectionState == "subscribing" || snapshot.connectionState == "streaming"
+    return LiveState(
+        connected = connected,
+        bonded = connected,
+        heartRate = if (connected) snapshot.currentBpm else null,
+        batteryPct = if (connected) snapshot.batteryPercent?.toDouble() else null,
+        charging = if (connected) snapshot.charging else null,
+        advertisingName = snapshot.deviceName,
+        scanning = snapshot.connectionState == "scanning",
+        statusNote = snapshot.recoveryUnavailableReason,
+    )
 }
 
 /**
