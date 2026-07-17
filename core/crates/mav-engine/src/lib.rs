@@ -17,7 +17,7 @@ pub mod snapshot;
 pub use acquisition::{Acquisition, Command, Event, HandshakeConfig, State, StepOutcome};
 pub use historical::{
     CommandTemplate, HistoricalConfig, HistoricalController, HistoricalEvent, HistoricalOutcome,
-    HistoricalState, ResponseResult,
+    HistoricalReport, HistoricalState, ResponseResult, SyncTotals, HISTORICAL_STATUS_SCHEMA,
 };
 pub use recompute::{
     AffectedDays, CacheKey, LocalDay, OffsetSpan, RecomputeCache, RecomputeTrigger, SyncDays,

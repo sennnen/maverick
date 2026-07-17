@@ -40,8 +40,20 @@ jobs:
           grep -q 'sealed class TransportAction' "$kotlin"
           grep -q 'hostSnapshot' "$kotlin"
           grep -q 'notification' "$kotlin"
+          grep -q 'struct HistoricalProgress' "$swift"
+          grep -q 'func historicalProgress' "$swift"
+          grep -q 'lastCursorHash' "$swift"
+          grep -q 'affectedDays' "$swift"
+          grep -q 'data class HistoricalProgress' "$kotlin"
+          grep -q 'historicalProgress' "$kotlin"
+          grep -q 'lastCursorHash' "$kotlin"
+          grep -q 'affectedDays' "$kotlin"
           if grep -Eq 'RealtimeProcessor|RawSample|ManifestCodec|PipelineOutput|Store' "$swift" "$kotlin"; then
             echo "internal core type leaked into generated bindings"
+            exit 1
+          fi
+          if grep -Eq 'func (acknowledge|forceTrim)' "$swift" || grep -Eq 'fun `?(acknowledge|forceTrim)' "$kotlin"; then
+            echo "historical progress must be read-only: no ack or trim on the FFI surface"
             exit 1
           fi
 

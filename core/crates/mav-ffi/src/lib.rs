@@ -104,6 +104,23 @@ pub struct IngestResult {
     pub duplicates: u32,
 }
 
+/// The `historical-status/v1` read model: honest sync progress and failure state. The cursor
+/// appears only as a hash — raw cursor bytes never cross this boundary — and there is no function
+/// anywhere on the surface that lets a host acknowledge, trim, or otherwise command the transfer.
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct HistoricalProgress {
+    pub state: String,
+    pub records_seen: u64,
+    pub records_inserted: u64,
+    pub duplicates: u64,
+    pub rejected_records: u64,
+    pub last_cursor_hash: Option<String>,
+    pub affected_days: Vec<String>,
+    pub failure_code: Option<u16>,
+    pub json: String,
+    pub hash: String,
+}
+
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct HostSnapshotResult {
     pub json: String,
@@ -213,6 +230,23 @@ impl MavRuntime {
         Ok(RuntimeConnectionState::from(
             self.lock()?.connection_state(),
         ))
+    }
+
+    pub fn historical_progress(&self) -> Result<HistoricalProgress, FfiError> {
+        let guard = self.lock()?;
+        let report = guard.historical_report();
+        Ok(HistoricalProgress {
+            state: report.state.clone(),
+            records_seen: report.records_seen,
+            records_inserted: report.records_inserted,
+            duplicates: report.duplicates,
+            rejected_records: report.rejected_records,
+            last_cursor_hash: report.last_cursor_hash.clone(),
+            affected_days: report.affected_days.clone(),
+            failure_code: report.failure_code,
+            json: report.canonical_json()?,
+            hash: report.canonical_hash()?,
+        })
     }
 
     pub fn host_snapshot(&self, at_unix_ms: i64) -> Result<HostSnapshotResult, FfiError> {
@@ -382,6 +416,37 @@ mod tests {
         assert_eq!(code, mav_model::error::codes::DECODE_LAYOUT_INVALID);
         assert_eq!(category, "decode");
         assert_eq!(safe_message, "manifest does not parse");
+    }
+
+    #[test]
+    fn historical_progress_starts_idle_and_is_byte_stable() {
+        let path = db_path();
+        let _ = std::fs::remove_file(&path);
+        let runtime = MavRuntime::new(RuntimeConfig {
+            database_path: path.to_string_lossy().into_owned(),
+            timezone_id: "Europe/London".to_owned(),
+            transport_capacity: 16,
+            app_version: "0.1.0".to_owned(),
+            app_build: "test".to_owned(),
+        })
+        .unwrap();
+        let progress = runtime.historical_progress().unwrap();
+        assert_eq!(progress.state, "historical_idle");
+        assert_eq!(progress.records_seen, 0);
+        assert_eq!(progress.records_inserted, 0);
+        assert_eq!(progress.duplicates, 0);
+        assert_eq!(progress.rejected_records, 0);
+        assert_eq!(progress.last_cursor_hash, None);
+        assert_eq!(progress.failure_code, None);
+        assert!(progress.affected_days.is_empty());
+        assert!(progress
+            .json
+            .contains("\"schema\":\"historical-status/v1\""));
+        assert_eq!(progress.hash.len(), 16);
+        let again = runtime.historical_progress().unwrap();
+        assert_eq!(again.json, progress.json);
+        assert_eq!(again.hash, progress.hash);
+        let _ = std::fs::remove_file(path);
     }
 
     #[test]

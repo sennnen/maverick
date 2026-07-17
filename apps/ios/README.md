@@ -34,7 +34,10 @@ the package as one directory so stale slices cannot survive a rebuild. Generated
 by Git and must never be edited.
 
 The app target links `MavCore.xcframework` and compiles `mav_ffi.swift`. Product code constructs
-`MavRuntime`; `runCapture` remains the debug parity surface.
+`MavRuntime`; `runCapture` remains the debug parity surface. `historicalProgress()` is the
+read-only `historical-status/v1` model for sync progress and failure: honest counts, affected
+days, a stable failure code, and the durable cursor as a hash only — the surface has no call
+that acknowledges or trims device history.
 
 ## Building the app
 

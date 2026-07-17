@@ -185,6 +185,7 @@ pub struct HostRuntime {
     session: Option<Session>,
     revision: u64,
     last_body_json: Option<String>,
+    historical: crate::historical::HistoricalReport,
 }
 
 impl HostRuntime {
@@ -200,7 +201,14 @@ impl HostRuntime {
             session: None,
             revision: 0,
             last_body_json: None,
+            historical: crate::historical::HistoricalReport::idle(),
         })
+    }
+
+    /// The progress and failure read model of the historical sync (`historical-status/v1`). Idle
+    /// until a sync runs; the live transfer machinery updates it and hosts can only read it.
+    pub fn historical_report(&self) -> &crate::historical::HistoricalReport {
+        &self.historical
     }
 
     pub fn install_connector(&mut self, registration: ConnectorRegistration) -> Result<()> {
@@ -854,6 +862,24 @@ mod tests {
         assert_eq!(
             snapshot.session.unwrap().canonical_hash().unwrap(),
             "33143ef069a85a38"
+        );
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn a_fresh_runtime_reports_an_idle_historical_sync() {
+        let path = db_path();
+        let runtime = runtime(&path);
+        let report = runtime.historical_report();
+        assert_eq!(report.state, "historical_idle");
+        assert_eq!(report.records_seen, 0);
+        assert_eq!(report.records_inserted, 0);
+        assert_eq!(report.last_cursor_hash, None);
+        assert_eq!(report.failure_code, None);
+        assert!(report.affected_days.is_empty());
+        assert_eq!(
+            report.canonical_hash().unwrap(),
+            runtime.historical_report().canonical_hash().unwrap()
         );
         let _ = std::fs::remove_file(path);
     }

@@ -10,7 +10,9 @@ The exact runtime, event, action, snapshot, threading, and compatibility rules a
 The UI preserves the Aura compose presentation layer in `ui/aura/`:
 Today, Recovery, Strain, and Sleep hubs, the Material bottom navigation, one app-wide settings
 sheet, and the trends/reports/metric-detail/workout-detail/timer surfaces. A Mav-owned
-`AppViewModel` adapts the core's `host-snapshot/v1` into the presentation surface; day
+`AppViewModel` adapts the core's `host-snapshot/v1` into the presentation surface, and
+`historicalProgress()` on `MavRuntime` is the read-only `historical-status/v1` model for sync
+progress and failure (cursor exposed as a hash only; no ack or trim call exists); day
 history, workouts, and ML signals stay empty until the core serves them, and the routed legacy
 destinations (live console, devices, coach, journal, …) are same-signature Mav stand-ins so
 `AuraRoot.kt` stays aligned with the preserved presentation source. The legacy data engine—its Room repositories,

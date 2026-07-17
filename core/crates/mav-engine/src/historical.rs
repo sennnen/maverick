@@ -5,9 +5,13 @@
 //! caller reports that the burst committed durably.
 
 use crate::acquisition::Command;
+use crate::recompute::AffectedDays;
 use mav_model::error::{codes, MavError, Result};
 use mav_obs::stage::Stage;
 use mav_obs::tap::{Ids, Tap, TapEvent};
+use serde::Serialize;
+
+pub const HISTORICAL_STATUS_SCHEMA: &str = "historical-status/v1";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum HistoricalState {
@@ -95,6 +99,94 @@ pub struct HistoricalOutcome {
     pub commands: Vec<Command>,
 }
 
+/// Sums the burst receipts and decode rejections of one sync, for the progress report. It holds
+/// outcomes only — no cursor bytes and no commands — so handing it to a host reveals nothing the
+/// host could replay at the device.
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
+pub struct SyncTotals {
+    inserted: u64,
+    duplicates: u64,
+    rejected_records: u64,
+    days: AffectedDays,
+}
+
+impl SyncTotals {
+    pub fn absorb(&mut self, receipt: &crate::burst::BurstReceipt) {
+        self.inserted += u64::from(receipt.inserted);
+        self.duplicates += u64::from(receipt.duplicates);
+        self.days.union(&receipt.affected_days);
+    }
+
+    pub fn note_rejected(&mut self, count: u64) {
+        self.rejected_records += count;
+    }
+
+    pub fn affected_days(&self) -> &AffectedDays {
+        &self.days
+    }
+}
+
+/// The progress and failure read model the FFI hands to hosts: honest counts, the durable cursor
+/// as a hash only, and a stable failure code. It is assembled from the controller and totals and
+/// carries no way to command either.
+#[derive(Clone, PartialEq, Eq, Debug, Serialize)]
+pub struct HistoricalReport {
+    pub schema: String,
+    pub state: String,
+    pub records_seen: u64,
+    pub records_inserted: u64,
+    pub duplicates: u64,
+    pub rejected_records: u64,
+    pub last_cursor_hash: Option<String>,
+    pub affected_days: Vec<String>,
+    pub failure_code: Option<u16>,
+}
+
+impl HistoricalReport {
+    pub fn assemble(controller: &HistoricalController, totals: &SyncTotals) -> Self {
+        Self {
+            schema: HISTORICAL_STATUS_SCHEMA.to_owned(),
+            state: controller.state().name().to_owned(),
+            records_seen: controller.records_seen(),
+            records_inserted: totals.inserted,
+            duplicates: totals.duplicates,
+            rejected_records: totals.rejected_records,
+            last_cursor_hash: controller.last_cursor_hash().map(str::to_owned),
+            affected_days: totals.days.iso(),
+            failure_code: controller.failure_code(),
+        }
+    }
+
+    /// The report of a runtime with no historical sync started.
+    pub fn idle() -> Self {
+        Self {
+            schema: HISTORICAL_STATUS_SCHEMA.to_owned(),
+            state: HistoricalState::Idle.name().to_owned(),
+            records_seen: 0,
+            records_inserted: 0,
+            duplicates: 0,
+            rejected_records: 0,
+            last_cursor_hash: None,
+            affected_days: Vec::new(),
+            failure_code: None,
+        }
+    }
+
+    pub fn canonical_json(&self) -> Result<String> {
+        serde_json::to_string(self).map_err(|e| {
+            MavError::new(
+                codes::STORAGE_SERIALIZE,
+                "could not serialise the historical report",
+            )
+            .context(e.to_string())
+        })
+    }
+
+    pub fn canonical_hash(&self) -> Result<String> {
+        Ok(crate::snapshot::fnv1a_64(self.canonical_json()?.as_bytes()))
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum AwaitedResponse {
     Range,
@@ -121,6 +213,8 @@ pub struct HistoricalController {
     pending_burst: Option<PendingBurst>,
     records_seen: u64,
     records_persisted: u64,
+    last_cursor_hash: Option<String>,
+    failure_code: Option<u16>,
     ids: Ids,
 }
 
@@ -135,6 +229,8 @@ impl HistoricalController {
             pending_burst: None,
             records_seen: 0,
             records_persisted: 0,
+            last_cursor_hash: None,
+            failure_code: None,
             ids: Ids::default(),
         }
     }
@@ -153,6 +249,17 @@ impl HistoricalController {
 
     pub fn awaiting_response(&self) -> bool {
         self.outstanding.is_some()
+    }
+
+    /// The FNV-1a hash of the last cursor whose burst committed durably. The raw cursor bytes
+    /// stay between the controller and the device; only this hash may cross FFI or enter a log.
+    pub fn last_cursor_hash(&self) -> Option<&str> {
+        self.last_cursor_hash.as_deref()
+    }
+
+    /// The stable `MAV-…` code the sync failed with, once the state is `Failed`.
+    pub fn failure_code(&self) -> Option<u16> {
+        self.failure_code
     }
 
     pub fn step(&mut self, event: HistoricalEvent, tap: &dyn Tap) -> Result<HistoricalOutcome> {
@@ -176,6 +283,7 @@ impl HistoricalController {
                 self.outstanding = None;
                 self.pending_burst = None;
                 self.burst_open = false;
+                self.failure_code = Some(codes::TRANSPORT_NATIVE_FAILURE);
                 self.transition(HistoricalState::Failed, tap);
                 Ok(HistoricalOutcome::default())
             }
@@ -297,6 +405,7 @@ impl HistoricalController {
         self.records_persisted = self
             .records_persisted
             .saturating_add(u64::from(pending.record_count));
+        self.last_cursor_hash = Some(crate::snapshot::fnv1a_64(&pending.ack_payload));
         let command = Command {
             opcode: self.config.acknowledge.opcode,
             seq: self.take_seq(),
@@ -314,6 +423,7 @@ impl HistoricalController {
             return self.fail("persistence failed with no burst awaiting commit", tap);
         }
         self.pending_burst = None;
+        self.failure_code = Some(error.code);
         self.transition(HistoricalState::Failed, tap);
         tap.on_stage(
             Stage::Acquisition,
@@ -410,6 +520,7 @@ impl HistoricalController {
         self.outstanding = None;
         self.pending_burst = None;
         self.burst_open = false;
+        self.failure_code = Some(error.code);
         self.transition(HistoricalState::Failed, tap);
         tap.on_stage(
             Stage::Acquisition,
@@ -747,6 +858,105 @@ mod tests {
         assert!(outcome.commands.is_empty());
         assert_eq!(controller.state(), HistoricalState::Failed);
         assert_eq!(controller.records_persisted(), 0);
+    }
+
+    // M5-P7: the progress read model. Hosts render it; they cannot reproduce or command the
+    // controller through it.
+
+    fn receipt(inserted: u32, duplicates: u32, day_index: i64) -> crate::burst::BurstReceipt {
+        let mut affected_days = crate::recompute::AffectedDays::default();
+        if inserted > 0 {
+            affected_days.insert(crate::recompute::LocalDay::from_index(day_index));
+        }
+        crate::burst::BurstReceipt {
+            inserted,
+            duplicates,
+            affected_days,
+        }
+    }
+
+    #[test]
+    fn the_status_report_serializes_canonically_with_a_stable_hash() {
+        let mut controller = HistoricalController::new(config());
+        let tap = RecordingTap::default();
+        drive_to_receiving(&mut controller, &tap);
+        end_burst(
+            &mut controller,
+            &tap,
+            &[0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80],
+        );
+        controller
+            .step(HistoricalEvent::BurstPersisted, &tap)
+            .unwrap();
+
+        let mut totals = SyncTotals::default();
+        totals.absorb(&receipt(2, 1, 20_285));
+        totals.note_rejected(1);
+
+        let report = HistoricalReport::assemble(&controller, &totals);
+        assert_eq!(
+            report.canonical_json().unwrap(),
+            "{\"schema\":\"historical-status/v1\",\"state\":\"historical_receiving\",\
+             \"records_seen\":7,\"records_inserted\":2,\"duplicates\":1,\"rejected_records\":1,\
+             \"last_cursor_hash\":\"763b696d4565b5c5\",\"affected_days\":[\"2025-07-16\"],\
+             \"failure_code\":null}"
+        );
+        assert_eq!(report.canonical_hash().unwrap(), {
+            let again = HistoricalReport::assemble(&controller, &totals);
+            again.canonical_hash().unwrap()
+        });
+    }
+
+    #[test]
+    fn the_cursor_crosses_only_as_a_hash() {
+        let mut controller = HistoricalController::new(config());
+        let tap = RecordingTap::default();
+        drive_to_receiving(&mut controller, &tap);
+        end_burst(&mut controller, &tap, &[0xDE, 0xAD, 0xBE, 0xEF]);
+        controller
+            .step(HistoricalEvent::BurstPersisted, &tap)
+            .unwrap();
+
+        let report = HistoricalReport::assemble(&controller, &SyncTotals::default());
+        assert_eq!(report.last_cursor_hash.as_deref(), Some("277045760cdd0993"));
+        let json = report.canonical_json().unwrap().to_lowercase();
+        assert!(!json.contains("deadbeef"));
+        assert!(!json.contains("222,173"));
+    }
+
+    #[test]
+    fn a_persistence_failure_reports_a_stable_code_and_blocks_the_ack() {
+        let mut controller = HistoricalController::new(config());
+        let tap = RecordingTap::default();
+        drive_to_receiving(&mut controller, &tap);
+        end_burst(&mut controller, &tap, &[1, 2, 3]);
+        controller
+            .step(
+                HistoricalEvent::PersistFailed {
+                    error: MavError::new(codes::STORAGE_QUERY, "injected commit failure"),
+                },
+                &tap,
+            )
+            .unwrap_err();
+
+        let report = HistoricalReport::assemble(&controller, &SyncTotals::default());
+        assert_eq!(report.state, "historical_failed");
+        assert_eq!(report.failure_code, Some(codes::STORAGE_QUERY));
+        assert_eq!(report.last_cursor_hash, None);
+        assert!(controller
+            .step(HistoricalEvent::BurstPersisted, &tap)
+            .is_err());
+    }
+
+    #[test]
+    fn a_disconnect_reports_the_transport_failure_code() {
+        let mut controller = HistoricalController::new(config());
+        let tap = RecordingTap::default();
+        drive_to_receiving(&mut controller, &tap);
+        controller.step(HistoricalEvent::Disconnect, &tap).unwrap();
+        let report = HistoricalReport::assemble(&controller, &SyncTotals::default());
+        assert_eq!(report.state, "historical_failed");
+        assert_eq!(report.failure_code, Some(codes::TRANSPORT_NATIVE_FAILURE));
     }
 
     #[test]
