@@ -65,7 +65,11 @@ pub struct RealtimeProcessor {
 
 impl RealtimeProcessor {
     pub fn new(manifest: Manifest, device: DeviceId) -> Result<Self> {
-        let reassembler = Reassembler::with_spec(manifest.frame.to_spec()?);
+        let reassembler = if manifest.frame.is_unframed() {
+            Reassembler::passthrough_with_max(manifest.frame.max_frame_bytes as usize)
+        } else {
+            Reassembler::with_spec(manifest.frame.to_spec()?)
+        };
         Ok(Self {
             manifest,
             device,
@@ -103,9 +107,18 @@ impl RealtimeProcessor {
                 }
             };
 
-            let decoded = self.codec.decode(&frame, &self.manifest, &mut self.kv)?;
+            let mut decoded = self.codec.decode(&frame, &self.manifest, &mut self.kv)?;
             if decoded.is_empty() {
                 continue;
+            }
+            // A standard profile carries no device clock, so the honest time of each reading is
+            // the moment the phone received it; stamping it here keeps the plausibility check and
+            // the reject flag for genuinely broken device clocks only.
+            if self.manifest.standard_profile.is_some() {
+                for sample in &mut decoded {
+                    sample.device_time =
+                        mav_model::time::DeviceTime::from_nanos(capture_wall.as_nanos());
+                }
             }
             tap.on_stage(
                 Stage::Decode,
@@ -405,6 +418,84 @@ mod tests {
     struct NullTap;
     impl Tap for NullTap {
         fn on_stage(&self, _stage: Stage, _event: TapEvent) {}
+    }
+
+    // PL-P8: the built-in standards connector. Unframed 0x2A37 notifications run the same
+    // pipeline; samples are capture-timed without being flagged, because the profile carries no
+    // device clock at all.
+
+    fn standard_hr_manifest() -> Manifest {
+        Manifest::from_json(
+            r#"{
+                "schema": "connector-manifest/v1",
+                "identity": {
+                    "family": "standard-ble-hr",
+                    "display_name": "Standard BLE heart rate",
+                    "models": ["STANDARD-HR"]
+                },
+                "gatt": { "service": "180D", "command": "2A39", "notify": ["2A37"] },
+                "frame": { "wire_format": "unframed", "max_frame_bytes": 64 },
+                "standard_profile": "heart_rate",
+                "packets": {},
+                "capabilities": ["heart_rate", "rr_interval"]
+            }"#,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn a_standard_hr_capture_flows_through_the_whole_pipeline() {
+        let capture = Capture {
+            device: DeviceId::new(1),
+            capture_wall: WallTime::from_unix_seconds(1_752_600_500),
+            chunks: vec![vec![0x00, 0x3C], vec![0x10, 0x40, 0x00, 0x04]],
+        };
+        let store = Store::open_in_memory().unwrap();
+        let output =
+            run_realtime_output(&standard_hr_manifest(), &capture, &store, &NullTap).unwrap();
+        assert_eq!(output.snapshot.current_bpm, Some(64));
+        assert_eq!(output.snapshot.in_range_samples, 2);
+        assert_eq!(output.snapshot.excluded_samples, 0);
+
+        let heart_rates = store
+            .samples(DeviceId::new(1), StreamKind::HeartRate)
+            .unwrap();
+        assert_eq!(heart_rates.len(), 2);
+        for sample in &heart_rates {
+            assert_eq!(
+                sample.device_time.as_nanos(),
+                1_752_600_500 * 1_000_000_000,
+                "capture-timed samples carry the capture wall as their time"
+            );
+            assert_eq!(sample.quality.reason, None);
+        }
+        let rr = store
+            .samples(DeviceId::new(1), StreamKind::RrInterval)
+            .unwrap();
+        assert_eq!(rr.len(), 1);
+        assert_eq!(rr[0].value.as_f64(), 1_000.0);
+    }
+
+    #[test]
+    fn a_replayed_standard_capture_is_idempotent() {
+        let capture = Capture {
+            device: DeviceId::new(1),
+            capture_wall: WallTime::from_unix_seconds(1_752_600_500),
+            chunks: vec![vec![0x00, 0x3C], vec![0x00, 0x3C]],
+        };
+        let store = Store::open_in_memory().unwrap();
+        let manifest = standard_hr_manifest();
+        run_realtime_output(&manifest, &capture, &store, &NullTap).unwrap();
+        run_realtime_output(&manifest, &capture, &store, &NullTap).unwrap();
+        // Two equal readings in one session are distinct beats (session-monotonic seq); the
+        // replayed run is the duplicate.
+        assert_eq!(
+            store
+                .samples(DeviceId::new(1), StreamKind::HeartRate)
+                .unwrap()
+                .len(),
+            2
+        );
     }
 
     #[test]

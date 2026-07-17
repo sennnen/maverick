@@ -23,14 +23,18 @@ pub trait DeviceCodec: Send {
     ) -> Result<Vec<RawSample>>;
 }
 
-/// The default codec: pure interpretation of the manifest's layouts, no state, no learned values.
-/// A device family only supplies its own codec when it needs what this one cannot do.
-#[derive(Default, Debug, Clone, Copy)]
-pub struct ManifestCodec;
+/// The default codec: pure interpretation of the manifest's layouts and admitted decoders. Its
+/// only state is the session-monotonic sequence for standard-profile samples, which carry no
+/// device clock of their own. A device family only supplies its own codec when it needs what
+/// this one cannot do.
+#[derive(Default, Debug, Clone)]
+pub struct ManifestCodec {
+    standard_seq: u16,
+}
 
 impl ManifestCodec {
     pub fn new() -> Self {
-        Self
+        Self::default()
     }
 }
 
@@ -41,6 +45,13 @@ impl DeviceCodec for ManifestCodec {
         manifest: &Manifest,
         _kv: &mut dyn DeviceKv,
     ) -> Result<Vec<RawSample>> {
+        if let Some(profile) = manifest.standard_profile.as_deref() {
+            return crate::standard::decode_standard_profile(
+                profile,
+                &frame.payload,
+                &mut self.standard_seq,
+            );
+        }
         let reader = TypedReader::new(&frame.payload);
         let packet_type = reader
             .u8_at(0)

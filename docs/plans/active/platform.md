@@ -328,7 +328,18 @@ disconnect, and package removal without deleting user data.
 **Exit:** a real standard BLE HR sensor can feed the core; a WHOOP package can be validated and
 registered without being committed to this repository.
 
-**Status: pending.**
+**Status: in progress.** The core side of the standards connector is done: `wire_format:
+"unframed"` runs the reassembler in passthrough (a GATT notification value is one frame), and
+`standard_profile: "heart_rate"` routes decode to the admitted SIG Heart Rate Measurement module
+in `mav-codec/src/standard.rs` — u8/u16 flag, sensor-contact bits ignored, energy-expended skip,
+RR intervals in 1/1024 s converted to exact milliseconds, zero heart rate treated as the
+no-reading sentinel. `fixtures/standard/hr_measurement_v1.json` pins the spec-derived vectors
+and exact truncation errors. Decision log: standard characteristics carry no device clock, so
+the pipeline stamps samples with the phone-side receive time *without* the implausible-timestamp
+flag (that flag means a broken device clock, and there is no device clock), and the codec keeps
+a session-monotonic sequence so equal readings in one session stay distinct through dedup.
+Remaining: connector package import/validation UI on both apps, native registry adapters, and
+the docs split with `maverick-connectors`.
 
 ---
 

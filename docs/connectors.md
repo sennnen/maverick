@@ -46,7 +46,10 @@ device family and known before any strap is ever connected:
 - **GATT.** Service, command, and notify characteristic UUIDs, and any standard GATT characteristics
   the device also exposes.
 - **Frame parameters.** The start-of-frame byte, the header layout, the CRC families and their
-  parameters, the padding rule, and the maximum frame size.
+  parameters, the padding rule, and the maximum frame size. `wire_format` is `gen4`, `gen5`, a
+  `custom` spec described as data (ADR-012), or `unframed` — a standard GATT characteristic whose
+  notification values arrive whole, with no header and no CRC, so the reassembler runs in
+  passthrough (PL-P8).
 - **Packet map.** The numeric packet types and what each one is (realtime data, historical data,
   event, metadata, command response, and so on).
 - **Field layouts.** For each packet type and record version, the offset, width, endianness, and
@@ -55,6 +58,13 @@ device family and known before any strap is ever connected:
   conversion is a fixed constant.
 - **Record versions.** The historical record versions the device emits, keyed by their version or
   subtype byte, each with its own field layout and a maturity note.
+- **Standard profile.** A pure standards connector (the built-in BLE Heart Rate connector) names
+  one admitted profile decoder — `standard_profile: "heart_rate"` — instead of a packet map. The
+  Heart Rate Measurement layout is flag-driven, which the layout DSL cannot express, so the
+  decoder is a reviewed module in `mav-codec/src/standard.rs` and the manifest can only name it,
+  exactly as `record_versions` names the historical decoders. Standard characteristics carry no
+  device clock; the pipeline stamps each sample with the phone-side receive time, unflagged,
+  because that is the honest time of a clockless reading.
 - **Capabilities and interval source.** The stream kinds the device produces, plus `ppg`, `ecg`, or
   `unknown` for beat-to-beat intervals. This controls whether variability may be labelled optical
   PRV or ECG HRV; the presence of RR alone cannot answer that.

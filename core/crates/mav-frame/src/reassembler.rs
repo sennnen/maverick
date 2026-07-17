@@ -20,7 +20,9 @@ pub enum ReassemblyEvent {
 }
 
 pub struct Reassembler {
-    spec: FrameSpec,
+    /// `None` is passthrough: the wire carries no framing at all (a standard GATT characteristic
+    /// value), so every pushed chunk is one complete frame.
+    spec: Option<FrameSpec>,
     max_frame_bytes: usize,
     buf: Vec<u8>,
     pos: usize,
@@ -44,7 +46,22 @@ impl Reassembler {
 
     pub fn with_spec_and_max(spec: FrameSpec, max_frame_bytes: usize) -> Self {
         Self {
-            spec,
+            spec: Some(spec),
+            max_frame_bytes,
+            buf: Vec::new(),
+            pos: 0,
+        }
+    }
+
+    /// No framing: each pushed chunk is one complete frame. This is how standard GATT profiles
+    /// arrive — a notification value has no start byte, no length, and no CRC (PL-P8).
+    pub fn passthrough() -> Self {
+        Self::passthrough_with_max(DEFAULT_MAX_FRAME_BYTES)
+    }
+
+    pub fn passthrough_with_max(max_frame_bytes: usize) -> Self {
+        Self {
+            spec: None,
             max_frame_bytes,
             buf: Vec::new(),
             pos: 0,
@@ -68,13 +85,29 @@ impl Reassembler {
     /// Feed one fragment and collect everything that resolves. Incomplete trailing frames stay
     /// buffered for the next call.
     pub fn push(&mut self, chunk: &[u8]) -> Vec<ReassemblyEvent> {
+        let Some(spec) = self.spec else {
+            if chunk.is_empty() {
+                return Vec::new();
+            }
+            if chunk.len() > self.max_frame_bytes {
+                return vec![ReassemblyEvent::InvalidFrame(
+                    MavError::new(codes::FRAME_OVERSIZED, "frame exceeds maximum size").context(
+                        format!("total {}, max {}", chunk.len(), self.max_frame_bytes),
+                    ),
+                )];
+            }
+            return vec![ReassemblyEvent::Frame(RawFrame {
+                payload: chunk.to_vec(),
+            })];
+        };
+
         self.buf.extend_from_slice(chunk);
         let mut events = Vec::new();
 
         loop {
             let skipped = self.buf[self.pos..]
                 .iter()
-                .take_while(|&&b| b != self.spec.sof)
+                .take_while(|&&b| b != spec.sof)
                 .count();
             if skipped > 0 {
                 self.pos += skipped;
@@ -82,14 +115,14 @@ impl Reassembler {
             }
 
             let avail = self.buf.len() - self.pos;
-            if avail < self.spec.header_len {
+            if avail < spec.header_len {
                 break;
             }
 
             let head = &self.buf[self.pos..];
-            let declared = self.spec.read_declared(head);
+            let declared = spec.read_declared(head);
 
-            if !self.spec.header_crc_ok(head) {
+            if !spec.header_crc_ok(head) {
                 events.push(ReassemblyEvent::InvalidFrame(
                     MavError::new(codes::FRAME_HEADER_CRC_MISMATCH, "header crc mismatch")
                         .context(format!("declared_len {declared}")),
@@ -98,7 +131,7 @@ impl Reassembler {
                 continue;
             }
 
-            if declared < self.spec.min_declared() {
+            if declared < spec.min_declared() {
                 events.push(ReassemblyEvent::InvalidFrame(
                     MavError::new(
                         codes::FRAME_TRUNCATED,
@@ -110,7 +143,7 @@ impl Reassembler {
                 continue;
             }
 
-            let total = self.spec.total_len(declared);
+            let total = spec.total_len(declared);
             if total > self.max_frame_bytes {
                 events.push(ReassemblyEvent::InvalidFrame(
                     MavError::new(codes::FRAME_OVERSIZED, "frame exceeds maximum size")
@@ -125,8 +158,8 @@ impl Reassembler {
             }
 
             let frame = &self.buf[self.pos..self.pos + total];
-            if !self.spec.trailer_ok(frame, total) {
-                let (start, end) = self.spec.payload_range(total);
+            if !spec.trailer_ok(frame, total) {
+                let (start, end) = spec.payload_range(total);
                 events.push(ReassemblyEvent::InvalidFrame(
                     MavError::new(codes::FRAME_PAYLOAD_CRC_MISMATCH, "payload crc mismatch")
                         .context(format!("payload_len {}", end - start)),
@@ -135,7 +168,7 @@ impl Reassembler {
                 continue;
             }
 
-            let (start, end) = self.spec.payload_range(total);
+            let (start, end) = spec.payload_range(total);
             events.push(ReassemblyEvent::Frame(RawFrame {
                 payload: frame[start..end].to_vec(),
             }));
@@ -301,5 +334,35 @@ mod tests {
         r.push(&wire[..5]);
         assert_eq!(r.reset(), 5);
         assert_eq!(r.pending(), 0);
+    }
+
+    // PL-P8: standard GATT characteristics are unframed — one notification value is one frame,
+    // with no header, no start byte, and no CRC.
+
+    #[test]
+    fn passthrough_emits_each_chunk_as_one_frame() {
+        let mut r = Reassembler::passthrough();
+        let events = r.push(&[0x10, 0x48, 0x30, 0x03]);
+        assert_eq!(frames_of(&events), vec![vec![0x10, 0x48, 0x30, 0x03]]);
+        let events = r.push(&[0x00, 0x3C]);
+        assert_eq!(frames_of(&events), vec![vec![0x00, 0x3C]]);
+        assert_eq!(r.pending(), 0);
+    }
+
+    #[test]
+    fn passthrough_ignores_an_empty_notification() {
+        let mut r = Reassembler::passthrough();
+        assert!(r.push(&[]).is_empty());
+    }
+
+    #[test]
+    fn passthrough_rejects_an_oversized_chunk() {
+        let mut r = Reassembler::passthrough_with_max(4);
+        let events = r.push(&[0u8; 5]);
+        assert!(matches!(
+            events.as_slice(),
+            [ReassemblyEvent::InvalidFrame(e)] if e.code == codes::FRAME_OVERSIZED
+        ));
+        assert_eq!(frames_of(&r.push(&[0x00, 0x3C])), vec![vec![0x00, 0x3C]]);
     }
 }

@@ -42,6 +42,12 @@ pub struct Manifest {
     pub packets: BTreeMap<u8, String>,
     #[serde(default)]
     pub layouts: BTreeMap<String, Layout>,
+    /// An admitted standard-profile decoder id (`heart_rate`), for a pure standards connector:
+    /// the notify characteristic carries unframed SIG-defined values, decoded by the named module
+    /// in `standard` rather than by packet bytes. Requires `frame.wire_format = "unframed"` and an
+    /// empty `packets` map (PL-P8).
+    #[serde(default)]
+    pub standard_profile: Option<String>,
     /// Historical record version/subtype byte to an admitted decoder id (`r20_k18`, `r20_k26`).
     /// These layouts carry bit fields and sentinel semantics the manifest DSL cannot express, so
     /// each admitted version is a reviewed decoder module in `records`, and the manifest only
@@ -170,6 +176,12 @@ pub struct FrameConfig {
 impl FrameConfig {
     /// The `mav-frame` frame description this config resolves to. The reassembler is driven by it,
     /// so a device's framing is data, not a hardcoded format.
+    /// True when the wire carries no framing at all: each notification value is one frame. The
+    /// reassembler runs in passthrough and `to_spec` has nothing to resolve.
+    pub fn is_unframed(&self) -> bool {
+        self.wire_format == "unframed"
+    }
+
     pub fn to_spec(&self) -> Result<FrameSpec> {
         match self.wire_format.as_str() {
             "gen4" => Ok(FrameSpec::gen4()),
@@ -393,8 +405,37 @@ impl Manifest {
             );
         }
         // Resolving the frame spec validates the wire format, and for a custom format checks the
-        // spec is present and its enum strings are known.
-        self.frame.to_spec()?;
+        // spec is present and its enum strings are known. The unframed wire has no spec to
+        // resolve and is only meaningful with a standard-profile decoder to route to.
+        if self.frame.is_unframed() {
+            let Some(profile) = self.standard_profile.as_deref() else {
+                return Err(MavError::new(
+                    codes::DECODE_LAYOUT_INVALID,
+                    "an unframed wire needs a standard_profile decoder",
+                ));
+            };
+            if !crate::standard::ADMITTED_PROFILES.contains(&profile) {
+                return Err(MavError::new(
+                    codes::DECODE_LAYOUT_INVALID,
+                    "standard_profile names a decoder this build does not admit",
+                )
+                .context(profile.to_owned()));
+            }
+            if !self.packets.is_empty() {
+                return Err(MavError::new(
+                    codes::DECODE_LAYOUT_INVALID,
+                    "a standard-profile manifest decodes by characteristic, not packet bytes",
+                ));
+            }
+        } else {
+            self.frame.to_spec()?;
+            if self.standard_profile.is_some() {
+                return Err(MavError::new(
+                    codes::DECODE_LAYOUT_INVALID,
+                    "standard_profile requires the unframed wire format",
+                ));
+            }
+        }
         if self.identity.models.is_empty() {
             return Err(MavError::new(
                 codes::DECODE_LAYOUT_INVALID,
@@ -647,6 +688,70 @@ mod tests {
         let sg = manifest.standard_gatt.as_ref().unwrap();
         assert_eq!(sg.heart_rate.as_ref().unwrap().characteristic, "2A37");
         assert!(sg.heart_rate_unbonded);
+    }
+
+    // PL-P8: the built-in standards connector — unframed notifications decoded by an admitted
+    // standard-profile decoder instead of packet bytes.
+
+    fn standard_hr_json() -> String {
+        r#"{
+            "schema": "connector-manifest/v1",
+            "identity": {
+                "family": "standard-ble-hr",
+                "display_name": "Standard BLE heart rate",
+                "models": ["STANDARD-HR"]
+            },
+            "gatt": { "service": "180D", "command": "2A39", "notify": ["2A37"] },
+            "frame": { "wire_format": "unframed", "max_frame_bytes": 64 },
+            "standard_profile": "heart_rate",
+            "packets": {},
+            "capabilities": ["heart_rate", "rr_interval"]
+        }"#
+        .to_owned()
+    }
+
+    #[test]
+    fn a_standard_profile_manifest_validates_without_a_frame_spec() {
+        let manifest = Manifest::from_json(&standard_hr_json()).unwrap();
+        assert!(manifest.frame.is_unframed());
+        assert_eq!(manifest.standard_profile.as_deref(), Some("heart_rate"));
+    }
+
+    #[test]
+    fn a_standard_profile_requires_the_unframed_wire() {
+        let json = standard_hr_json().replace(
+            r#""wire_format": "unframed", "max_frame_bytes": 64"#,
+            r#""wire_format": "gen5", "max_frame_bytes": 64"#,
+        );
+        let err = Manifest::from_json(&json).unwrap_err();
+        assert_eq!(err.code, codes::DECODE_LAYOUT_INVALID);
+    }
+
+    #[test]
+    fn a_standard_profile_rejects_packet_routing() {
+        let json = standard_hr_json().replace(
+            r#""packets": {}"#,
+            r#""packets": { "40": "realtime_data" }"#,
+        );
+        let err = Manifest::from_json(&json).unwrap_err();
+        assert_eq!(err.code, codes::DECODE_LAYOUT_INVALID);
+    }
+
+    #[test]
+    fn an_unadmitted_standard_profile_is_rejected() {
+        let json = standard_hr_json().replace(
+            r#""standard_profile": "heart_rate""#,
+            r#""standard_profile": "blood_pressure""#,
+        );
+        let err = Manifest::from_json(&json).unwrap_err();
+        assert_eq!(err.code, codes::DECODE_LAYOUT_INVALID);
+    }
+
+    #[test]
+    fn an_unframed_wire_still_needs_a_standard_profile_to_decode() {
+        let json = standard_hr_json().replace(r#""standard_profile": "heart_rate","#, "");
+        let err = Manifest::from_json(&json).unwrap_err();
+        assert_eq!(err.code, codes::DECODE_LAYOUT_INVALID);
     }
 
     #[test]

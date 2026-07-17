@@ -12,6 +12,7 @@ pub mod kv;
 pub mod manifest;
 pub mod records;
 pub mod registry;
+pub mod standard;
 
 pub use codec::{DeviceCodec, ManifestCodec};
 pub use kv::{DeviceKv, MemoryKv};

@@ -1,0 +1,73 @@
+{
+  "schema": "standard-record/v1",
+  "characteristic": "2A37",
+  "source": "Bluetooth SIG Heart Rate Service 1.0 (HRS_SPEC_V10), Heart Rate Measurement characteristic: flags bit0 selects u8/u16 heart rate, bit3 adds a u16 energy-expended field, bit4 appends u16 RR-intervals in units of 1/1024 s. [PROV]",
+  "cases": [
+    {
+      "name": "u8_heart_rate_only",
+      "payload_hex": "003c",
+      "expected_samples": [
+        { "kind": "heart_rate", "value": 60 }
+      ]
+    },
+    {
+      "name": "u16_heart_rate",
+      "payload_hex": "014000",
+      "expected_samples": [
+        { "kind": "heart_rate", "value": 64 }
+      ]
+    },
+    {
+      "name": "u16_heart_rate_with_contact_bits",
+      "payload_hex": "054000",
+      "expected_samples": [
+        { "kind": "heart_rate", "value": 64 }
+      ]
+    },
+    {
+      "name": "rr_intervals_convert_to_exact_ms",
+      "payload_hex": "10483003",
+      "expected_samples": [
+        { "kind": "heart_rate", "value": 72 },
+        { "kind": "rr_interval", "value_ms": 796.875 }
+      ]
+    },
+    {
+      "name": "energy_expended_is_skipped_before_rr",
+      "payload_hex": "18503412300300040002",
+      "expected_samples": [
+        { "kind": "heart_rate", "value": 80 },
+        { "kind": "rr_interval", "value_ms": 796.875 },
+        { "kind": "rr_interval", "value_ms": 1000.0 },
+        { "kind": "rr_interval", "value_ms": 500.0 }
+      ]
+    },
+    {
+      "name": "zero_heart_rate_is_a_no_reading_sentinel",
+      "payload_hex": "10003003",
+      "expected_samples": [
+        { "kind": "rr_interval", "value_ms": 796.875 }
+      ]
+    },
+    {
+      "name": "empty_payload",
+      "expected_error_code": 3003,
+      "payload_hex": ""
+    },
+    {
+      "name": "u16_heart_rate_truncated",
+      "expected_error_code": 3003,
+      "payload_hex": "0140"
+    },
+    {
+      "name": "odd_rr_byte_truncated",
+      "expected_error_code": 3003,
+      "payload_hex": "104830"
+    },
+    {
+      "name": "rr_promised_but_absent",
+      "expected_error_code": 3003,
+      "payload_hex": "1048"
+    }
+  ]
+}
