@@ -13,7 +13,7 @@ Milestones are gated by exit criteria, not dates. The full table with scope and 
 | M2 | Connector framing hardening | An adversarial format exposed the closed enum; ADR-012 made framing manifest data | [completed/M2.md](completed/M2.md) |
 | M3 | RR variability and honest availability | Published time-domain variability; PPG labelled PRV; no invented Recovery score | [completed/M3.md](completed/M3.md) |
 | M4 | Sleep | Gravity/HR/RR/respiration features, rule-based staging first, night-summary snapshots | not yet broken into packets |
-| M5 | Historical sync | Safe backfill controller, admitted record versions, canonical merge, recompute triggers | [active/M5.md](active/M5.md) |
+| M5 | Historical sync | Safe backfill controller, admitted record versions, canonical merge, recompute triggers | [completed/M5.md](completed/M5.md) |
 | M6 | Analytics breadth and ML | Strain and the remaining metrics that pass the admission rule; native inference wired with golden vectors | not yet broken into packets |
 | M7 | Cloud connector | A manifest of kind `cloud` through the same pipeline, proving the abstraction covers non-BLE sources | not yet broken into packets |
 | M8 | Hardening | Observability and fixture-coverage audits, error-report UX, doc gardening, ADR backfill | not yet broken into packets |

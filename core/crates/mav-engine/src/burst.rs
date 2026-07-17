@@ -1,7 +1,7 @@
 //! One historical START…END burst, from decoded samples to one atomic commit. The collector owns
 //! no radio and no cursor: it scores, places, and persists inside a single transaction, and its
 //! receipt is the only thing allowed to become a `BurstPersisted` event — the safe-ack invariant
-//! (docs/plans/active/M5.md) is enforced by construction because a failed transaction returns an
+//! (docs/plans/completed/M5.md) is enforced by construction because a failed transaction returns an
 //! error and leaves zero rows.
 
 use crate::recompute::{AffectedDays, LocalDay, Timezone};
