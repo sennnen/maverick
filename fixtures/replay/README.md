@@ -21,3 +21,10 @@ A capture, a manifest, and the snapshot they produce, for `mav-replay` and the p
 The decoder drops the zero placeholder, SQI rejects 50 ms, and the two equal 800 ms intervals remain
 distinct through their `seq` values. Frame CRCs and the expected time-domain values were generated
 with an independent Python implementation, not Maverick.
+
+`mixed_history_v1` is the M5-P5 canonical-merge fixture: five gen5 chunks mixing packet-40
+realtime seconds with packet-47 K=18 history records, including a duplicated historical chunk
+(must store once) and a stale-clock record (1970 timestamp: the wall time falls back to the
+capture wall, the raw device time is preserved, and the sample carries the implausible-timestamp
+reason). Synthetic [PROV], built with an independent Python implementation; the expected snapshot
+is produced by the code and its values are checked by hand in the file's evidence note.
