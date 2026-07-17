@@ -1,203 +1,203 @@
 {
   "schema": "record/v1",
   "wire_format": "gen5",
-  "confidence": "PROV",
-  "source": "Synthetic: an MG R20 K=26 raw-PPG burst built to the corpus-pinned offsets (docs/protocol/whoop.md, fourth source, 2,332 bursts): 24 i16 LE photodiode samples at body[16:64], raw ADC with no invented scale, spanning negative and positive values so signedness is pinned. Regenerate from a real capture in the hardware epoch.",
+  "confidence": "FIELD. A real WHOOP 5.0/MG raw-PPG burst (type 47, version 26) captured on hardware and committed with only samples + timestamp. Version 26 rides the second inner byte (inner[1]); the third byte is the on-wrist r22 command 0x80. All 24 i16 LE photodiode samples at body[16:64] reproduce byte-for-byte as raw ADC with no invented scale, spanning negative and positive values so signedness is pinned. Each sample keeps the record second and its in-burst index as seq; no sub-second timestamps are invented. Still owes a check on our own strap in the hardware epoch.",
+  "source": "tanarchytan/whoop-rs, crates/whoop-protocol/tests/fixtures/real_frames.json, ppg_frames[0]. Real capture, author-validated; imported as Maverick's golden fixture in place of the earlier synthetic one, which encoded the version in the wrong inner byte.",
   "produced_with": {
-    "generator": "independent Python (struct, zlib crc32, CRC-16/Modbus)"
+    "generator": "real hardware capture (WHOOP 5.0/MG); expected samples computed by an independent Python decode, never the code under test"
   },
-  "input_hex": "aa015000010035412f021ad007000008827668070005000000000018fc7cfce0fc44fda8fd0cfe70fed4fe38ff9cff00006400c8002c019001f4015802bc0220038403e8034c04b004140500000000000000000017ffd7a8",
+  "input_hex": "aa015000010035412f1a80cdbb7601e700556a33730800e3aa020024013201cf0129020900f2f960f821fac6fbe9fca9fea6fea0fec7fe5eff7bff64006600fc0058014701cc0123017afc800f2c3c6006000100fdb8be41",
   "expected_samples": [
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 0,
       "value": {
-        "i16": -1000
+        "i16": 292
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 1,
       "value": {
-        "i16": -900
+        "i16": 306
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 2,
       "value": {
-        "i16": -800
+        "i16": 463
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 3,
       "value": {
-        "i16": -700
+        "i16": 553
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 4,
       "value": {
-        "i16": -600
+        "i16": 9
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 5,
       "value": {
-        "i16": -500
+        "i16": -1550
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 6,
       "value": {
-        "i16": -400
+        "i16": -1952
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 7,
       "value": {
-        "i16": -300
+        "i16": -1503
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 8,
       "value": {
-        "i16": -200
+        "i16": -1082
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 9,
       "value": {
-        "i16": -100
+        "i16": -791
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 10,
       "value": {
-        "i16": 0
+        "i16": -343
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 11,
+      "value": {
+        "i16": -346
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1783955687000000000,
+      "seq": 12,
+      "value": {
+        "i16": -352
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1783955687000000000,
+      "seq": 13,
+      "value": {
+        "i16": -313
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1783955687000000000,
+      "seq": 14,
+      "value": {
+        "i16": -162
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1783955687000000000,
+      "seq": 15,
+      "value": {
+        "i16": -133
+      }
+    },
+    {
+      "kind": "ppg",
+      "device_time": 1783955687000000000,
+      "seq": 16,
       "value": {
         "i16": 100
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
-      "seq": 12,
-      "value": {
-        "i16": 200
-      }
-    },
-    {
-      "kind": "ppg",
-      "device_time": 1752597000000000000,
-      "seq": 13,
-      "value": {
-        "i16": 300
-      }
-    },
-    {
-      "kind": "ppg",
-      "device_time": 1752597000000000000,
-      "seq": 14,
-      "value": {
-        "i16": 400
-      }
-    },
-    {
-      "kind": "ppg",
-      "device_time": 1752597000000000000,
-      "seq": 15,
-      "value": {
-        "i16": 500
-      }
-    },
-    {
-      "kind": "ppg",
-      "device_time": 1752597000000000000,
-      "seq": 16,
-      "value": {
-        "i16": 600
-      }
-    },
-    {
-      "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 17,
       "value": {
-        "i16": 700
+        "i16": 102
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 18,
       "value": {
-        "i16": 800
+        "i16": 252
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 19,
       "value": {
-        "i16": 900
+        "i16": 344
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 20,
       "value": {
-        "i16": 1000
+        "i16": 327
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 21,
       "value": {
-        "i16": 1100
+        "i16": 460
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 22,
       "value": {
-        "i16": 1200
+        "i16": 291
       }
     },
     {
       "kind": "ppg",
-      "device_time": 1752597000000000000,
+      "device_time": 1783955687000000000,
       "seq": 23,
       "value": {
-        "i16": 1300
+        "i16": -902
       }
     }
   ]

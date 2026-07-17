@@ -1,6 +1,7 @@
-//! Golden record fixtures (M5-P4). Frames and expected samples were built to the corpus-pinned
-//! offsets with an independent Python implementation, never with the code under test. See
-//! fixtures/records/README.md.
+//! Golden record fixtures. The input frames are real WHOOP 5.0/MG captures (imported from
+//! tanarchytan/whoop-rs) and the expected samples were computed by an independent decode, never the
+//! code under test. The inner record is `[type][version][command][body..]`: version is inner[1] and
+//! the command (0x80 on-wrist r22) is inner[2]. See fixtures/records/README.md.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use mav_codec::codec::{DeviceCodec, ManifestCodec};
@@ -164,23 +165,23 @@ fn negative_skin_temperature_keeps_its_sign() {
 fn truncated_records_fail_with_the_exact_boundary() {
     let manifest = manifest();
     // One byte short of each pinned body length fails; the pinned length succeeds.
-    let short_k18 = [&[0x2F, 0x01, 18][..], &[0u8; R20_K18_MIN_BODY_LEN - 1][..]].concat();
+    let short_k18 = [&[0x2F, 18, 0x00][..], &[0u8; R20_K18_MIN_BODY_LEN - 1][..]].concat();
     let error = decode_record(&manifest, &short_k18).unwrap_err();
     assert_eq!(error.code, codes::DECODE_FIELD_UNREADABLE);
-    let exact_k18 = [&[0x2F, 0x01, 18][..], &[0u8; R20_K18_MIN_BODY_LEN][..]].concat();
+    let exact_k18 = [&[0x2F, 18, 0x00][..], &[0u8; R20_K18_MIN_BODY_LEN][..]].concat();
     assert!(decode_record(&manifest, &exact_k18).is_ok());
 
-    let short_k26 = [&[0x2F, 0x01, 26][..], &[0u8; R20_K26_MIN_BODY_LEN - 1][..]].concat();
+    let short_k26 = [&[0x2F, 26, 0x00][..], &[0u8; R20_K26_MIN_BODY_LEN - 1][..]].concat();
     let error = decode_record(&manifest, &short_k26).unwrap_err();
     assert_eq!(error.code, codes::DECODE_FIELD_UNREADABLE);
-    let exact_k26 = [&[0x2F, 0x01, 26][..], &[0u8; R20_K26_MIN_BODY_LEN][..]].concat();
+    let exact_k26 = [&[0x2F, 26, 0x00][..], &[0u8; R20_K26_MIN_BODY_LEN][..]].concat();
     assert!(decode_record(&manifest, &exact_k26).is_ok());
 }
 
 #[test]
 fn unknown_versions_produce_no_samples_and_a_typed_error() {
     // v20 is deliberately unadmitted: the ledger marks its optical layout unknown.
-    let payload = [&[0x2F, 0x01, 20][..], &[0u8; 200][..]].concat();
+    let payload = [&[0x2F, 20, 0x00][..], &[0u8; 200][..]].concat();
     let error = decode_record(&manifest(), &payload).unwrap_err();
     assert_eq!(error.code, codes::DECODE_UNKNOWN_RECORD_VERSION);
     assert!(error.context.iter().any(|c| c.contains("20")));

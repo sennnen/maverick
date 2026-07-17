@@ -18,11 +18,14 @@ The tags:
 - **[SERIES]** — from the fourth source's sniffed 4.0 and decoded MG buffer. Corpus-pinned, one setup.
 - **[FIELD]** — from the fifth source, real worn-MG sessions. The closest thing to ground truth here,
   and it earns precedence over code-inferred claims where they collide; strongest on what it refutes.
+- **[WRS]** — from the sixth source, `tanarchytan/whoop-rs`, a from-scratch Rust client that
+  round-trips real 4.0 and 5.0/MG captures byte for byte; the origin of Maverick's real record
+  fixtures. Strong for the wire, but its author's own hardware, so it still owes the check on ours.
 - **[PROV]** — provisional, uncalibrated, or self-admittedly guessed. Treat as an approximation.
 - **[HW]** — can only be confirmed with a physical strap, which we do not have.
 - **[CONFLICT]** — the sources disagree. Must be resolved on hardware; do not hardcode a guess.
 
-There are five sources. Two are surveyed codebases: one a Rust core with real capture fixtures, the
+There are six sources. Two are surveyed codebases: one a Rust core with real capture fixtures, the
 other a Swift and Kotlin implementation, also with real fixtures and honest provenance comments. The
 third, tagged **[JUDES]** below, is a June 2026 writeup of cracking the 5.0 (judes.club), built on an
 HCI capture of the official app talking to a real MG and validated by round-tripping all 8,031
@@ -34,10 +37,19 @@ correlates candidate fields against known state, so it is the only source that c
 from a plausible-looking coincidence, and several of its results are refutations of the fourth
 source's labels. Where [FIELD] and a code-inferred claim collide, [FIELD] wins.
 
+The sixth, tagged **[WRS]**, is `tanarchytan/whoop-rs`: a from-scratch Rust WHOOP client (pure
+sans-IO codec plus a BLE core) whose author decoded the 4.0 and 5.0/MG wire against his own real
+captures, drained a real 5.0 overnight buffer record by record, and validated the derived metrics
+against ground truth without leaning on guesses. It agrees with the surveyed repos and the three
+writeups on the envelope, the command bytes, and the shared record offsets, and it is the origin of
+the real 5.0/MG record frames now committed as Maverick's `fixtures/records/` goldens. It is the one
+source that supplied Maverick with a real frame to decode rather than a synthetic one, so where its
+capture settles a byte that the surveys left ambiguous, the capture wins.
+
 The third, fourth, and fifth sources agree with the surveyed repos on the gen5 envelope and the
 command bytes, which is about as much corroboration as reverse-engineering gets, but all of it is
 still someone else's hardware and owes the same check on ours. A standing rule for this document,
-learned from all five: a protocol claim must cite a code location or a fixture, because prose docs
+learned from all six: a protocol claim must cite a code location or a fixture, because prose docs
 drifted from code in the surveyed repos (one had a wrong gen5 frame layout and a UUID typo, the
 other referenced a manifest file that did not exist), the fourth source is itself a catalogue of
 plausible field labels that turned out wrong, and the fifth source's main product is disproving
@@ -150,6 +162,15 @@ Inside a validated frame, the body has a fixed small header: [XVAL]
 [3..] body
 ```
 
+For a type-47 HISTORICAL_DATA record the layout version is byte `[1]` (the sequence position), not
+byte `[2]`. A real worn 5.0/MG record carries the version there — 18 for the per-second metrics
+record, 26 for the raw-PPG burst — and puts the on-wrist r22 command `0x80` in `[2]`. This resolves
+the "sequence or subtype byte" ambiguity below in favour of the sequence byte; it is pinned by the
+`[WRS]` real captures now in `fixtures/records/r20_k18_v1.json` and `r20_k26_v1.json`, and it is what
+`mav-codec`'s `decode_record` keys on. An earlier synthetic Maverick fixture placed the version in
+byte `[2]`; no real frame agrees with it, which is exactly the drift the "regenerate from a real
+capture" rule exists to catch. [WRS]
+
 The packet types, all [XVAL]:
 
 | value | meaning |
@@ -255,7 +276,9 @@ Swift/Kotlin repo]
 
 ## Historical records
 
-Historical records are versioned by the sequence or subtype byte, and each version has its own field
+Historical records are versioned by the **sequence byte** (inner `[1]`) — the "sequence or subtype
+byte" ambiguity resolved by the `[WRS]` real captures (see the inner-payload note above); the subtype
+byte `[2]` carries the on-wrist r22 command, not the version. Each version has its own field
 layout. The absolute byte offsets in the surveys sometimes differ because one counts from the frame
 start and the other from the body start; where that happens the field order and types still match,
 and the exact offsets should be pinned from a fixture rather than copied from prose.
@@ -331,6 +354,15 @@ at `body[45]`/`49`/`53`, not a separate channel: read that way the first "channe
 +0.11, not the +0.42 the fourth source claimed. [FIELD refutes [SERIES]] These are textbook
 plausible-but-wrong readings, exactly what this document keeps warning about, caught only because the
 fifth source could hold the bytes against a real body.
+
+The sixth source complicates the gravity offset specifically. On its committed real worn 5.0/MG frame
+(`fixtures/records/r20_k18_v1.json`), the little-endian gravity triplet reads clean at `body[34]`
+(`inner[37]`), |g| ≈ 1.01, while `body[45]` reads all zeros — the opposite of the fifth source's
+`body[45]` placement just above, on the same version-18 record. The two were captured on different
+bands and possibly different firmware, so treat the gen5 v18 gravity offset as `[CONFLICT]` between
+`body[34]` [WRS] and `body[45]` [FIELD]. [WRS] is currently favoured, because a committed real frame
+decodes to unit gravity at `body[34]` and to zeros at `body[45]`; the gravity-admission work reads
+`body[34]` and this flips on our own hardware. [WRS] / [CONFLICT]
 
 Residual K=18 bytes that are decoded but not pinned, meaning not stored and not asserted: a
 `cardiac_flags` byte at `body[33]` (see the ECG section for what it is and is not), `rr_packed` at

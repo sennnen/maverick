@@ -1,35 +1,35 @@
 {
   "schema": "record/v1",
   "wire_format": "gen5",
-  "confidence": "PROV",
-  "source": "Synthetic: an MG R20 K=18 per-second record built to the corpus-pinned offsets (docs/protocol/whoop.md, fourth/fifth source, ~2M records): HR 64 at body[11], skin temp 33.20 C as i16 LE 3320 at body[62:64], sleep state SLEEP (2) in bits 5-4 of body[70]. Residual and refuted bytes carry non-zero noise so the decoder provably ignores them; the tri-mode SpO2 byte holds diagnostic code 0x08 that must never surface as a percentage. Regenerate from a real capture in the hardware epoch.",
+  "confidence": "FIELD. A real worn WHOOP 5.0/MG per-second record (type 47, version 18) captured on hardware and committed with only biometrics + timestamp (no serial/name/token). Version 18 rides the second inner byte (inner[1]); the third byte is the on-wrist r22 command 0x80. Admitted fields reproduce byte-for-byte: HR 102 at body[11], skin temp 3057 (i16 LE centidegrees) at body[62:64], sleep state 0 (bits 5-4 of body[70]). The awake capture carries SpO2 0 (sleep-only), so the tri-mode SpO2 byte stays unadmitted here as intended. Still owes a check on our own strap in the hardware epoch.",
+  "source": "tanarchytan/whoop-rs, crates/whoop-protocol/tests/fixtures/real_frames.json, frame 'v18_real_whoop5_worn'. Real drained capture, author-validated against ground truth; imported as Maverick's golden fixture in place of the earlier synthetic one, which encoded the version in the wrong inner byte.",
   "produced_with": {
-    "generator": "independent Python (struct, zlib crc32, CRC-16/Modbus)"
+    "generator": "real hardware capture (WHOOP 5.0/MG); expected samples computed by an independent Python decode, never the code under test"
   },
-  "input_hex": "aa01740001003fb12f0112e803000008827668070000405a5a5a5a5a5a5a5a5a5a5a5a5a5a425a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5af80c5a5a5a5a5a5a2f085a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a51eaef36",
+  "input_hex": "aa01740001003fb12f1280733d8401b69f266a66460066025a0265020000000000007b0a8d656463ff0012163cf6a439bf2924fd3ed763fe3e3200aa000000000000000000f7000901f10b0007010c020c00000000000000000000000000000000000000000000000100656f1e1e0000009d61a7c00000003e862817",
   "expected_samples": [
     {
       "kind": "heart_rate",
-      "device_time": 1752597000000000000,
+      "device_time": 1780916150000000000,
       "seq": 0,
       "value": {
-        "u8": 64
+        "u8": 102
       }
     },
     {
       "kind": "skin_temp",
-      "device_time": 1752597000000000000,
+      "device_time": 1780916150000000000,
       "seq": 0,
       "value": {
-        "i16": 3320
+        "i16": 3057
       }
     },
     {
       "kind": "sleep_state_raw",
-      "device_time": 1752597000000000000,
+      "device_time": 1780916150000000000,
       "seq": 0,
       "value": {
-        "u8": 2
+        "u8": 0
       }
     }
   ]

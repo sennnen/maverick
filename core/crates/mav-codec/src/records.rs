@@ -11,10 +11,16 @@ use mav_model::raw::RawSample;
 /// below; manifest validation rejects any other id at parse time.
 pub const ADMITTED_DECODERS: &[&str] = &["r20_k18", "r20_k26"];
 
-/// Decode one historical-record payload (`[0]` packet type, `[1]` sequence, `[2]` version/subtype,
-/// `[3..]` body) through the decoder the manifest admits for its version byte.
+/// Decode one historical-record payload through the decoder the manifest admits for its version.
+///
+/// The inner record is `[0]` packet type, `[1]` version, `[2]` command, `[3..]` body. The version
+/// keying the decoder lookup is the second byte, not the third: on a real MG type-47 record the
+/// third byte is the command (`0x80`/`0x82` on-wrist), and the layout version rides the byte the
+/// gen frame otherwise calls sequence. This is pinned by a real capture (fixtures/records, and
+/// docs/protocol/whoop.md); an earlier synthetic fixture placed the version in the third byte and
+/// no real frame agrees with it.
 pub fn decode_record(manifest: &Manifest, payload: &[u8]) -> Result<Vec<RawSample>> {
-    let [_, _, version, body @ ..] = payload else {
+    let [_, version, _command, body @ ..] = payload else {
         return Err(MavError::new(
             codes::DECODE_FIELD_UNREADABLE,
             "historical record too short for its version byte",
