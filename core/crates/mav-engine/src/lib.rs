@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 
 pub mod acquisition;
+pub mod burst;
 pub mod historical;
 pub mod pipeline;
 pub mod runtime;

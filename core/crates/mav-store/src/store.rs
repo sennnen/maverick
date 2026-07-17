@@ -93,6 +93,29 @@ impl Store {
         Ok(Self { conn })
     }
 
+    /// Run `work` inside one SQLite transaction: commit on `Ok`, roll back on `Err` so a partial
+    /// burst can never persist (the M5 safe-ack invariant needs all-or-nothing writes). A rollback
+    /// failure is appended to the original error's context rather than replacing it; SQLite drops
+    /// an unfinished transaction when the connection closes, so no partial state survives either
+    /// way.
+    pub fn in_transaction<T>(&self, work: impl FnOnce(&Self) -> Result<T>) -> Result<T> {
+        self.conn
+            .execute_batch("BEGIN IMMEDIATE")
+            .map_err(|e| query_err("beginning a transaction", &e))?;
+        match work(self) {
+            Ok(value) => {
+                self.conn
+                    .execute_batch("COMMIT")
+                    .map_err(|e| query_err("committing a transaction", &e))?;
+                Ok(value)
+            }
+            Err(error) => match self.conn.execute_batch("ROLLBACK") {
+                Ok(()) => Err(error),
+                Err(rollback) => Err(error.context(format!("rollback also failed: {rollback}"))),
+            },
+        }
+    }
+
     pub fn schema_version(&self) -> Result<i64> {
         self.conn
             .pragma_query_value(None, "user_version", |row| row.get(0))
@@ -461,6 +484,55 @@ mod tests {
             .unwrap();
         let err = Store::init(conn).err().unwrap();
         assert_eq!(err.code, codes::STORAGE_NEWER_SCHEMA);
+    }
+
+    #[test]
+    fn a_failed_transaction_leaves_zero_rows() {
+        let store = Store::open_in_memory().unwrap();
+        let device = DeviceId::new(7);
+        let first = sample(StreamKind::HeartRate, 1_000, 0, RawValue::U8(62));
+        let second = sample(StreamKind::HeartRate, 2_000, 0, RawValue::U8(63));
+        let error = store
+            .in_transaction(|txn| -> Result<()> {
+                assert_eq!(
+                    txn.insert_sample(device, &first).unwrap(),
+                    InsertOutcome::Inserted
+                );
+                let _ = txn.insert_sample(device, &second)?;
+                Err(MavError::new(
+                    codes::STORAGE_QUERY,
+                    "injected failure on record two",
+                ))
+            })
+            .unwrap_err();
+        assert_eq!(error.code, codes::STORAGE_QUERY);
+        assert_eq!(
+            store.count_samples(device, StreamKind::HeartRate).unwrap(),
+            0
+        );
+    }
+
+    #[test]
+    fn a_committed_transaction_is_durable() {
+        let store = Store::open_in_memory().unwrap();
+        let device = DeviceId::new(7);
+        let inserted = store
+            .in_transaction(|txn| {
+                let mut inserted = 0;
+                for (ns, bpm) in [(1_000, 62u8), (2_000, 63u8)] {
+                    let s = sample(StreamKind::HeartRate, ns, 0, RawValue::U8(bpm));
+                    if txn.insert_sample(device, &s)? == InsertOutcome::Inserted {
+                        inserted += 1;
+                    }
+                }
+                Ok(inserted)
+            })
+            .unwrap();
+        assert_eq!(inserted, 2);
+        assert_eq!(
+            store.count_samples(device, StreamKind::HeartRate).unwrap(),
+            2
+        );
     }
 
     #[test]
