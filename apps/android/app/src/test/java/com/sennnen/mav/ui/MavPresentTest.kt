@@ -38,4 +38,53 @@ class MavPresentTest {
         assertEquals("828.0 ms", microsAsMs(828_000, java.util.Locale.US))
         assertEquals("50.0%", milliPercentAsPercent(50_000, java.util.Locale.US))
     }
+
+    @Test
+    fun anIdleOrUnknownSyncShowsNothing() {
+        assertNull(syncProgressLabel("historical_idle", 0, 0, 0, null))
+        assertNull(syncProgressLabel("something_new", 5, 5, 0, null))
+    }
+
+    @Test
+    fun preparingStatesShareOneLabel() {
+        assertEquals(
+            "Preparing history sync",
+            syncProgressLabel("historical_awaiting_range", 0, 0, 0, null),
+        )
+        assertEquals(
+            "Preparing history sync",
+            syncProgressLabel("historical_awaiting_send_acceptance", 0, 0, 0, null),
+        )
+    }
+
+    @Test
+    fun receivingCountsTheRecordsSeen() {
+        assertEquals("Syncing history", syncProgressLabel("historical_receiving", 0, 0, 0, null))
+        assertEquals(
+            "Syncing history — 1 record",
+            syncProgressLabel("historical_receiving", 1, 0, 0, null),
+        )
+        assertEquals(
+            "Syncing history — 7 records",
+            syncProgressLabel("historical_awaiting_durable_commit", 7, 2, 0, null),
+        )
+    }
+
+    @Test
+    fun completionSummarizesInsertedAndDuplicates() {
+        assertEquals("History synced", syncProgressLabel("historical_complete", 0, 0, 0, null))
+        assertEquals(
+            "History synced — 12 new, 3 duplicate",
+            syncProgressLabel("historical_complete", 15, 12, 3, null),
+        )
+    }
+
+    @Test
+    fun failureCarriesTheStableCode() {
+        assertEquals(
+            "History sync failed (MAV-5004)",
+            syncProgressLabel("historical_failed", 7, 0, 0, 5004),
+        )
+        assertEquals("History sync failed", syncProgressLabel("historical_failed", 0, 0, 0, null))
+    }
 }

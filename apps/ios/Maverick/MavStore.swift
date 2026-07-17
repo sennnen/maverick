@@ -5,6 +5,8 @@ final class MavStore: ObservableObject {
   enum State: Equatable { case opening, ready(MavSnapshot), failed(String) }
 
   @Published private(set) var state: State = .opening
+  /// The core's `historical-status/v1` progress as a display line; nil when idle or unknown.
+  @Published private(set) var syncProgress: String?
   private let worker = MavRuntimeWorker()
   private var inFlight = false
 
@@ -20,7 +22,9 @@ final class MavStore: ObservableObject {
         guard let self else { return }
         self.inFlight = false
         switch result {
-        case let .success(snapshot): self.state = .ready(snapshot)
+        case let .success(snapshot, syncProgress):
+          self.syncProgress = syncProgress
+          self.state = .ready(snapshot)
         case let .failure(message): self.state = .failed(message)
         }
       }
@@ -52,7 +56,7 @@ private final class MavRuntimeWorker: @unchecked Sendable {
   private let queue = DispatchQueue(label: "com.sennnen.mav.runtime", qos: .userInitiated)
   private var runtime: MavRuntime?
 
-  enum Output: Sendable { case success(MavSnapshot); case failure(String) }
+  enum Output: Sendable { case success(MavSnapshot, String?); case failure(String) }
 
   func refresh(config: RuntimeConfig, completion: @escaping @Sendable (Output) -> Void) {
     queue.async { [weak self] in
@@ -60,8 +64,16 @@ private final class MavRuntimeWorker: @unchecked Sendable {
       do {
         let runtime = try self.runtime ?? MavRuntime(config: config)
         let result = try runtime.hostSnapshot(atUnixMs: Int64(Date().timeIntervalSince1970 * 1_000))
+        let progress = try runtime.historicalProgress()
+        let syncProgress = MavPresent.syncProgressLabel(
+          state: progress.state,
+          recordsSeen: Int64(clamping: progress.recordsSeen),
+          recordsInserted: Int64(clamping: progress.recordsInserted),
+          duplicates: Int64(clamping: progress.duplicates),
+          failureCode: progress.failureCode.map(Int.init))
         self.runtime = runtime
-        completion(.success(try MavSnapshotDecoder.decode(json: result.json, hash: result.hash)))
+        completion(.success(
+          try MavSnapshotDecoder.decode(json: result.json, hash: result.hash), syncProgress))
       } catch {
         completion(.failure((error as? LocalizedError)?.errorDescription ?? error.localizedDescription))
       }

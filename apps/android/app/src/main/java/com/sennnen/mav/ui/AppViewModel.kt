@@ -59,6 +59,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     /** A manual workout in progress (strain-hub live banner). Never set until live sessions land. */
     data class ActiveWorkout(val startMs: Long, val liveStrain: Double = 0.0)
 
+    private val mutableSyncNote = MutableStateFlow<String?>(null)
+    /** The core's `historical-status/v1` progress as a display line; null when idle or unknown. */
+    val syncNote: StateFlow<String?> = mutableSyncNote.asStateFlow()
+
     private val mutableV5Signals = MutableStateFlow<V5HealthSignals.Snapshot?>(null)
     /** Nightly heads-up bundle (cycle / illness ward); published once those analytics are admitted. */
     val v5Signals: StateFlow<V5HealthSignals.Snapshot?> = mutableV5Signals.asStateFlow()
@@ -85,6 +89,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 val active = runtime ?: openRuntime().also { runtime = it }
                 val result = active.hostSnapshot(System.currentTimeMillis())
                 val snapshot = MavSnapshotDecoder.decode(result.json, result.hash)
+                val progress = active.historicalProgress()
+                mutableSyncNote.value = syncProgressLabel(
+                    state = progress.state,
+                    recordsSeen = progress.recordsSeen.toLong(),
+                    recordsInserted = progress.recordsInserted.toLong(),
+                    duplicates = progress.duplicates.toLong(),
+                    failureCode = progress.failureCode?.toInt(),
+                )
                 publishLive(snapshot)
                 MavAppState.Ready(snapshot)
             }.getOrElse(::failureState)

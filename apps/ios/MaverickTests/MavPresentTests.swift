@@ -44,4 +44,68 @@ final class MavPresentTests: XCTestCase {
     XCTAssertEqual(MavPresent.microsAsMs(828_000, locale: us), "828.0 ms")
     XCTAssertEqual(MavPresent.milliPercentAsPercent(50_000, locale: us), "50.0%")
   }
+
+  func testAnIdleOrUnknownSyncShowsNothing() {
+    XCTAssertNil(MavPresent.syncProgressLabel(
+      state: "historical_idle", recordsSeen: 0, recordsInserted: 0, duplicates: 0, failureCode: nil))
+    XCTAssertNil(MavPresent.syncProgressLabel(
+      state: "something_new", recordsSeen: 5, recordsInserted: 5, duplicates: 0, failureCode: nil))
+  }
+
+  func testPreparingStatesShareOneLabel() {
+    XCTAssertEqual(
+      MavPresent.syncProgressLabel(
+        state: "historical_awaiting_range", recordsSeen: 0, recordsInserted: 0, duplicates: 0,
+        failureCode: nil),
+      "Preparing history sync")
+    XCTAssertEqual(
+      MavPresent.syncProgressLabel(
+        state: "historical_awaiting_send_acceptance", recordsSeen: 0, recordsInserted: 0,
+        duplicates: 0, failureCode: nil),
+      "Preparing history sync")
+  }
+
+  func testReceivingCountsTheRecordsSeen() {
+    XCTAssertEqual(
+      MavPresent.syncProgressLabel(
+        state: "historical_receiving", recordsSeen: 0, recordsInserted: 0, duplicates: 0,
+        failureCode: nil),
+      "Syncing history")
+    XCTAssertEqual(
+      MavPresent.syncProgressLabel(
+        state: "historical_receiving", recordsSeen: 1, recordsInserted: 0, duplicates: 0,
+        failureCode: nil),
+      "Syncing history — 1 record")
+    XCTAssertEqual(
+      MavPresent.syncProgressLabel(
+        state: "historical_awaiting_durable_commit", recordsSeen: 7, recordsInserted: 2,
+        duplicates: 0, failureCode: nil),
+      "Syncing history — 7 records")
+  }
+
+  func testCompletionSummarizesInsertedAndDuplicates() {
+    XCTAssertEqual(
+      MavPresent.syncProgressLabel(
+        state: "historical_complete", recordsSeen: 0, recordsInserted: 0, duplicates: 0,
+        failureCode: nil),
+      "History synced")
+    XCTAssertEqual(
+      MavPresent.syncProgressLabel(
+        state: "historical_complete", recordsSeen: 15, recordsInserted: 12, duplicates: 3,
+        failureCode: nil),
+      "History synced — 12 new, 3 duplicate")
+  }
+
+  func testFailureCarriesTheStableCode() {
+    XCTAssertEqual(
+      MavPresent.syncProgressLabel(
+        state: "historical_failed", recordsSeen: 7, recordsInserted: 0, duplicates: 0,
+        failureCode: 5004),
+      "History sync failed (MAV-5004)")
+    XCTAssertEqual(
+      MavPresent.syncProgressLabel(
+        state: "historical_failed", recordsSeen: 0, recordsInserted: 0, duplicates: 0,
+        failureCode: nil),
+      "History sync failed")
+  }
 }

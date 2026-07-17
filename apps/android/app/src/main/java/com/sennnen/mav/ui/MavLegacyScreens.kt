@@ -56,6 +56,7 @@ fun LiveScreen(vm: AppViewModel, onManageDevices: () -> Unit) {
     val live by vm.live.collectAsStateWithLifecycle()
     val bpm by vm.bpm.collectAsStateWithLifecycle()
     val appState by vm.state.collectAsStateWithLifecycle()
+    val syncNote by vm.syncNote.collectAsStateWithLifecycle()
     val snapshot = (appState as? MavAppState.Ready)?.snapshot
     val p = Aura.palette
     AuraScreen(lead = AuraFamily.HEART) {
@@ -103,6 +104,7 @@ fun LiveScreen(vm: AppViewModel, onManageDevices: () -> Unit) {
                 Column(Modifier.padding(vertical = 4.dp)) {
                     InfoRow("Strap", live.advertisingName ?: "WHOOP")
                     InfoRow("Battery", live.batteryPct?.let { "${it.roundToInt()}%" } ?: "--")
+                    syncNote?.let { InfoRow("History", it) }
                     val prv = snapshot?.prv
                     if (prv != null) {
                         // Tap for the small PRV detail: the full admitted metric set + provenance.

@@ -39,6 +39,8 @@ final class AppModel: ObservableObject {
   @Published var prv: MavPrv?
   @Published var prvUnavailableReason: String?
   @Published var recoveryUnavailableReason: String?
+  /// The core's `historical-status/v1` progress as a display line; nil when idle or unknown.
+  @Published var syncProgress: String?
 
   let countdown = CountdownTimer()
   let behavior = BehaviorStore()

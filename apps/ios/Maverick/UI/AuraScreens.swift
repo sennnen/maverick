@@ -86,6 +86,10 @@ struct AuraLiveView: View {
           RowDivider()
           AuraInfoRow(label: "Battery", value: live.batteryPct.map { "\(Int($0.rounded()))%" } ?? "--")
           RowDivider()
+          if let syncProgress = model.syncProgress {
+            AuraInfoRow(label: "History", value: syncProgress)
+            RowDivider()
+          }
           if let prv = model.prv {
             // Tap for the small PRV detail: the full admitted metric set + provenance.
             VStack(spacing: 0) {

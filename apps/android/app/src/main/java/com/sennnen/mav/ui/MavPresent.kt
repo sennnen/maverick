@@ -24,6 +24,35 @@ private fun relativeAge(ageMs: Long): String = when {
     else -> "${ageMs / 86_400_000} d ago"
 }
 
+/**
+ * The history-sync progress line, from the core's `historical-status/v1` read model. Display
+ * words only — the state names, counts, and failure code are the core's, and an unknown state
+ * shows nothing rather than a guess.
+ */
+fun syncProgressLabel(
+    state: String,
+    recordsSeen: Long,
+    recordsInserted: Long,
+    duplicates: Long,
+    failureCode: Int?,
+): String? = when (state) {
+    "historical_awaiting_range", "historical_awaiting_send_acceptance" -> "Preparing history sync"
+    "historical_receiving", "historical_awaiting_durable_commit" -> when {
+        recordsSeen == 0L -> "Syncing history"
+        recordsSeen == 1L -> "Syncing history — 1 record"
+        else -> "Syncing history — $recordsSeen records"
+    }
+    "historical_complete" ->
+        if (recordsInserted == 0L && duplicates == 0L) {
+            "History synced"
+        } else {
+            "History synced — $recordsInserted new, $duplicates duplicate"
+        }
+    "historical_failed" ->
+        if (failureCode == null) "History sync failed" else "History sync failed (MAV-$failureCode)"
+    else -> null
+}
+
 /** Fixed-point micros → "67.5 ms". Display formatting only; the value stays the core's. */
 fun microsAsMs(micros: Long, locale: Locale = Locale.getDefault()): String =
     String.format(locale, "%.1f ms", micros / 1_000.0)

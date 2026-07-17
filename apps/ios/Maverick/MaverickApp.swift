@@ -25,6 +25,7 @@ struct MaverickApp: App {
         .onChange(of: store.state) { _, state in
           if case let .ready(snapshot) = state {
             model.apply(snapshot: snapshot, to: live)
+            model.syncProgress = store.syncProgress
           }
         }
         .onAppear { repo.reload = { store.retry() } }

@@ -292,9 +292,12 @@ left the UI disconnected while streaming; stored HR/battery are cleared rather t
 the link drops. Session PRV surfaces on the live sheet under its provisional
 `pulse_rate_variability` label (never the overnight HRV vital, whose copy promises a sleep-window
 figure the core has not computed); the Recovery hub's empty state speaks the core reason; emptiness
-guards on both platforms pin that live values never leak into Strain or Sleep. Remaining: metric
-detail views, stale-age labels, historical-sync progress once M5-P7 lands, and the screen-level
-UI/screenshot tests.
+guards on both platforms pin that live values never leak into Strain or Sleep. Historical-sync
+progress now renders on both live surfaces from `historicalProgress()` (M5-P7's
+`historical-status/v1`): one parity-tested `syncProgressLabel` mapping per platform turns the
+core's state, counts, and failure code into a display line, shows nothing when idle or unknown,
+and invents no percentage the protocol cannot provide. Remaining: metric detail views and the
+screen-level UI/screenshot tests.
 
 ---
 
