@@ -11,11 +11,14 @@ were computed by an independent decode, never the code under test. They still ow
 strap in the hardware epoch.
 
 - `r20_k18_v1.json` — a real worn MG per-second metrics record (version 18 at inner `[1]`, on-wrist
-  r22 command `0x80` at inner `[2]`). Expected output is exactly heart rate (`body[11]`), skin
-  temperature (`body[62:64]`, i16 LE centidegrees), and the packed sleep state (bits 5–4 of
-  `body[70]`, stored as the raw wire state). The capture is awake, so its tri-mode SpO2 byte is 0 and
-  stays unadmitted, and every other residual/refuted byte produces nothing — the test proves the
-  decoder emits those three streams and no more.
+  r22 command `0x80` at inner `[2]`). Expected output is the full admitted field set, each
+  range-gated: heart rate (`body[11]`), the two R-R intervals (count `body[12]`, values `body[13..]`),
+  gravity (three f32 from `body[34]`, accepted at |g| ≈ 1), skin temperature (`body[62:64]`, raw u16
+  register kept in the 5–45 °C band), steps (`body[46]`), activity class (`body[52]`), the packed
+  sleep state (bits 5–4 of `body[70]`), and signal quality (`body[29]`). The capture is awake, so its
+  sleep-only tri-mode SpO2 byte (`body[71]`) is 0 and stays unadmitted — proving the 70..=100 gate on
+  a real frame — the empirical `signal_flags` bitfield has no stream kind and is not emitted, and
+  every other residual/refuted byte produces nothing. See ADR-014 for the two added stream kinds.
 - `r20_k26_v1.json` — a real MG raw-PPG burst (version 26): 24 i16 LE photodiode samples at
   `body[16:64]`, raw ADC with no invented scale, spanning negative and positive values so signedness
   is pinned. Each sample keeps the record's second and its in-burst index as `seq`; no sub-second

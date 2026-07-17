@@ -13,3 +13,4 @@
 - [ADR-011](ADR-011.md) — Connectors are a separate importable package, not bundled in the app
 - [ADR-012](ADR-012.md) — Frame parameters become manifest data
 - [ADR-013](ADR-013.md) — One stateful host runtime beside the stateless fixture runner
+- [ADR-014](ADR-014.md) — Additive stream kinds for the WHOOP gen5 K=18 record

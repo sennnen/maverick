@@ -53,6 +53,10 @@ fn truncated(version: &str, need: usize, got: usize) -> MavError {
     .context(format!("{version}: need {need} bytes, got {got}"))
 }
 
+fn u16_le(body: &[u8], at: usize) -> u16 {
+    u16::from_le_bytes([body[at], body[at + 1]])
+}
+
 fn u32_le(body: &[u8], at: usize) -> u32 {
     u32::from_le_bytes([body[at], body[at + 1], body[at + 2], body[at + 3]])
 }
@@ -61,13 +65,29 @@ fn seconds_to_nanos(seconds: u32) -> i64 {
     i64::from(seconds) * 1_000_000_000
 }
 
-/// The MG per-second metrics record (R20, K=18), corpus-pinned by the fourth and fifth sources
-/// against ~2M records. Admitted fields only: HR `u8` at `body[11]` (zero means no optical lock
-/// and is a validity sentinel, not a sample), skin temperature `i16` LE centidegrees at
-/// `body[62:64]`, and the packed sleep state in bits 5–4 of `body[70]`. The secondary HR, the
-/// tri-mode SpO2 byte, the refuted motion/fusion bytes, and every residual byte stay unadmitted.
+/// The MG per-second metrics record (R20, K=18), corpus-pinned by the fourth, fifth, and sixth
+/// (`[WRS]`) sources against millions of records. Admitted fields, each range-gated so a wrong
+/// offset on unmapped firmware yields nothing:
+///
+/// - HR `u8` at `body[11]`; zero means no optical lock and is a validity sentinel, not a sample.
+/// - R-R intervals: a slot count `u8` at `body[12]` (clamped to 4) then that many consecutive
+///   `u16` LE from `body[13]`, dropping any zero (an empty slot); `seq` is the kept-index so two
+///   equal intervals in one second survive dedup as two beats.
+/// - gravity: three `f32` LE from `body[34]`, accepted only if finite and `|g|` in `[0.5, 1.5)`;
+///   emitted as three samples `seq` 0/1/2 (x, y, z).
+/// - skin temperature: `u16` LE register at `body[62:64]`, kept only when `raw/100` °C is in
+///   `[5, 45)` — a raw register, not a Maverick °C claim (the consumer owns the final scale).
+/// - SpO2 percent: the sleep-only tri-mode `u8` at `body[71]`, kept only in `70..=100` (bit-7
+///   sentinels and sub-70 diagnostic codes drop); an awake record carries 0 and emits nothing.
+/// - steps: cumulative `u16` LE counter at `body[46]`.
+/// - activity class: `u8` at `body[52]`, kept only in `{0, 1, 2}`.
+/// - packed sleep state in bits 5–4 of `body[70]`.
+/// - signal quality: the PPG confidence `u8` at `body[29]` (255 = clean; empirical).
+///
+/// The secondary HR, the refuted motion/fusion bytes, and the empirical `signal_flags` bitfield at
+/// `body[22]` (no clean stream kind yet) stay unadmitted; their bytes remain raw evidence.
 mod r20_k18 {
-    use super::{seconds_to_nanos, truncated, u32_le};
+    use super::{seconds_to_nanos, truncated, u16_le, u32_le};
     use mav_model::error::Result;
     use mav_model::raw::{RawSample, RawValue};
     use mav_model::stream::StreamKind;
@@ -77,34 +97,90 @@ mod r20_k18 {
     /// the admitted region; the documented record is 109 bytes and anything shorter is truncation.
     pub const MIN_BODY_LEN: usize = 109;
 
+    /// R-R slots are a 4-wide fixed array in the historical layout.
+    const RR_MAX_SLOTS: usize = 4;
+
+    /// Read three consecutive `f32` LE as a gravity vector, accepted only if finite and physically
+    /// plausible (`|g|` in `[0.5, 1.5)`), so a wrong offset or garbage bytes drop rather than store.
+    fn gravity(body: &[u8], at: usize) -> Option<[f32; 3]> {
+        let g = [
+            f32::from_le_bytes([body[at], body[at + 1], body[at + 2], body[at + 3]]),
+            f32::from_le_bytes([body[at + 4], body[at + 5], body[at + 6], body[at + 7]]),
+            f32::from_le_bytes([body[at + 8], body[at + 9], body[at + 10], body[at + 11]]),
+        ];
+        if !g.iter().all(|v| v.is_finite()) {
+            return None;
+        }
+        let magnitude = (g[0] * g[0] + g[1] * g[1] + g[2] * g[2]).sqrt();
+        (0.5..1.5).contains(&magnitude).then_some(g)
+    }
+
     pub fn decode(body: &[u8]) -> Result<Vec<RawSample>> {
         if body.len() < MIN_BODY_LEN {
             return Err(truncated("r20_k18", MIN_BODY_LEN, body.len()));
         }
         let time = DeviceTime::from_nanos(seconds_to_nanos(u32_le(body, 4)));
+        let sample = |kind, seq, value| RawSample {
+            kind,
+            device_time: time,
+            seq,
+            value,
+        };
         let mut samples = Vec::new();
+
         let hr = body[11];
         if hr != 0 {
-            samples.push(RawSample {
-                kind: StreamKind::HeartRate,
-                device_time: time,
-                seq: 0,
-                value: RawValue::U8(hr),
-            });
+            samples.push(sample(StreamKind::HeartRate, 0, RawValue::U8(hr)));
         }
-        let skin_temp = i16::from_le_bytes([body[62], body[63]]);
-        samples.push(RawSample {
-            kind: StreamKind::SkinTemp,
-            device_time: time,
-            seq: 0,
-            value: RawValue::I16(skin_temp),
-        });
-        samples.push(RawSample {
-            kind: StreamKind::SleepStateRaw,
-            device_time: time,
-            seq: 0,
-            value: RawValue::U8((body[70] >> 4) & 0x03),
-        });
+
+        let rr_count = (body[12] as usize).min(RR_MAX_SLOTS);
+        let mut rr_seq = 0u16;
+        for slot in 0..rr_count {
+            let rr = u16_le(body, 13 + slot * 2);
+            if rr != 0 {
+                samples.push(sample(StreamKind::RrInterval, rr_seq, RawValue::U16(rr)));
+                rr_seq += 1;
+            }
+        }
+
+        if let Some(g) = gravity(body, 34) {
+            for (axis, component) in g.iter().enumerate() {
+                samples.push(sample(
+                    StreamKind::Gravity,
+                    axis as u16,
+                    RawValue::F32(*component),
+                ));
+            }
+        }
+
+        let skin_temp = u16_le(body, 62);
+        if (5.0..45.0).contains(&(f32::from(skin_temp) / 100.0)) {
+            samples.push(sample(StreamKind::SkinTemp, 0, RawValue::U16(skin_temp)));
+        }
+
+        let spo2 = body[71];
+        if (70..=100).contains(&spo2) {
+            samples.push(sample(StreamKind::Spo2Percent, 0, RawValue::U8(spo2)));
+        }
+
+        samples.push(sample(
+            StreamKind::StepCount,
+            0,
+            RawValue::U16(u16_le(body, 46)),
+        ));
+
+        let activity = body[52];
+        if activity <= 2 {
+            samples.push(sample(StreamKind::ActivityClass, 0, RawValue::U8(activity)));
+        }
+
+        samples.push(sample(
+            StreamKind::SleepStateRaw,
+            0,
+            RawValue::U8((body[70] >> 4) & 0x03),
+        ));
+        samples.push(sample(StreamKind::SignalQuality, 0, RawValue::U8(body[29])));
+
         Ok(samples)
     }
 }

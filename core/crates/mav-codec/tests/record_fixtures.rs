@@ -56,7 +56,7 @@ fn manifest() -> Manifest {
             "frame": { "wire_format": "gen5", "max_frame_bytes": 8192 },
             "packets": { "47": "historical_data" },
             "record_versions": { "18": "r20_k18", "26": "r20_k26" },
-            "capabilities": ["heart_rate", "skin_temp", "sleep_state_raw", "ppg"]
+            "capabilities": ["heart_rate", "rr_interval", "gravity", "skin_temp", "spo2_percent", "step_count", "activity_class", "sleep_state_raw", "signal_quality", "ppg"]
         }"#,
     )
     .unwrap()
@@ -92,14 +92,23 @@ fn decode_fixture(name: &str) -> Vec<RawSample> {
 fn k18_decodes_exactly_the_admitted_fields() {
     let samples = decode_fixture("r20_k18_v1.json");
     let kinds: Vec<_> = samples.iter().map(|s| s.kind).collect();
-    // Exactly these streams and no other: the SpO2 diagnostic byte, secondary HR, and every
-    // residual/refuted byte must produce nothing.
+    // Exactly these streams and no other on this real awake frame: the sleep-only SpO2 byte is 0
+    // and stays absent, the secondary HR and empirical signal_flags bitfield are unadmitted, and
+    // every residual/refuted byte must produce nothing.
     assert_eq!(
         kinds,
         vec![
             StreamKind::HeartRate,
+            StreamKind::RrInterval,
+            StreamKind::RrInterval,
+            StreamKind::Gravity,
+            StreamKind::Gravity,
+            StreamKind::Gravity,
             StreamKind::SkinTemp,
-            StreamKind::SleepStateRaw
+            StreamKind::StepCount,
+            StreamKind::ActivityClass,
+            StreamKind::SleepStateRaw,
+            StreamKind::SignalQuality,
         ]
     );
 }
@@ -130,34 +139,83 @@ fn k18_zero_heart_rate_is_a_sentinel_not_a_sample() {
     payload[14] = 0;
     let samples = decode_record(&manifest(), &payload).unwrap();
     assert!(samples.iter().all(|s| s.kind != StreamKind::HeartRate));
-    assert_eq!(samples.len(), 2);
+    // The other ten admitted streams on this frame are untouched; only HR drops.
+    assert_eq!(samples.len(), 10);
+}
+
+/// Build a synthetic v18 payload (`[type][version][command] + body`) with `set` applied to the body,
+/// so an invariant can exercise a field the real awake fixture does not (e.g. a valid SpO2).
+fn v18_payload(set: impl Fn(&mut [u8])) -> Vec<u8> {
+    let mut body = vec![0u8; R20_K18_MIN_BODY_LEN];
+    set(&mut body);
+    [&[0x2F, 18, 0x00][..], &body].concat()
+}
+
+fn decode_v18(set: impl Fn(&mut [u8])) -> Vec<RawSample> {
+    decode_record(&manifest(), &v18_payload(set)).unwrap()
+}
+
+fn value_of(samples: &[RawSample], kind: StreamKind) -> Option<serde_json::Value> {
+    samples
+        .iter()
+        .find(|s| s.kind == kind)
+        .map(|s| serde_json::to_value(s.value).unwrap())
 }
 
 #[test]
-fn negative_skin_temperature_keeps_its_sign() {
-    let fixture = load("r20_k18_v1.json");
-    let mut reassembler = Reassembler::new(WireFormat::Gen5);
-    let frame = reassembler
-        .push(&unhex(&fixture.input_hex))
-        .into_iter()
-        .find_map(|event| match event {
-            ReassemblyEvent::Frame(frame) => Some(frame),
-            _ => None,
-        })
-        .unwrap();
-    // body[62:64] is payload[65:67]: -150 centidegrees must come back as -150, not 65386.
-    let mut payload = frame.payload.clone();
-    let raw = (-150i16).to_le_bytes();
-    payload[65] = raw[0];
-    payload[66] = raw[1];
-    let samples = decode_record(&manifest(), &payload).unwrap();
-    let temp = samples
-        .iter()
-        .find(|s| s.kind == StreamKind::SkinTemp)
-        .unwrap();
+fn k18_skin_temp_kept_in_band_dropped_out_of_band() {
+    // body[62:64] is the raw u16 register; °C = raw/100 is admitted only in [5, 45).
+    let worn = decode_v18(|b| b[62..64].copy_from_slice(&3345u16.to_le_bytes()));
     assert_eq!(
-        serde_json::to_value(temp.value).unwrap(),
-        serde_json::json!({"i16": -150})
+        value_of(&worn, StreamKind::SkinTemp),
+        Some(serde_json::json!({ "u16": 3345 }))
+    );
+    // 3.0 °C is below the floor and 50.0 °C above the ceiling: both drop rather than store garbage.
+    let cold = decode_v18(|b| b[62..64].copy_from_slice(&300u16.to_le_bytes()));
+    assert_eq!(value_of(&cold, StreamKind::SkinTemp), None);
+    let hot = decode_v18(|b| b[62..64].copy_from_slice(&5000u16.to_le_bytes()));
+    assert_eq!(value_of(&hot, StreamKind::SkinTemp), None);
+}
+
+#[test]
+fn k18_spo2_tri_mode_gates_sentinels_and_codes() {
+    // The sleep-only byte at body[71]: a %-range value is a real SpO2; bit-7 sentinels and sub-70
+    // diagnostic codes are not readings and must not be stored.
+    let spo2 = |v: u8| value_of(&decode_v18(|b| b[71] = v), StreamKind::Spo2Percent);
+    assert_eq!(spo2(98), Some(serde_json::json!({ "u8": 98 }))); // real percentage
+    assert_eq!(spo2(8), None); // low diagnostic code
+    assert_eq!(spo2(0xA8), None); // bit-7 saturation sentinel
+    assert_eq!(spo2(0), None); // no reading
+}
+
+#[test]
+fn k18_activity_class_gates_out_invalid_codes() {
+    let act = |v: u8| value_of(&decode_v18(|b| b[52] = v), StreamKind::ActivityClass);
+    assert_eq!(act(0), Some(serde_json::json!({ "u8": 0 }))); // still
+    assert_eq!(act(2), Some(serde_json::json!({ "u8": 2 }))); // run
+    assert_eq!(act(0xFF), None); // invalid sentinel
+    assert_eq!(act(7), None); // unmapped code
+}
+
+#[test]
+fn k18_gravity_rejects_implausible_magnitude() {
+    // An all-zero body has |g| = 0, outside [0.5, 1.5): no gravity samples at all.
+    let zeroed = decode_v18(|_| {});
+    assert!(zeroed.iter().all(|s| s.kind != StreamKind::Gravity));
+    // A unit vector down the x axis is |g| = 1: exactly three gravity samples, seq 0/1/2.
+    let unit = decode_v18(|b| b[34..38].copy_from_slice(&1.0f32.to_le_bytes()));
+    let gravity: Vec<_> = unit
+        .iter()
+        .filter(|s| s.kind == StreamKind::Gravity)
+        .collect();
+    assert_eq!(gravity.len(), 3);
+    assert_eq!(
+        gravity.iter().map(|s| s.seq).collect::<Vec<_>>(),
+        vec![0, 1, 2]
+    );
+    assert_eq!(
+        serde_json::to_value(gravity[0].value).unwrap(),
+        serde_json::json!({ "f32": 1.0 })
     );
 }
 

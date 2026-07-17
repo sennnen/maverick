@@ -335,8 +335,10 @@ increments once per record and resets on reboot, a `u32` LE unix timestamp at `b
 
 **K=18, the per-second metrics record (109 bytes).** Heart rate is a single `u8` bpm at `body[11]`,
 zero when the strap has no optical lock, so the same byte doubles as a validity flag. A secondary HR
-sits at `body[26]` and tracks the primary at correlation +0.94. Skin temperature is an `i16` LE at
-`body[62:64]` scaled by 0.01 to give degrees Celsius, traceable to the strap's ams AS6221 sensor.
+sits at `body[26]` and tracks the primary at correlation +0.94. Skin temperature is a raw `u16` LE
+register at `body[62:64]` scaled by 0.01 to give degrees Celsius, traceable to the strap's ams AS6221
+sensor; the sixth source `[WRS]` reads it as an unsigned register and keeps it only when `raw/100` °C
+lands in the physiological `[5, 45)` band, which drops garbage bytes a blind `i16` read would store.
 A packed state byte at `body[70]` carries an on-wire sleep state in bits 5–4, decoding to `{0 STILL,
 1 WAKE, 2 SLEEP, 3 UP}` (the STILL/SLEEP split is decisive in the data; WAKE versus UP cannot be
 told apart from passive captures, so treat that half as [PROV]). SpO2 is a single tri-mode byte at
@@ -380,12 +382,19 @@ with no exceptions). 24 Hz is coarse for PPG: a 41.7 ms sample period quantises 
 ±21 ms, which alone floors RMSSD around 30 ms even with flawless peak detection. That floor is a
 constraint to design around, not a bug to fix. [SERIES]
 
-**Admission status (M5-P4).** Maverick's `mav-codec` record decoders admit, from K=18: the primary
-HR at `body[11]` (zero treated as the no-lock sentinel), skin temperature at `body[62:64]` as i16
-LE centidegrees, and the packed sleep state in bits 5–4 of `body[70]` stored as the raw wire state;
-and from K=26 the 24-sample photodiode burst as raw ADC. Everything marked residual, refuted, or
-[PROV]-only above remains unadmitted, v20/v21 stay undecoded, and unknown version bytes produce a
-typed `DECODE_UNKNOWN_RECORD_VERSION` rather than a fallback decode.
+**Admission status (WHOOP-P2, extending M5-P4).** Maverick's `mav-codec` record decoders admit, from
+K=18, the full corpus-pinned field set, each range-gated so a wrong offset yields nothing: the primary
+HR at `body[11]` (zero is the no-lock sentinel); the R-R intervals (count `body[12]` clamped to four,
+values `body[13..]`, zero slots dropped); gravity as three `f32` from `body[34]`, accepted only at
+finite `|g|` in `[0.5, 1.5)`; skin temperature at `body[62:64]` as a raw `u16` register kept only in
+the `[5, 45)` °C band; the sleep-only tri-mode SpO2 percent at `body[71]` kept only in `70..=100`
+(emitted as the new `spo2_percent` stream, ADR-014); cumulative steps at `body[46]`; the coarse
+activity class at `body[52]` kept only in `{0,1,2}` (the new `activity_class` stream, ADR-014); the
+packed sleep state in bits 5–4 of `body[70]`; and the PPG confidence `signal_quality` `u8` at
+`body[29]`. From K=26, the 24-sample photodiode burst as raw ADC. The empirical `signal_flags`
+bitfield at `body[22]` has no clean stream kind and stays recorded but unemitted; the secondary HR,
+everything marked residual/refuted/[PROV]-only above, and v20/v21 stay unadmitted, and unknown version
+bytes produce a typed `DECODE_UNKNOWN_RECORD_VERSION` rather than a fallback decode.
 
 **The off-by-eleven trap.** Each MG record arrives inside an 8-byte frame header plus a 3-byte inner
 prefix (type, sequence, subtype) before the body, so a position measured from the frame start is 11

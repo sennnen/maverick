@@ -18,9 +18,16 @@ pub enum StreamKind {
     Gravity,
     SkinTemp,
     Spo2Raw,
+    /// A device-computed SpO2 percentage (0–100), distinct from `Spo2Raw` (unscaled optical ADC).
+    /// On WHOOP 5.0/MG this is the sleep-only tri-mode byte in the K=18 record; see ADR-014 and
+    /// docs/protocol/whoop.md.
+    Spo2Percent,
     RespRaw,
     BatterySoc,
     StepCount,
+    /// A device-classified coarse activity code (0 still, 1 walk, 2 run on WHOOP 5.0/MG K=18).
+    /// The raw on-wire code, not a Maverick activity claim; see ADR-014.
+    ActivityClass,
     SkinContact,
     SignalQuality,
     WristState,
