@@ -138,8 +138,8 @@ easy to get wrong. Two equal RR intervals in the same second are two distinct he
 beat counted twice. If the dedup key is `(device, ts, rr_ms)`, the second of two equal intervals in
 one second collapses into the first, a zero-difference beat vanishes, and RMSSD (and every HRV
 figure built on it) biases high. The key must therefore include an in-second sequence tiebreaker:
-`(device, ts, rr_ms, seq)`. This is not a nicety. It is the fix that landed as noop PR #163 and its
-iOS parity commit, and in Maverick it is an invariant test in `mav-timeline`, not a comment.
+`(device, ts, rr_ms, seq)`. This is not a nicety. It is a proven historical failure mode, and in
+Maverick it is an invariant test in `mav-timeline`, not a comment.
 
 Clock correction is done by storing a mapping, never by editing the sample. When a device's RTC is
 implausible (outside a sane unix window) the timeline records a `ClockMap` segment that translates

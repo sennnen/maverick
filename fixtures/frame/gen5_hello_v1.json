@@ -2,7 +2,7 @@
   "schema": "frame/v1",
   "wire_format": "gen5",
   "confidence": "XVAL",
-  "source": "The static gen5 client hello, transcribed byte for byte from real captures carried by both surveyed codebases (goose GooseHello.swift and noop-fork DeviceFamily.swift). Decodes as GET_HELLO (command 0x91 = 145), sequence 1, data [0x01].",
+  "source": "The static gen5 client hello, transcribed byte for byte from real captures carried by both surveyed codebases (GooseHello.swift and DeviceFamily.swift). Decodes as GET_HELLO (command 0x91 = 145), sequence 1, data [0x01].",
   "produced_with": { "mav-frame": "0.1.0" },
   "input_hex": "aa0108000001e67123019101363e5c8d",
   "expected_payload_hex": "23019101"

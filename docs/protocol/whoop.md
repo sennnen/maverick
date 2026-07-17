@@ -528,7 +528,7 @@ and document which, rather than carrying the ambiguity into the timeline.
 Key RR intervals on `(device, ts, rr_ms, seq)`, where `seq` is an in-second occurrence counter.
 Without the `seq` tiebreaker, two equal RR intervals in the same second collapse into one, which
 removes a real (zero-difference) beat and biases RMSSD high. [XVAL] This is the fix that landed as
-noop PR #163, and its iOS parity commit is in the current NOOP git history. In Maverick it is an
+mav PR #163, and its iOS parity commit is in the current Maverick git history. In Maverick it is an
 invariant test in `mav-timeline`, described in [../pipeline.md](../pipeline.md).
 
 ## The hardware checklist

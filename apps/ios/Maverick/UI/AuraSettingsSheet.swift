@@ -575,7 +575,7 @@ struct AuraSettingsSheet: View {
           // this toggle and Android's are NOT functionally equivalent. iOS's `AuraDataProtection`
           // (StrandiOS/System/AuraPrivacyAndReminders.swift) stamps NSFileProtectionCompleteUnlessOpen
           // on the WHOLE store directory (the live DB + WAL/SHM), while Android's `AuraDataProtection`
-          // (android/.../data/AuraDataProtection.kt) only wraps `.noopbak` BACKUP snapshots in an
+          // (android/.../data/AuraDataProtection.kt) only wraps `.mavbak` BACKUP snapshots in an
           // AES/GCM envelope and never touches the live database. Relabelling iOS to "backups at rest"
           // would misdescribe what the toggle protects. Flagged in the parity report rather than
           // silently reconciled — a real behavioural difference, not just copy drift.
@@ -614,7 +614,7 @@ struct AuraSettingsSheet: View {
 
   private var about: some View {
     VStack(alignment: .leading, spacing: 10) {
-      Text("NOOP").font(AuraDesign.heading(17)).foregroundStyle(AuraDesign.ink)
+      Text("Maverick").font(AuraDesign.heading(17)).foregroundStyle(AuraDesign.ink)
       Text("Connects directly to your WHOOP strap over Bluetooth. No account, no cloud, nothing ever leaves this device.")
         .font(AuraDesign.sub).foregroundStyle(AuraDesign.ink.opacity(0.55))
         .fixedSize(horizontal: false, vertical: true)

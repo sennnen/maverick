@@ -46,7 +46,7 @@ import com.sennnen.mav.data.AuraDataProtection
 import com.sennnen.mav.ui.AppViewModel
 import com.sennnen.mav.ui.AppearanceMode
 import com.sennnen.mav.ui.AppearancePrefs
-import com.sennnen.mav.ui.NoopPrefs
+import com.sennnen.mav.ui.MavPrefs
 import com.sennnen.mav.ui.ProfileStore
 import kotlin.math.max
 import kotlin.math.min
@@ -83,7 +83,7 @@ fun AuraSettingsSheet(
     var weightKg by remember { mutableStateOf(profile.weightKg) }
     var heightCm by remember { mutableStateOf(profile.heightCm) }
     var hrMaxOverride by remember { mutableStateOf(profile.hrMaxOverride) }
-    var morningCheckIn by remember { mutableStateOf(NoopPrefs.morningReportEnabled(context)) }
+    var morningCheckIn by remember { mutableStateOf(MavPrefs.morningReportEnabled(context)) }
     var encryptAtRest by remember { mutableStateOf(AuraDataProtection.enabled(context)) }
 
     AuraSheet(title = "Settings", onDismiss = onDismiss) {
@@ -251,7 +251,7 @@ fun AuraSettingsSheet(
                     checked = morningCheckIn,
                     onCheckedChange = {
                         morningCheckIn = it
-                        NoopPrefs.setMorningReportEnabled(context, it)
+                        MavPrefs.setMorningReportEnabled(context, it)
                     },
                     colors = SwitchDefaults.colors(
                         checkedTrackColor = AuraFamily.ENERGY.glow,
@@ -337,7 +337,7 @@ fun AuraSettingsSheet(
 
         // MARK: About
         Column(Modifier.padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("NOOP", style = AuraType.heading(17.sp), color = p.ink)
+            Text("Maverick", style = AuraType.heading(17.sp), color = p.ink)
             Text(
                 "Connects directly to your WHOOP strap over Bluetooth. No account, no cloud, nothing ever leaves this device.",
                 style = AuraType.sub, color = p.ink.copy(alpha = 0.55f),

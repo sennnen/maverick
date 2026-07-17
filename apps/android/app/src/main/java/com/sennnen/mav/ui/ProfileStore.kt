@@ -98,7 +98,7 @@ class ProfileStore(private val prefs: SharedPreferences) {
     val hrMax: Int get() = if (hrMaxOverride > 0) hrMaxOverride else hrMaxAuto
 
     // ── Backup settings snapshot/apply (#1000) ──────────────────────────────────────────────────
-    // The profile half of a `.noopbak`'s `settings.json`. Canonical key strings mirror
+    // The profile half of a `.mavbak`'s `settings.json`. Canonical key strings mirror
     // `BackupSettingsCodec.WHITELIST` (and the Apple `BackupSettings.whitelist`) exactly — note
     // canonical `profile.hrMax` maps onto this store's `hr_max_override` pref. Lives on ProfileStore
     // because only it knows its private pref keys; `contains` checks keep never-set fields OUT of the
@@ -131,7 +131,7 @@ class ProfileStore(private val prefs: SharedPreferences) {
     }
 
     companion object {
-        private const val PREFS = "noop_profile"
+        private const val PREFS = "mav_profile"
         private const val KEY_AGE = "age"
         private const val KEY_SEX = "sex"
         private const val KEY_WEIGHT = "weight_kg"

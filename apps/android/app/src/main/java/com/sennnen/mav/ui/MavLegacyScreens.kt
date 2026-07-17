@@ -41,10 +41,10 @@ import com.sennnen.mav.ui.aura.AuraStatusChip
 import com.sennnen.mav.ui.aura.AuraType
 import kotlin.math.roundToInt
 
-// The destinations AuraRoot routes to that NOOP backs with its own on-device subsystems
+// The destinations AuraRoot routes to that Maverick backs with its own on-device subsystems
 // (Room store, BLE engine, importers, AI coach, ML). Mav's core owns those lanes, so until
 // each lands in the Rust core these destinations render an honest Aura-styled empty state —
-// same signatures as NOOP's screens, so AuraRoot.kt stays byte-identical to the source.
+// same signatures as Maverick's screens, so AuraRoot.kt stays byte-identical to the source.
 
 /** Live console — real data: the snapshot's live HR, connection state and strap identity. */
 @Composable

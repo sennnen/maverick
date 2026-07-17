@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * The noop:// deep-link router (ANDROID_PARITY_ROADMAP.md C2). MainActivity
+ * The mav:// deep-link router (ANDROID_PARITY_ROADMAP.md C2). MainActivity
  * publishes the requested host here (a process singleton, so it survives the
  * activity re-creation a notification tap causes); the Aura shell collects it
  * and lands on the right hub / flyout, then clears it.
@@ -22,10 +22,10 @@ object AuraDeepLink {
     private val _requested = MutableStateFlow<String?>(null)
     val requested: StateFlow<String?> = _requested.asStateFlow()
 
-    /** Publish a request from an incoming Intent; ignores non-noop schemes. */
+    /** Publish a request from an incoming Intent; ignores non-mav schemes. */
     fun offer(intent: Intent?) {
         val uri = intent?.data ?: return
-        if (uri.scheme != "noop") return
+        if (uri.scheme != "mav") return
         _requested.value = uri.host ?: return
     }
 
@@ -39,7 +39,7 @@ object AuraDeepLink {
         PendingIntent.getActivity(
             context,
             requestCode,
-            Intent(Intent.ACTION_VIEW, Uri.parse("noop://$host"))
+            Intent(Intent.ACTION_VIEW, Uri.parse("mav://$host"))
                 .setPackage(context.packageName)
                 .addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK or

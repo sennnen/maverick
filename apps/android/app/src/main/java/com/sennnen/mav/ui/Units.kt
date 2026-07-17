@@ -6,13 +6,13 @@ import kotlin.math.roundToInt
 
 // MARK: - Unit system preference
 //
-// NOOP stores EVERYTHING in SI (km, kg, cm, °C) — the importers normalise on the way in, so this is a
+// Maverick stores EVERYTHING in SI (km, kg, cm, °C) — the importers normalise on the way in, so this is a
 // purely cosmetic, display-only layer. There is no data migration and nothing in Room changes when the
 // user flips this. One Metric/Imperial switch for length+mass with a SEPARATE temperature override,
 // because plenty of people think in kg/cm but still read body temperature in °F (and vice versa).
 // Default is Metric — most of the world, and it matches what we store.
 //
-// Persisted via NoopPrefs (SharedPreferences), the same mechanism every other Android preference uses.
+// Persisted via MavPrefs (SharedPreferences), the same mechanism every other Android preference uses.
 // This mirrors the macOS Units.swift + @AppStorage side exactly.
 
 /** Length+mass unit system. Temperature has its own override (see [UnitPrefs.temperature]). */
@@ -40,38 +40,38 @@ enum class TemperatureUnit(val raw: String) {
 }
 
 /**
- * How the Effort score is displayed (#268). NOOP stores Effort 0–100 (StrainScorer.maxStrain = 100);
+ * How the Effort score is displayed (#268). Maverick stores Effort 0–100 (StrainScorer.maxStrain = 100);
  * people coming from WHOOP often think in its 0–21 Day Strain axis, so this purely cosmetic toggle lets
- * the SAME stored value be shown on either scale. Default is NOOP's own 0–100 — the data never changes.
+ * the SAME stored value be shown on either scale. Default is Maverick's own 0–100 — the data never changes.
  * Mirrors the macOS [EffortScale].
  */
 enum class EffortScale(val raw: String) {
-    /** NOOP's native 0–100 axis (the stored value, one decimal). */
+    /** Maverick's native 0–100 axis (the stored value, one decimal). */
     HUNDRED("hundred"),
 
     /** WHOOP's 0–21 Day Strain axis — the stored 0–100 value rescaled down for display only. */
     WHOOP("whoop");
 
     companion object {
-        /** An unset/unknown value resolves to NOOP's native 0–100 axis. */
+        /** An unset/unknown value resolves to Maverick's native 0–100 axis. */
         fun fromRaw(raw: String?): EffortScale = entries.firstOrNull { it.raw == raw } ?: HUNDRED
     }
 }
 
 /**
- * Reads the two unit preferences from [NoopPrefs] and resolves the "match the system" default for
+ * Reads the two unit preferences from [MavPrefs] and resolves the "match the system" default for
  * temperature. SharedPreferences isn't reactive, so Compose screens read these once into remembered
  * state (exactly like the other toggles) and re-read on a recomposition triggered by the Settings write.
  */
 object UnitPrefs {
     /** The length/mass system (default Metric). */
     fun system(context: Context): UnitSystem =
-        UnitSystem.fromRaw(NoopPrefs.of(context).getString(NoopPrefs.KEY_UNIT_SYSTEM, null))
+        UnitSystem.fromRaw(MavPrefs.of(context).getString(MavPrefs.KEY_UNIT_SYSTEM, null))
 
     /** The resolved temperature unit, applying the "match the length/mass system" default. */
     fun temperature(context: Context): TemperatureUnit {
         val override = TemperatureUnit.fromRaw(
-            NoopPrefs.of(context).getString(NoopPrefs.KEY_TEMPERATURE_UNIT, null),
+            MavPrefs.of(context).getString(MavPrefs.KEY_TEMPERATURE_UNIT, null),
         )
         return override ?: system(context).temperatureMatching
     }
@@ -85,11 +85,11 @@ object UnitPrefs {
 
     /** The Effort display scale (default 0–100). Read once into Compose state like the other prefs. */
     fun effortScale(context: Context): EffortScale =
-        EffortScale.fromRaw(NoopPrefs.of(context).getString(KEY_EFFORT_SCALE, null))
+        EffortScale.fromRaw(MavPrefs.of(context).getString(KEY_EFFORT_SCALE, null))
 
     /** Persist the Effort display scale. */
     fun setEffortScale(context: Context, scale: EffortScale) {
-        NoopPrefs.of(context).edit().putString(KEY_EFFORT_SCALE, scale.raw).apply()
+        MavPrefs.of(context).edit().putString(KEY_EFFORT_SCALE, scale.raw).apply()
     }
 }
 
@@ -214,7 +214,7 @@ object UnitFormatter {
     // MARK: Effort scale (stored 0–100 — #268)
 
     /**
-     * NOOP stores Effort 0–100 (StrainScorer.maxStrain = 100). WHOOP's Day Strain axis is 0–21, and the
+     * Maverick stores Effort 0–100 (StrainScorer.maxStrain = 100). WHOOP's Day Strain axis is 0–21, and the
      * import boundary rescales by 100/21 (WhoopCsvImporter / WhoopExportImporter.dayStrainToEffortScale),
      * so the exact inverse for a display-only 0–100 → 0–21 conversion is ×21/100. Kept byte-identical to
      * that factor and to the macOS `UnitFormatter.effortScaleFactor`.

@@ -1,7 +1,7 @@
 import SwiftUI
 
 // Storage & diagnostics (Data group) — iOS port of Android's `AuraDiagnosticsSheet`
-// (android/app/src/main/java/com/noop/ui/aura/AuraToolSheets.kt). Read-only on-device store
+// (android/app/src/main/java/com/mav/ui/aura/AuraToolSheets.kt). Read-only on-device store
 // stats plus maintenance actions, all running locally.
 //
 // Parity note: Android ships THREE maintenance actions (Compact database / VACUUM, Run

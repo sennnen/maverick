@@ -42,7 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sennnen.mav.MainActivity
-import com.sennnen.mav.ui.NoopPrefs
+import com.sennnen.mav.ui.MavPrefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -115,7 +115,7 @@ object AuraCountdown {
         if (loaded) return
         loaded = true
         appContext = context.applicationContext
-        val prefs = NoopPrefs.of(context)
+        val prefs = MavPrefs.of(context)
         lastDurationSeconds = prefs.getInt(DURATION_KEY, 10 * 60)
         val end = prefs.getLong(END_KEY, 0L)
         if (end > System.currentTimeMillis()) resume(end)
@@ -126,7 +126,7 @@ object AuraCountdown {
         if (seconds <= 0) return
         acknowledge()
         lastDurationSeconds = seconds
-        appContext?.let { NoopPrefs.of(it).edit().putInt(DURATION_KEY, seconds).apply() }
+        appContext?.let { MavPrefs.of(it).edit().putInt(DURATION_KEY, seconds).apply() }
         pausedRemaining = null
         resume(System.currentTimeMillis() + seconds * 1000L)
     }
@@ -177,7 +177,7 @@ object AuraCountdown {
 
     private fun persistEnd(endMs: Long?) {
         val ctx = appContext ?: return
-        val e = NoopPrefs.of(ctx).edit()
+        val e = MavPrefs.of(ctx).edit()
         if (endMs == null) e.remove(END_KEY) else e.putLong(END_KEY, endMs)
         e.apply()
     }

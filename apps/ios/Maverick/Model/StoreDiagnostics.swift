@@ -6,7 +6,7 @@ enum StorePaths {
   static func defaultDatabasePath() throws -> String { MavStore.databaseURL().path }
 }
 
-/// Read-only `PRAGMA quick_check` probe over the core's SQLite store (the NOOP check, re-based
+/// Read-only `PRAGMA quick_check` probe over the core's SQLite store (the Maverick check, re-based
 /// from GRDB onto the raw C API — the probed file is never mutated).
 enum DatabaseIntegrity {
   /// nil when healthy, else SQLite's first complaint (or the open/query error) verbatim.

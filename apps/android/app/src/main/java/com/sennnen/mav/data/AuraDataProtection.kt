@@ -18,9 +18,9 @@ import javax.crypto.spec.GCMParameterSpec
  *
  * OFF by default and deliberately absent from onboarding — debug logs and CSV exports stay
  * plaintext so shared feedback remains readable (maintainer requirement). When the Settings
- * toggle is on, `.noopbak` snapshots are wrapped in a hardware-Keystore AES/GCM envelope:
+ * toggle is on, `.mavbak` snapshots are wrapped in a hardware-Keystore AES/GCM envelope:
  *
- *     "NOOPENC1" (8 bytes) · IV (12 bytes) · GCM ciphertext of the whole zip
+ *     "MAVENC01" (8 bytes) · IV (12 bytes) · GCM ciphertext of the whole zip
  *
  * The key never leaves the device's Keystore, so an encrypted backup only restores on the
  * device that wrote it — that IS the at-rest contract; users who need portable backups leave
@@ -28,17 +28,17 @@ import javax.crypto.spec.GCMParameterSpec
  * not) restore transparently.
  */
 object AuraDataProtection {
-    private const val PREFS = "noop_prefs"
-    private const val KEY_ENABLED = "noop.encryptAtRest"
+    private const val PREFS = "mav_prefs"
+    private const val KEY_ENABLED = "mav.encryptAtRest"
 
     private const val KEYSTORE = "AndroidKeyStore"
-    private const val KEY_ALIAS = "noop.atrest.v1"
+    private const val KEY_ALIAS = "mav.atrest.v1"
     private const val TRANSFORM = "AES/GCM/NoPadding"
     private const val TAG_BITS = 128
     private const val IV_LEN = 12
 
     /** The 8-byte envelope magic. Plain zips start "PK", plain SQLite "SQLite f" — no overlap. */
-    val MAGIC: ByteArray = "NOOPENC1".toByteArray(Charsets.US_ASCII)
+    val MAGIC: ByteArray = "MAVENC01".toByteArray(Charsets.US_ASCII)
 
     fun enabled(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ENABLED, false)
@@ -76,7 +76,7 @@ object AuraDataProtection {
     fun decryptingStream(input: InputStream): InputStream {
         val magic = ByteArray(MAGIC.size)
         readFully(input, magic)
-        require(isEncrypted(magic)) { "Not an encrypted NOOP backup." }
+        require(isEncrypted(magic)) { "Not an encrypted Maverick backup." }
         val iv = ByteArray(IV_LEN)
         readFully(input, iv)
         val cipher = Cipher.getInstance(TRANSFORM)

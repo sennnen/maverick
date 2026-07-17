@@ -1,19 +1,19 @@
 # Platform lane — native shells, UI migration, and release builds
 
-This lane turns the shared core into two real applications without rebuilding the old NOOP
+This lane turns the shared core into two real applications without rebuilding legacy
 internals around it. It runs beside the numbered data milestones because the apps should be
 integrated as soon as a core read model exists, while individual cards become available only when
 their underlying analytics are admitted.
 
-The visual and interaction specification is the current Aura shell in the NOOP workspace: four
+The visual and interaction specification is the current Aura shell: four
 hubs (`Today`, `Recovery`, `Strain`, `Sleep`), settings opened from every hub rather than occupying a
 tab, calm crossfades, horizontal hub switching, and the existing card, chart, spacing, colour, and
-type system. We preserve that product work. We do not copy NOOP's repositories, BLE clients,
+type system. We preserve that product work. We do not copy legacy repositories, BLE clients,
 analytics, persistence, ML wrappers, notification machinery, or giant platform view models. Those
 are the implementation being replaced.
 
 The product must remain honest while the migration is incomplete. A card backed by an unavailable
-Maverick analytic shows the reason from the core. It never reads an old NOOP score, computes a
+Maverick analytic shows the reason from the core. It never reads an old cached score, computes a
 platform substitute, or fills the space with synthetic data. Empty and unavailable states are
 normal product states, not temporary lies.
 
@@ -153,7 +153,7 @@ minified release APKs. The iOS compile/link parity test remains with its minimal
 **Owns:** project/build files, app entry points, base resources, platform test targets, and no
 feature screens beyond a diagnostic launch surface.
 
-**Must not touch:** NOOP source files in place or copy its old app model.
+**Must not touch:** legacy source files in place or copy its old app model.
 
 **Contract:** Create `Maverick` iOS and Android applications with new bundle/application ids,
 Maverick naming, current supported OS floors chosen from actual toolchain support, strict warnings,
@@ -178,7 +178,7 @@ JDK 17, API 26–36 support, the generated core package wired into Gradle, a sta
 off the UI thread, strict `host-snapshot/v1` decoding, structured startup failure display, real JVM
 decoder tests, clean Android lint, a signed debug APK containing only the shipped ABIs, and a
 minified R8 release build. The iOS app now has the same `MavRuntime` read boundary, strict snapshot
-decoder tests, and no NOOP domain dependency; macOS CI builds it after generating the core
+decoder tests, and no legacy domain dependency; macOS CI builds it after generating the core
 XCFramework. Fixture parity launch tests remain.
 
 ---
@@ -218,9 +218,9 @@ More complete per-field presentation state lands with the admitted analytics.
 ## Packet PL-P6: Migrate the Aura design system and four-hub shell
 
 **Owns:** native design tokens, reusable components, tab shell, settings presentation shell, and
-visual regression fixtures. It may copy and rewrite the corresponding Aura files from NOOP.
+visual regression fixtures. It may copy and rewrite the corresponding Aura files.
 
-**Must not touch:** old NOOP data models, repositories, BLE clients, analytics, onboarding, coach,
+**Must not touch:** legacy data models, repositories, BLE clients, analytics, onboarding, coach,
 journal, backup, HealthKit, Health Connect, widgets, notifications, or connector-specific screens.
 
 **Contract:** Preserve the existing product specification:
@@ -245,11 +245,11 @@ No old score is present.
 labels, large text, reduced motion, light/dark appearance where supported, and screenshots at the
 agreed phone sizes.
 
-**Exit:** both apps show the cleaned Aura shell and compile without any NOOP domain package.
+**Exit:** both apps show the cleaned Aura shell and compile without any legacy domain package.
 
 **Status: in progress.** Superseding the earlier "rewrite entangled components" guidance, the owner
-directed a verbatim adoption: both apps now carry the NOOP Aura UI files copied file-for-file
-(package renames/imports only), with Mav-owned adapter stores exposing NOOP's member surface over
+directed a verbatim adoption: both apps now carry the preserved Aura UI files, with Mav-owned adapter
+stores exposing the needed presentation surface over
 `host-snapshot/v1` and same-name stand-ins for destinations whose subsystems live in future core
 lanes. Hubs, settings sheet, horizontal switching, and honest unavailable states are in. Visual
 regression fixtures still need a CI simulator lane.

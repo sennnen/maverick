@@ -18,16 +18,16 @@ enum class AppearanceMode(val storageValue: String, val label: String) {
     }
 }
 
-/** Theme preference, persisted in `noop_prefs` and mirrored in snapshot state so the toggle is live.
+/** Theme preference, persisted in `mav_prefs` and mirrored in snapshot state so the toggle is live.
  *  [load] is called once from MainActivity before first composition (no flash); [set] writes + flips. */
 object AppearancePrefs {
-    private const val FILE = "noop_prefs"
+    private const val FILE = "mav_prefs"
     private const val KEY = "theme.appearance"
 
     private fun prefs(ctx: Context): SharedPreferences =
         ctx.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
-    /** Live appearance mode read by NoopTheme; defaults to System until [load] runs. */
+    /** Live appearance mode read by MavTheme; defaults to System until [load] runs. */
     var mode by mutableStateOf(AppearanceMode.SYSTEM)
         private set
 

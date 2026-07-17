@@ -26,9 +26,9 @@ import uniffi.mav_ffi.MavRuntime
 import uniffi.mav_ffi.RuntimeConfig
 
 /**
- * The single app-wide view model behind the Aura UI — the Mav twin of NOOP's `AppViewModel`,
- * exposing the exact member surface the copied Aura screens read, backed by the Rust core's
- * `host-snapshot/v1` instead of NOOP's on-device Room store + BLE engine.
+ * The single app-wide view model behind the Aura UI. It exposes the member surface the
+ * Aura screens read, backed by the Rust core's
+ * from `host-snapshot/v1` instead of the legacy on-device Room store and BLE engine.
  *
  * Surfaces the core cannot fill yet stay HONESTLY empty (no fabricated rows, no cached scores):
  * `recentDays` / `workouts` emit empty lists and the repo facade returns empty series, so every
@@ -66,7 +66,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val repo: MavRepo = MavRepo()
     val mlEngine: MavMlSignals = MavMlSignals()
 
-    /** The canonical device id day-keyed reads use; mirrors NOOP's `activeStrapId`. */
+    /** The canonical device id day-keyed reads use; mirrors the legacy `activeStrapId`. */
     val activeStrapId: String get() = "my-whoop"
 
     private var runtime: MavRuntime? = null
@@ -149,7 +149,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 }
 
 /**
- * Read facade with NOOP `WhoopRepository`'s signatures, returning empty results until the core
+ * Read facade with legacy `WhoopRepository` signatures, returning empty results until the core
  * exposes the matching read models. Suspend so call-sites keep their coroutine shape.
  */
 class MavRepo {

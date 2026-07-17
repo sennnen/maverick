@@ -18,10 +18,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sennnen.mav.MavAppState
 import com.sennnen.mav.ui.AppViewModel
 
-// Mav stand-ins for NOOP's AuraToolSheets (pairing / migrate / diagnostics). NOOP's originals
+// Mav stand-ins for Maverick's AuraToolSheets (pairing / migrate / diagnostics). Maverick's originals
 // operate its Room store and BLE engine directly; those lanes belong to Mav's Rust core, so
 // these sheets stay presentation-only: same names + signatures (AuraRoot.kt is byte-identical
-// to the NOOP source), real snapshot facts where the core has them, honest text where not.
+// to the Maverick source), real snapshot facts where the core has them, honest text where not.
 
 @Composable
 fun AuraPairingSheet(vm: AppViewModel, onDismiss: () -> Unit, onOpenDevices: () -> Unit) {

@@ -1,8 +1,8 @@
 import Foundation
 import SwiftUI
 
-// The environment stores the copied Aura views observe — NOOP's member surface, backed by the
-// Rust core's host snapshot instead of NOOP's Swift-side BLE engine and GRDB store. Values the
+// The environment stores the copied Aura views observe — Maverick's member surface, backed by the
+// Rust core's host snapshot instead of Maverick's Swift-side BLE engine and GRDB store. Values the
 // core cannot fill yet stay honestly nil/empty; nothing is estimated app-side.
 
 /// Live connection + biometric readout, derived from the core snapshot's connection block.
@@ -25,7 +25,7 @@ struct ActiveWorkout: Equatable {
 /// A strength session in progress. Inert until the strength lane lands.
 final class StrengthSession: ObservableObject {}
 
-/// The app-wide model behind the Aura views — the Mav twin of NOOP's `AppModel`. It owns the
+/// The app-wide model behind the Aura views — the Mav twin of Maverick's `AppModel`. It owns the
 /// core runtime worker (via `MavStore`) and republishes snapshot facts into the stores the
 /// views observe.
 @MainActor
@@ -108,7 +108,7 @@ enum AFibScreener {
   }
 }
 
-/// The user's body profile — @AppStorage-backed, same keys and ranges as NOOP's ProfileStore.
+/// The user's body profile — @AppStorage-backed, same keys and ranges as Maverick's ProfileStore.
 @MainActor
 final class ProfileStore: ObservableObject {
   private let d = UserDefaults.standard

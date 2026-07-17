@@ -1,6 +1,6 @@
 import Foundation
 
-// Value-type twins of the StrandAnalytics results the Aura UI can render. In NOOP these are
+// Value-type twins of the StrandAnalytics results the Aura UI can render. In Maverick these are
 // computed nightly on-device; in Mav the matching analytics live in the Rust core and publish
 // through the host snapshot once admitted (docs/analytics.md). Only the shapes the copied
 // views read are carried — no scoring runs in the app.

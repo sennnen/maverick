@@ -7,13 +7,13 @@ analytics logic. Its implementation sequence is defined in the
 The exact runtime, event, action, snapshot, threading, and compatibility rules are in
 [the platform contract](../../docs/platform.md).
 
-The UI is the NOOP Aura compose UI, copied file-for-file into `ui/aura/` (package rename only):
+The UI preserves the Aura compose presentation layer in `ui/aura/`:
 Today, Recovery, Strain, and Sleep hubs, the Material bottom navigation, one app-wide settings
 sheet, and the trends/reports/metric-detail/workout-detail/timer surfaces. A Mav-owned
-`AppViewModel` adapter exposes NOOP's member surface over the core's `host-snapshot/v1`; day
+`AppViewModel` adapts the core's `host-snapshot/v1` into the presentation surface; day
 history, workouts, and ML signals stay empty until the core serves them, and the routed legacy
 destinations (live console, devices, coach, journal, …) are same-signature Mav stand-ins so
-`AuraRoot.kt` stays byte-identical to its source. NOOP's actual data engine—its Room repositories,
+`AuraRoot.kt` stays aligned with the preserved presentation source. The legacy data engine—its Room repositories,
 WHOOP BLE client, importers, ML assets, services, widgets, and notification machinery—is still not
 an app dependency.
 
@@ -30,7 +30,7 @@ R8; local release builds remain unsigned. CI pushes to `main` decode and use the
 keystore, verify its signature with `apksigner`, and publish the signed APK. Required GitHub Actions
 secrets are `ANDROID_KEYSTORE_BASE64` (single-line Base64 JKS), `ANDROID_KEYSTORE_PASSWORD`,
 `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`. The launch surface is the Aura shell;
-the strict snapshot-decoder tests and the ported NOOP helper tests (logical day, widget anchor,
+the strict snapshot-decoder tests and the presentation helper tests (logical day, widget anchor,
 stage segments, zone parsing) run in the same gate.
 
 ## Building the core for Android

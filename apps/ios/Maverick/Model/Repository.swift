@@ -1,10 +1,10 @@
 import Foundation
 
-/// Read facade with NOOP `Repository`'s member surface, backed by the Rust core instead of a
+/// Read facade with the legacy `Repository` member surface, backed by the Rust core instead of a
 /// Swift-side GRDB store. Day history, sleeps, journal and workouts stay HONESTLY empty until
 /// the core exposes the matching read models — no cached scores, no fabricated rows. The pure
 /// day-resolution statics (logical day, widget anchor, vitals carry) are ported verbatim so the
-/// hubs anchor on exactly the day NOOP would.
+/// hubs anchor on exactly the day the legacy presentation did.
 @MainActor
 final class Repository: ObservableObject {
   @Published private(set) var days: [DailyMetric] = []
@@ -80,7 +80,7 @@ final class Repository: ObservableObject {
   static let appleHealthSource = "apple-health"
   static let healthConnectSource = "health-connect"
 
-  // MARK: Day resolution (ported verbatim from NOOP Repository)
+  // MARK: Day resolution (ported from the legacy repository)
 
   /// Prefer the LOCAL-calendar-day row when it differs from the logical day AND has a banked
   /// night; otherwise the logical-day row (the anti-blank guard for the post-midnight window).

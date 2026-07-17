@@ -69,7 +69,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sennnen.mav.ui.NoopPrefs
+import com.sennnen.mav.ui.MavPrefs
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -425,10 +425,10 @@ object AuraHubCards {
     fun encode(hidden: Set<String>): String = hidden.sorted().joinToString(",")
 
     fun load(context: android.content.Context, hub: String): String =
-        NoopPrefs.of(context).getString(storageKey(hub), "") ?: ""
+        MavPrefs.of(context).getString(storageKey(hub), "") ?: ""
 
     fun save(context: android.content.Context, hub: String, csv: String) {
-        NoopPrefs.of(context).edit().putString(storageKey(hub), csv).apply()
+        MavPrefs.of(context).edit().putString(storageKey(hub), csv).apply()
     }
 }
 

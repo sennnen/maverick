@@ -148,7 +148,7 @@ struct AuraReportsView: View {
     let renderer = ImageRenderer(content: content)
     renderer.proposedSize = .init(width: 616, height: nil)
     let url = FileManager.default.temporaryDirectory
-      .appendingPathComponent("NOOP-\(span.rawValue)-Report.pdf")
+      .appendingPathComponent("Maverick-\(span.rawValue)-Report.pdf")
     renderer.render { size, draw in
       var box = CGRect(origin: .zero, size: size)
       guard let ctx = CGContext(url as CFURL, mediaBox: &box, nil) else { return }
@@ -212,7 +212,7 @@ struct AuraReportSheet: View {
       }
       .auraDarkCard(padding: 18)
 
-      Text("Generated on-device by NOOP · \(Date.now.formatted(date: .abbreviated, time: .shortened)) · Approximate, not medical advice")
+      Text("Generated on-device by Maverick · \(Date.now.formatted(date: .abbreviated, time: .shortened)) · Approximate, not medical advice")
         .font(AuraDesign.caption).foregroundStyle(AuraDesign.ink.opacity(0.4))
     }
   }

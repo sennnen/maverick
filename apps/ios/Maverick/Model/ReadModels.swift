@@ -1,6 +1,6 @@
 import Foundation
 
-// Read-model twins of the NOOP value types the Aura UI renders (WhoopStore / StrandAnalytics),
+// Read-model twins of the Maverick value types the Aura UI renders (WhoopStore / StrandAnalytics),
 // carried as plain structs: Mav has no Swift-side store — rows arrive from the Rust core through
 // the FFI snapshot. Field sets and semantics are unchanged so the copied views compile verbatim.
 

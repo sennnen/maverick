@@ -320,7 +320,7 @@ private fun SleepPlannerCard(needMin: Double?, debtMin: Double?) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var wakeMin by androidx.compose.runtime.saveable.rememberSaveable {
         androidx.compose.runtime.mutableIntStateOf(
-            com.sennnen.mav.ui.NoopPrefs.of(context).getInt("aura.sleep.targetWakeMin", 7 * 60),
+            com.sennnen.mav.ui.MavPrefs.of(context).getInt("aura.sleep.targetWakeMin", 7 * 60),
         )
     }
     val need = needMin ?: 480.0
@@ -347,7 +347,7 @@ private fun SleepPlannerCard(needMin: Double?, debtMin: Double?) {
                 value = wakeMin.toFloat(),
                 onValueChange = {
                     wakeMin = (it / 15f).roundToInt() * 15
-                    com.sennnen.mav.ui.NoopPrefs.of(context).edit().putInt("aura.sleep.targetWakeMin", wakeMin).apply()
+                    com.sennnen.mav.ui.MavPrefs.of(context).edit().putInt("aura.sleep.targetWakeMin", wakeMin).apply()
                 },
                 valueRange = 240f..660f,   // 04:00 – 11:00
                 steps = 27,

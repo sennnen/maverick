@@ -56,9 +56,9 @@ vector exists, and until then it carries no CoreML or TFLite dependency at all.
 Everything else is Rust: reassembly, CRC checking, frame decode, signal quality, the timeline,
 storage, features, the ML preprocessing, metrics, and the immutable snapshots the UI reads. The
 apps under `apps/ios` and `apps/android` are native product shells. Their visual and interaction
-specification comes from the existing Aura screens in the prior NOOP workspace, but only the
+specification comes from the existing Aura screens, but only the
 presentation layer crosses: design tokens, reusable visual components, the four-hub navigation,
-settings placement, and screen composition. NOOP's repositories, BLE clients, analytics, storage,
+settings placement, and screen composition. Legacy repositories, BLE clients, analytics, storage,
 ML wrappers, and platform view models do not cross. Maverick replaces those with one small native
 presentation store fed by immutable core read models. The exact migration and release sequence is
 the [platform lane](plans/active/platform.md), and the binding contract is

@@ -171,7 +171,7 @@ struct WorkoutRoute: Equatable, Codable {
 enum RouteStore {
 
     /// Single `UserDefaults` key holding a JSON `[key: WorkoutRoute]` map. Namespaced like `moments`.
-    static let defaultsKey = "noop.workoutRoutes"
+    static let defaultsKey = "mav.workoutRoutes"
 
     /// Cap on stored routes — newest kept, oldest evicted (keys sort by the leading startTs). A route is
     /// a handful of bytes, but this keeps the map from growing unboundedly across an install's lifetime.

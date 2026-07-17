@@ -242,7 +242,7 @@ Native code may not:
 - decide whether an analytic is available;
 - query SQLite;
 - merge days or remove duplicates;
-- fill absent data with demo, cached NOOP, or guessed values;
+- fill absent data with demo, cached legacy, or guessed values;
 - issue device commands not emitted by the runtime.
 
 The four hub slots exist even when their analytics do not. Their state is one of value, collecting,

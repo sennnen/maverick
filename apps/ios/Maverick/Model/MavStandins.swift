@@ -1,8 +1,8 @@
 import SwiftUI
 
-// Mav stand-ins for the NOOP destinations whose subsystems live in the Rust core's future
+// Mav stand-ins for the Maverick destinations whose subsystems live in the Rust core's future
 // lanes (AI coach, workouts, strength, alarm, pairing, import, HealthKit, backup, legacy
-// settings). Same type names + call shapes as the NOOP originals, so every copied Aura view
+// settings). Same type names + call shapes as the Maverick originals, so every copied Aura view
 // stays byte-identical to its source; each renders an honest Aura-styled pending state.
 
 private struct MavPendingSheet: View {
@@ -45,7 +45,7 @@ private struct MavPendingSheet: View {
   }
 }
 
-/// Private coach. NOOP's engine calls a user-keyed AI API; Mav stays fully on-device, so the
+/// Private coach. Maverick's engine calls a user-keyed AI API; Mav stays fully on-device, so the
 /// coach waits for the core's day aggregates and an on-device path.
 struct AuraCoachView: View {
   var body: some View {

@@ -98,7 +98,7 @@ fun AuraRootScreen(viewModel: AppViewModel) {
         var showPairing by rememberSaveable { mutableStateOf(false) }
         var showDiagnostics by rememberSaveable { mutableStateOf(false) }
 
-        // noop:// deep links from actionable notifications (roadmap C2).
+        // mav:// deep links from actionable notifications (roadmap C2).
         val deepLink by AuraDeepLink.requested.collectAsStateWithLifecycle()
         LaunchedEffect(deepLink) {
             when (deepLink) {
@@ -211,7 +211,7 @@ fun AuraRootScreen(viewModel: AppViewModel) {
                 composable("test_centre") { TestCentreScreen(viewModel) }
                 composable("backup_sync") { BackupSyncScreen() }
                 // Wrist-automation config lost its route when AppRoot was replaced by this shell:
-                // SedentaryDetector / InactivityNotifier / NoopNotificationListener kept reading
+                // SedentaryDetector / InactivityNotifier / MavNotificationListener kept reading
                 // NotifPrefs, but no reachable screen wrote them. Settings is their door again.
                 composable("automations") { AutomationsScreen(viewModel) }
                 composable("notifications") { NotificationsSettingsScreen(viewModel) }

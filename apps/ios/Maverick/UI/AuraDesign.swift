@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - Design system (NOOP WHOOP-only rebuild) — editorial, Veri-inspired
+// MARK: - Design system (Maverick WHOOP-only rebuild) — editorial, Veri-inspired
 //
 // Pure-black editorial canvas (with a light variant), rounded tiles carrying a
 // luminous RADIAL COLOUR GLOW, and clean Helvetica Neue typography — thin, large

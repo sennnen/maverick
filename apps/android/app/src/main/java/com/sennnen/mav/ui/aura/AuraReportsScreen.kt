@@ -178,7 +178,7 @@ fun AuraReportsScreen(vm: AppViewModel, onClose: () -> Unit) {
                 }
 
                 Text(
-                    "Generated on-device by NOOP · Approximate, not medical advice",
+                    "Generated on-device by Maverick · Approximate, not medical advice",
                     style = AuraType.caption, color = p.ink.copy(alpha = 0.4f),
                 )
 
@@ -337,13 +337,13 @@ private fun exportReportPdf(
         val generatedOn = LocalDate.now().format(DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US))
         dim.textSize = 10f
         c.drawText(
-            "Generated on-device by NOOP · $generatedOn · Approximate, not medical advice",
+            "Generated on-device by Maverick · $generatedOn · Approximate, not medical advice",
             margin, y, dim,
         )
 
         doc.finishPage(page)
         val dir = File(context.cacheDir, "reports").apply { mkdirs() }
-        val file = File(dir, "NOOP-${title.replace(" ", "-")}.pdf")
+        val file = File(dir, "Maverick-${title.replace(" ", "-")}.pdf")
         file.outputStream().use { doc.writeTo(it) }
         doc.close()
 

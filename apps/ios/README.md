@@ -7,13 +7,12 @@ analytics logic. Its implementation sequence is defined in the
 The exact runtime, event, action, snapshot, threading, and compatibility rules are in
 [the platform contract](../../docs/platform.md).
 
-The app is the NOOP Aura UI, copied file-for-file into `Maverick/UI/` (only the NOOP package
-imports are stripped): the four hubs—Today, Recovery, Strain, and Sleep—behind the floating glass
+The app preserves the Aura UI in `Maverick/UI/`: the four hubs—Today, Recovery, Strain, and Sleep—behind the floating glass
 tab bar, one app-wide settings sheet, and the live/trends/reports/journal/diagnostics/timer
-surfaces. `Maverick/Model/` supplies Mav-owned adapter stores with NOOP's member surface
+surfaces. `Maverick/Model/` supplies Mav-owned adapter stores with the presentation member surface
 (`AppModel`, `Repository`, `LiveState`, …) backed by `MavStore`'s immutable `host-snapshot/v1`
 values; day history, sleeps, and workouts stay empty until the core serves them, and the
-coach/workouts/strength/alarm/pairing/import destinations are same-name Aura stand-ins. NOOP's
+coach/workouts/strength/alarm/pairing/import destinations are same-name Aura stand-ins. The legacy
 actual data engine—its GRDB store, WHOOP packages, Swift analytics, onboarding, widgets, HealthKit,
 and background machinery—is still not a dependency.
 

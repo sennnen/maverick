@@ -1,6 +1,6 @@
 package com.sennnen.mav.data
 
-// Read-model twins of the NOOP entity types the Aura UI renders (Entities.kt), minus the
+// Read-model twins of the Maverick entity types the Aura UI renders (Entities.kt), minus the
 // Room annotations: Mav has no on-device Room store — rows come from the Rust core through
 // the FFI snapshot, so these are plain value types. Field sets and semantics are unchanged
 // so the copied Aura screens compile verbatim.

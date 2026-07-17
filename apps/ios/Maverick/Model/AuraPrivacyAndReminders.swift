@@ -43,9 +43,9 @@ enum AuraDataProtection {
 enum JournalReminder {
   static let enabledKey = "reminder.journal.enabled"
   static let minutesKey = "reminder.journal.minutes"     // minutes from midnight
-  static let categoryId = "noop.journal.checkin"
-  static let actionId = "noop.journal.open"
-  private static let requestId = "noop.journal.daily"
+  static let categoryId = "mav.journal.checkin"
+  static let actionId = "mav.journal.open"
+  private static let requestId = "mav.journal.daily"
 
   /// Register the actionable category once at launch.
   static func registerCategory() {
