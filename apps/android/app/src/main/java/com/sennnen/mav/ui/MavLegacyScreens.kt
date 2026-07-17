@@ -39,6 +39,7 @@ import com.sennnen.mav.ui.aura.AuraScreen
 import com.sennnen.mav.ui.aura.AuraSectionHeader
 import com.sennnen.mav.ui.aura.AuraStatusChip
 import com.sennnen.mav.ui.aura.AuraType
+import java.util.Locale
 import kotlin.math.roundToInt
 
 // The destinations AuraRoot routes to that Maverick backs with its own on-device subsystems
@@ -51,6 +52,8 @@ import kotlin.math.roundToInt
 fun LiveScreen(vm: AppViewModel, onManageDevices: () -> Unit) {
     val live by vm.live.collectAsStateWithLifecycle()
     val bpm by vm.bpm.collectAsStateWithLifecycle()
+    val appState by vm.state.collectAsStateWithLifecycle()
+    val snapshot = (appState as? MavAppState.Ready)?.snapshot
     val p = Aura.palette
     AuraScreen(lead = AuraFamily.HEART) {
         Column(
@@ -90,7 +93,21 @@ fun LiveScreen(vm: AppViewModel, onManageDevices: () -> Unit) {
                 Column(Modifier.padding(vertical = 4.dp)) {
                     InfoRow("Strap", live.advertisingName ?: "WHOOP")
                     InfoRow("Battery", live.batteryPct?.let { "${it.roundToInt()}%" } ?: "--")
+                    val prv = snapshot?.prv
+                    if (prv != null) {
+                        InfoRow("PRV · RMSSD", String.format(Locale.getDefault(), "%.1f ms", prv.rmssdMicros / 1000.0))
+                        InfoRow("PRV intervals", "${prv.intervalCount} used · ${prv.excludedIntervalCount} excluded")
+                    } else {
+                        // The core's structured reason; the platform never invents availability.
+                        InfoRow("PRV", snapshot?.prvUnavailableReason ?: "--")
+                    }
                 }
+            }
+            if (snapshot?.prv != null) {
+                Text(
+                    "PRV is optical pulse-rate variability, not ECG HRV.",
+                    style = AuraType.sub, color = p.ink.copy(alpha = 0.55f),
+                )
             }
             AuraDarkCard {
                 AuraNavRow(Icons.Filled.Sensors, "Manage devices", "Pairing & connectors", onClick = onManageDevices)

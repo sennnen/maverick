@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sennnen.mav.MavAppState
 import com.sennnen.mav.analytics.CyclePhaseEngine
 import com.sennnen.mav.analytics.IllnessSignalEngine
 import com.sennnen.mav.data.DailyMetric
@@ -76,6 +77,8 @@ fun AuraRecoveryScreen(vm: AppViewModel) {
     val p = Aura.palette
     val days by vm.recentDays.collectAsStateWithLifecycle()
     val signals by vm.v5Signals.collectAsStateWithLifecycle()
+    val appState by vm.state.collectAsStateWithLifecycle()
+    val recoveryReason = (appState as? MavAppState.Ready)?.snapshot?.recoveryUnavailableReason
 
     val anchor = auraAnchorDay(days)
     val vitalsDay = auraLastVitalsDay(days, anchor)
@@ -153,7 +156,7 @@ fun AuraRecoveryScreen(vm: AppViewModel) {
                             unit = "%", label = "recovered", status = status,
                         )
                     }
-                    Text(insight(status), style = AuraType.sub, color = p.ink.copy(alpha = 0.8f))
+                    Text(insight(status, recoveryReason), style = AuraType.sub, color = p.ink.copy(alpha = 0.8f))
                 }
             }
 
@@ -234,11 +237,12 @@ private fun statusLine(status: AuraStatus): String = when (status) {
     AuraStatus.NONE -> "No data"
 }
 
-private fun insight(status: AuraStatus): String = when (status) {
+private fun insight(status: AuraStatus, unavailableReason: String?): String = when (status) {
     AuraStatus.GOOD -> "Your body absorbed yesterday's load. A big day is on the table."
     AuraStatus.FAIR -> "Partial recharge. Train, but leave something in reserve."
     AuraStatus.LOW -> "Your body is asking for rest. Keep intensity low today."
-    AuraStatus.NONE -> "Wear your strap overnight to score recovery."
+    // The core's structured reason, when it gave one — never a platform-invented explanation.
+    AuraStatus.NONE -> unavailableReason ?: "No recovery data yet."
 }
 
 private fun buildVitals(

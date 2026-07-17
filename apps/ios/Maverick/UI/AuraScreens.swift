@@ -71,8 +71,26 @@ struct AuraLiveView: View {
           AuraInfoRow(label: "Strap", value: live.advertisingName ?? "WHOOP")
           RowDivider()
           AuraInfoRow(label: "Battery", value: live.batteryPct.map { "\(Int($0.rounded()))%" } ?? "--")
+          RowDivider()
+          if let prv = model.prv {
+            AuraInfoRow(label: "PRV · RMSSD",
+                        value: String(format: "%.1f ms", Double(prv.rmssdMicros) / 1000))
+            RowDivider()
+            AuraInfoRow(label: "PRV intervals",
+                        value: "\(prv.intervalCount) used · \(prv.excludedIntervalCount) excluded")
+          } else {
+            // The core's structured reason; the platform never invents availability.
+            AuraInfoRow(label: "PRV", value: model.prvUnavailableReason ?? "--")
+          }
         }
         .padding(.vertical, 4).auraGroup()
+
+        if model.prv != nil {
+          Text("PRV is optical pulse-rate variability, not ECG HRV.")
+            .font(AuraDesign.sub)
+            .foregroundStyle(AuraDesign.ink.opacity(0.55))
+            .padding(.horizontal, 4)
+        }
       }
       .padding(.horizontal, AuraDesign.screenMargin).padding(.bottom, 130)
     }

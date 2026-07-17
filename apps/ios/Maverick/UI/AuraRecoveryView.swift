@@ -113,7 +113,8 @@ struct AuraRecoveryView: View {
     case .good: "Your body absorbed yesterday's load. A big day is on the table."
     case .fair: "Partial recharge. Train, but leave something in reserve."
     case .low: "Your body is asking for rest. Keep intensity low today."
-    case .none: "Wear your strap overnight to score recovery."
+    // The core's structured reason, when it gave one — never a platform-invented explanation.
+    case .none: model.recoveryUnavailableReason ?? "No recovery data yet."
     }
   }
 
