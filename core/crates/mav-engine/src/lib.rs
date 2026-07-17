@@ -10,6 +10,7 @@ pub mod acquisition;
 pub mod burst;
 pub mod historical;
 pub mod pipeline;
+pub mod recompute;
 pub mod runtime;
 pub mod snapshot;
 
@@ -18,6 +19,11 @@ pub use historical::{
     CommandTemplate, HistoricalConfig, HistoricalController, HistoricalEvent, HistoricalOutcome,
     HistoricalState, ResponseResult,
 };
+pub use recompute::{
+    AffectedDays, CacheKey, LocalDay, OffsetSpan, RecomputeCache, RecomputeTrigger, SyncDays,
+    Timezone,
+};
+
 pub use pipeline::{
     run_realtime, run_realtime_json, run_realtime_output, run_realtime_output_json, Capture,
     IngestStats, PipelineOutput, RealtimeProcessor,

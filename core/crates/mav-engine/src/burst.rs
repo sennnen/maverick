@@ -4,6 +4,7 @@
 //! (docs/plans/active/M5.md) is enforced by construction because a failed transaction returns an
 //! error and leaves zero rows.
 
+use crate::recompute::{AffectedDays, LocalDay, Timezone};
 use mav_model::error::Result;
 use mav_model::ids::{DeviceId, MetadataId};
 use mav_model::raw::{RawSample, RawSampleBatch};
@@ -13,12 +14,14 @@ use mav_obs::tap::{Ids, Tap, TapEvent};
 use mav_store::{InsertOutcome, Store};
 use mav_timeline::{place_on_wall, Timeline};
 
-/// Proof of a durable commit: counts observed after the transaction succeeded. Only a value of
-/// this type may drive `HistoricalEvent::BurstPersisted`.
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+/// Proof of a durable commit: counts observed after the transaction succeeded, and the local
+/// calendar days the newly inserted samples landed on. Only a value of this type may drive
+/// `HistoricalEvent::BurstPersisted`, and only inserted samples dirty a day.
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct BurstReceipt {
     pub inserted: u32,
     pub duplicates: u32,
+    pub affected_days: AffectedDays,
 }
 
 /// Collects the decoded samples between `HISTORY_START` and `HISTORY_END`, then persists them
@@ -50,10 +53,12 @@ impl HistoricalBurst {
     /// Score, place, and commit the whole burst in one transaction. `Ok` is the durable receipt
     /// (feed `BurstPersisted`); `Err` means the transaction rolled back and zero burst rows exist
     /// (feed `PersistFailed`). `capture_wall` is the phone-side receive time the timeline falls
-    /// back to when a record's own timestamp is implausible.
+    /// back to when a record's own timestamp is implausible, and `timezone` is the injected offset
+    /// table that decides which local calendar day each inserted sample dirties.
     pub fn persist(
         self,
         capture_wall: WallTime,
+        timezone: &Timezone,
         store: &Store,
         tap: &dyn Tap,
     ) -> Result<BurstReceipt> {
@@ -88,7 +93,11 @@ impl HistoricalBurst {
             let mut receipt = receipt;
             for sample in timeline.drain_ordered() {
                 match txn.insert_sample(batch.device, &sample)? {
-                    InsertOutcome::Inserted => receipt.inserted += 1,
+                    InsertOutcome::Inserted => {
+                        receipt.inserted += 1;
+                        let wall = sample.wall_time.unwrap_or(capture_wall);
+                        receipt.affected_days.insert(LocalDay::of(wall, timezone));
+                    }
                     InsertOutcome::Duplicate => receipt.duplicates += 1,
                 }
             }
@@ -116,6 +125,7 @@ mod tests {
         CommandTemplate, HistoricalConfig, HistoricalController, HistoricalEvent, HistoricalState,
         ResponseResult,
     };
+    use crate::recompute::{OffsetSpan, Timezone};
     use mav_model::error::{codes, MavError};
     use mav_model::stream::StreamKind;
     use mav_model::time::DeviceTime;
@@ -149,15 +159,12 @@ mod tests {
     fn a_two_record_burst_commits_atomically() {
         let store = Store::open_in_memory().unwrap();
         let receipt = burst_with_two_records()
-            .persist(WALL, &store, &SilentTap)
+            .persist(WALL, &tz_utc(), &store, &SilentTap)
             .unwrap();
-        assert_eq!(
-            receipt,
-            BurstReceipt {
-                inserted: 2,
-                duplicates: 0
-            }
-        );
+        assert_eq!(receipt.inserted, 2);
+        assert_eq!(receipt.duplicates, 0);
+        // Epoch-adjacent device times are implausible, so both fall back to the capture wall day.
+        assert_eq!(receipt.affected_days.iso(), vec!["2025-07-15"]);
         assert_eq!(
             store
                 .count_samples(DeviceId::new(1), StreamKind::HeartRate)
@@ -170,18 +177,14 @@ mod tests {
     fn replaying_a_committed_burst_reports_duplicates_and_changes_nothing() {
         let store = Store::open_in_memory().unwrap();
         burst_with_two_records()
-            .persist(WALL, &store, &SilentTap)
+            .persist(WALL, &tz_utc(), &store, &SilentTap)
             .unwrap();
         let replay = burst_with_two_records()
-            .persist(WALL, &store, &SilentTap)
+            .persist(WALL, &tz_utc(), &store, &SilentTap)
             .unwrap();
-        assert_eq!(
-            replay,
-            BurstReceipt {
-                inserted: 0,
-                duplicates: 2
-            }
-        );
+        assert_eq!(replay.inserted, 0);
+        assert_eq!(replay.duplicates, 2);
+        assert!(replay.affected_days.is_empty());
         assert_eq!(
             store
                 .count_samples(DeviceId::new(1), StreamKind::HeartRate)
@@ -198,7 +201,7 @@ mod tests {
             raw(StreamKind::RrInterval, 1_000_000_000, 0, 800),
             raw(StreamKind::RrInterval, 1_000_000_000, 1, 800),
         ]);
-        let receipt = burst.persist(WALL, &store, &SilentTap).unwrap();
+        let receipt = burst.persist(WALL, &tz_utc(), &store, &SilentTap).unwrap();
         assert_eq!(receipt.inserted, 2);
         assert_eq!(
             store
@@ -206,6 +209,125 @@ mod tests {
                 .unwrap(),
             2
         );
+    }
+
+    // M5-P6: newly inserted samples dirty their local calendar day; duplicates dirty nothing.
+
+    fn tz_utc() -> Timezone {
+        Timezone::fixed("UTC", 0)
+    }
+
+    fn hr_at_seconds(unix_seconds: i64, value: u16) -> RawSample {
+        raw(
+            StreamKind::HeartRate,
+            unix_seconds * 1_000_000_000,
+            0,
+            value,
+        )
+    }
+
+    #[test]
+    fn a_burst_spanning_local_midnight_dirties_two_days() {
+        let store = Store::open_in_memory().unwrap();
+        let mut burst = HistoricalBurst::begin(DeviceId::new(1), MetadataId::new(1));
+        burst.push(vec![
+            hr_at_seconds(1_752_623_999, 60),
+            hr_at_seconds(1_752_624_001, 61),
+        ]);
+        let receipt = burst
+            .persist(
+                WallTime::from_unix_seconds(1_752_624_100),
+                &tz_utc(),
+                &store,
+                &SilentTap,
+            )
+            .unwrap();
+        assert_eq!(receipt.inserted, 2);
+        assert_eq!(
+            receipt.affected_days.iso(),
+            vec!["2025-07-15", "2025-07-16"]
+        );
+    }
+
+    #[test]
+    fn a_duplicate_only_replay_dirties_no_days() {
+        let store = Store::open_in_memory().unwrap();
+        let burst = || {
+            let mut burst = HistoricalBurst::begin(DeviceId::new(1), MetadataId::new(1));
+            burst.push(vec![
+                hr_at_seconds(1_752_623_999, 60),
+                hr_at_seconds(1_752_624_001, 61),
+            ]);
+            burst
+        };
+        let wall = WallTime::from_unix_seconds(1_752_624_100);
+        let first = burst()
+            .persist(wall, &tz_utc(), &store, &SilentTap)
+            .unwrap();
+        assert_eq!(first.affected_days.len(), 2);
+        let replay = burst()
+            .persist(wall, &tz_utc(), &store, &SilentTap)
+            .unwrap();
+        assert_eq!(replay.inserted, 0);
+        assert_eq!(replay.duplicates, 2);
+        assert!(replay.affected_days.is_empty());
+    }
+
+    #[test]
+    fn mixed_inserted_and_duplicate_data_dirties_only_inserted_days() {
+        let store = Store::open_in_memory().unwrap();
+        let wall = WallTime::from_unix_seconds(1_752_624_100);
+        let mut first = HistoricalBurst::begin(DeviceId::new(1), MetadataId::new(1));
+        first.push(vec![hr_at_seconds(1_752_600_000, 70)]);
+        first.persist(wall, &tz_utc(), &store, &SilentTap).unwrap();
+
+        let mut second = HistoricalBurst::begin(DeviceId::new(1), MetadataId::new(1));
+        second.push(vec![
+            hr_at_seconds(1_752_600_000, 70),
+            hr_at_seconds(1_752_624_001, 72),
+        ]);
+        let receipt = second.persist(wall, &tz_utc(), &store, &SilentTap).unwrap();
+        assert_eq!(receipt.inserted, 1);
+        assert_eq!(receipt.duplicates, 1);
+        assert_eq!(receipt.affected_days.iso(), vec!["2025-07-16"]);
+    }
+
+    #[test]
+    fn the_injected_timezone_moves_the_day_boundary() {
+        let samples = || {
+            vec![
+                hr_at_seconds(1_752_623_999, 60),
+                hr_at_seconds(1_752_624_001, 61),
+            ]
+        };
+        let wall = WallTime::from_unix_seconds(1_752_624_100);
+
+        let store = Store::open_in_memory().unwrap();
+        let mut burst = HistoricalBurst::begin(DeviceId::new(1), MetadataId::new(1));
+        burst.push(samples());
+        let utc = burst.persist(wall, &tz_utc(), &store, &SilentTap).unwrap();
+        assert_eq!(utc.affected_days.iso(), vec!["2025-07-15", "2025-07-16"]);
+
+        // Same instants under London's 2025 table: both sit past local midnight in BST.
+        let london = Timezone::new(
+            "Europe/London",
+            vec![
+                OffsetSpan {
+                    start_unix_seconds: 0,
+                    offset_seconds: 0,
+                },
+                OffsetSpan {
+                    start_unix_seconds: 1_743_296_400,
+                    offset_seconds: 3_600,
+                },
+            ],
+        )
+        .unwrap();
+        let store = Store::open_in_memory().unwrap();
+        let mut burst = HistoricalBurst::begin(DeviceId::new(1), MetadataId::new(1));
+        burst.push(samples());
+        let shifted = burst.persist(wall, &london, &store, &SilentTap).unwrap();
+        assert_eq!(shifted.affected_days.iso(), vec!["2025-07-16"]);
     }
 
     /// The cross-layer safe-ack proof: a mid-burst storage failure rolls the transaction back to

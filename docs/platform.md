@@ -43,6 +43,13 @@ The product constructor accepts one `RuntimeConfig`:
 Production construction reads time only when the host supplies it on an event or query. Tests use
 the same methods with fixed timestamps. There is no hidden system clock in a deterministic path.
 
+Timezone data follows the same rule. When the core needs local calendar-day boundaries — the
+affected-day recompute trigger after a historical sync — the host supplies an explicit UTC-offset
+table (`mav-engine`'s `Timezone`: the IANA id plus ascending `OffsetSpan` entries derived from the
+platform's own tzdb). The core does pure arithmetic on that table and never bundles or reads a
+tzdb, so day boundaries are reproducible from the inputs alone and an OS tzdb update cannot move
+a frozen fixture hash.
+
 Opening a newer database schema fails with `MAV-5003`. Opening or migrating any other invalid store
 returns its existing stable storage code. A failed constructor never returns a half-open runtime.
 
