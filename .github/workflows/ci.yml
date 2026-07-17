@@ -153,6 +153,7 @@ jobs:
         run: |
           apk=apps/android/app/build/outputs/apk/release/app-release.apk
           test -f "$apk"
+          unzip -Z1 "$apk" | grep -Eq '^classes([0-9]+)?\.dex$'
           apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
           test -n "$apksigner"
           "$apksigner" verify --verbose --print-certs "$apk"
