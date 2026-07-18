@@ -137,13 +137,18 @@ pub struct MavRuntime {
 impl MavRuntime {
     #[uniffi::constructor]
     pub fn new(config: RuntimeConfig) -> Result<Arc<Self>, FfiError> {
-        let runtime = mav_engine::HostRuntime::open(mav_engine::RuntimeConfig {
+        let mut runtime = mav_engine::HostRuntime::open(mav_engine::RuntimeConfig {
             database_path: config.database_path,
             timezone_id: config.timezone_id,
             transport_capacity: config.transport_capacity,
             app_version: config.app_version,
             app_build: config.app_build,
         })?;
+        // The built-in device codecs this binary links, registered by id (ADR-016). The engine
+        // resolves a manifest's `codec` field against exactly this set.
+        runtime.register_codec(mav_connector_whoop::codec::CODEC_ID, || {
+            Box::new(mav_connector_whoop::WhoopCodec::new())
+        });
         Ok(Arc::new(Self {
             inner: Mutex::new(runtime),
         }))
@@ -332,13 +337,43 @@ pub fn core_version() -> String {
     env!("CARGO_PKG_VERSION").to_owned()
 }
 
+/// Resolve a manifest's `codec` id against the device-codec crates this binary links. This is the
+/// edge's half of ADR-016: the engine never names a device, so the FFI does.
+fn codec_for(
+    manifest: &mav_engine::Manifest,
+) -> Result<Box<dyn mav_engine::DeviceCodec>, FfiError> {
+    match manifest.codec.as_deref() {
+        None => Ok(Box::new(mav_engine::ManifestCodec::new())),
+        Some(mav_connector_whoop::codec::CODEC_ID) => {
+            Ok(Box::new(mav_connector_whoop::WhoopCodec::new()))
+        }
+        Some(other) => Err(FfiError::from(
+            mav_model::error::MavError::new(
+                mav_model::error::codes::DECODE_CODEC_UNAVAILABLE,
+                "manifest names a codec this build does not carry",
+            )
+            .context(other.to_owned()),
+        )),
+    }
+}
+
 /// Run one `capture/v1` capture against a device manifest and return canonical session and analytics
 /// JSON with their hashes. Both inputs are JSON strings the host already holds, so the boundary
 /// carries no pipeline types. The parity harness drives this on each platform: the same inputs must
 /// return the same hashes, and any difference is a binding bug.
 #[uniffi::export]
 pub fn run_capture(manifest_json: String, capture_json: String) -> Result<RunResult, FfiError> {
-    let output = mav_engine::run_realtime_output_json(&manifest_json, &capture_json, &DiscardTap)?;
+    let manifest = mav_engine::Manifest::from_json(&manifest_json)?;
+    let capture = mav_engine::Capture::from_json(&capture_json)?;
+    let store = mav_engine::Store::open_in_memory()?;
+    let codec = codec_for(&manifest)?;
+    let output = mav_engine::run_realtime_output_with_codec(
+        &manifest,
+        &capture,
+        &store,
+        &DiscardTap,
+        codec,
+    )?;
     Ok(RunResult {
         snapshot_json: output.snapshot.canonical_json()?,
         hash: output.snapshot.canonical_hash()?,

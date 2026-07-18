@@ -4,7 +4,10 @@
 //! does, a capture replayed here runs the identical code a live device would. See docs/pipeline.md.
 #![forbid(unsafe_code)]
 
-use mav_engine::{run_realtime_output, AnalyticsSnapshot, Capture, Manifest, Snapshot, Store};
+use mav_engine::{
+    run_realtime_output_with_codec, AnalyticsSnapshot, Capture, DeviceCodec, Manifest,
+    ManifestCodec, Snapshot, Store,
+};
 use mav_model::error::{codes, MavError, Result};
 use mav_obs::ring::{RingEntry, RingLog, RingLogTap};
 use std::path::Path;
@@ -26,6 +29,22 @@ pub fn replay_files(manifest_path: &Path, capture_path: &Path) -> Result<Replay>
     replay(&manifest, &capture)
 }
 
+/// Resolve a manifest's `codec` id against the device-codec crates this binary links (the same
+/// set the FFI links, so a replay runs the identical decode a live device would).
+fn codec_for(manifest: &Manifest) -> Result<Box<dyn DeviceCodec>> {
+    match manifest.codec.as_deref() {
+        None => Ok(Box::new(ManifestCodec::new())),
+        Some(mav_connector_whoop::codec::CODEC_ID) => {
+            Ok(Box::new(mav_connector_whoop::WhoopCodec::new()))
+        }
+        Some(other) => Err(MavError::new(
+            mav_model::error::codes::DECODE_CODEC_UNAVAILABLE,
+            "manifest names a codec this build does not carry",
+        )
+        .context(other.to_owned())),
+    }
+}
+
 /// Replay an already-parsed capture against a manifest. The tap is the ring log, so the boundary
 /// dump is whatever the pipeline emitted, rejections included.
 pub fn replay(manifest: &Manifest, capture: &Capture) -> Result<Replay> {
@@ -33,7 +52,8 @@ pub fn replay(manifest: &Manifest, capture: &Capture) -> Result<Replay> {
     let tap = RingLogTap(log.clone());
     let store = Store::open_in_memory()?;
 
-    let output = run_realtime_output(manifest, capture, &store, &tap)?;
+    let output =
+        run_realtime_output_with_codec(manifest, capture, &store, &tap, codec_for(manifest)?)?;
     let hash = output.snapshot.canonical_hash()?;
     let analytics_hash = output.analytics.canonical_hash()?;
     let boundary = log.recent(4096);
@@ -173,9 +193,14 @@ mod tests {
             };
             let store = Store::open_in_memory().unwrap();
             let log = Arc::new(RingLog::new(64));
-            let output =
-                mav_engine::run_realtime_output(&manifest, &permuted, &store, &RingLogTap(log))
-                    .unwrap();
+            let output = mav_engine::run_realtime_output_with_codec(
+                &manifest,
+                &permuted,
+                &store,
+                &RingLogTap(log),
+                Box::new(mav_connector_whoop::WhoopCodec::new()),
+            )
+            .unwrap();
             let rows = |kind| store.samples(DeviceId::new(1), kind).unwrap();
             results.push((
                 output.snapshot.canonical_hash().unwrap(),
@@ -200,8 +225,13 @@ mod tests {
         let store = Store::open_in_memory().unwrap();
         let log = Arc::new(RingLog::new(64));
         let tap = RingLogTap(log);
-        let first = mav_engine::run_realtime_output(&manifest, &capture, &store, &tap).unwrap();
-        let second = mav_engine::run_realtime_output(&manifest, &capture, &store, &tap).unwrap();
+        let whoop = || Box::new(mav_connector_whoop::WhoopCodec::new());
+        let first =
+            mav_engine::run_realtime_output_with_codec(&manifest, &capture, &store, &tap, whoop())
+                .unwrap();
+        let second =
+            mav_engine::run_realtime_output_with_codec(&manifest, &capture, &store, &tap, whoop())
+                .unwrap();
         assert_eq!(
             first.snapshot.canonical_hash().unwrap(),
             second.snapshot.canonical_hash().unwrap()
@@ -223,7 +253,14 @@ mod tests {
         let (manifest, capture) = mixed_manifest_and_capture();
         let store = Store::open_in_memory().unwrap();
         let log = Arc::new(RingLog::new(64));
-        mav_engine::run_realtime_output(&manifest, &capture, &store, &RingLogTap(log)).unwrap();
+        mav_engine::run_realtime_output_with_codec(
+            &manifest,
+            &capture,
+            &store,
+            &RingLogTap(log),
+            Box::new(mav_connector_whoop::WhoopCodec::new()),
+        )
+        .unwrap();
         let heart_rates = store
             .samples(DeviceId::new(1), StreamKind::HeartRate)
             .unwrap();

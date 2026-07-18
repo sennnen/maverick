@@ -21,6 +21,18 @@ pub trait DeviceCodec: Send {
         manifest: &Manifest,
         kv: &mut dyn DeviceKv,
     ) -> Result<Vec<RawSample>>;
+
+    /// The historical-record decoder ids this codec carries as reviewed modules. A manifest's
+    /// `record_versions` may only name ids from this list; the check runs when the manifest and
+    /// codec meet at install ([`Manifest::validate_against_codec`]).
+    fn admitted_record_decoders(&self) -> &'static [&'static str] {
+        &[]
+    }
+
+    /// The event-vocabulary ids this codec carries, checked the same way for `event_vocabulary`.
+    fn admitted_event_vocabularies(&self) -> &'static [&'static str] {
+        &[]
+    }
 }
 
 /// The default codec: pure interpretation of the manifest's layouts and admitted decoders. Its
@@ -59,19 +71,10 @@ impl DeviceCodec for ManifestCodec {
         let layout = match manifest.layout_for_packet(packet_type)? {
             Some(layout) => layout,
             None => {
-                // Historical records route through the admitted per-version decoders and events
-                // through the admitted vocabulary rather than a manifest layout; every other
-                // layout-less packet is control or not-yet-decoded.
-                if manifest.packet_name(packet_type) == Some("historical_data")
-                    && !manifest.record_versions.is_empty()
-                {
-                    return crate::records::decode_record(manifest, &frame.payload);
-                }
-                if manifest.packet_name(packet_type) == Some("event") {
-                    if let Some(vocabulary) = manifest.event_vocabulary.as_deref() {
-                        return crate::events::decode_event(vocabulary, &frame.payload);
-                    }
-                }
+                // A layout-less known packet is control, not-yet-decoded, or a kind only a device
+                // codec can interpret (historical records, events); this manifest-only codec
+                // decodes none of them, and a manifest naming such decoders cannot install
+                // without a codec that admits them.
                 return Ok(Vec::new());
             }
         };
@@ -321,34 +324,7 @@ mod tests {
     }
 
     #[test]
-    fn an_event_packet_routes_through_the_admitted_vocabulary() {
-        let manifest = Manifest::from_json(
-            r#"{
-                "schema": "connector-manifest/v1",
-                "identity": { "family": "t", "display_name": "T", "models": ["T"] },
-                "gatt": { "service": "s", "command": "c", "notify": ["n"] },
-                "frame": { "wire_format": "gen5", "max_frame_bytes": 8192 },
-                "packets": { "48": "event" },
-                "event_vocabulary": "whoop",
-                "capabilities": ["battery_soc", "wrist_state"]
-            }"#,
-        )
-        .unwrap();
-        // A wrist-on event: number at payload[2], RTC unix at payload[4..8].
-        let mut payload = vec![48u8, 1, 9, 0, 0, 0, 0, 0];
-        payload[4..8].copy_from_slice(&1_752_600_000u32.to_le_bytes());
-        let mut codec = ManifestCodec::new();
-        let mut kv = MemoryKv::new();
-        let samples = codec
-            .decode(&RawFrame { payload }, &manifest, &mut kv)
-            .unwrap();
-        assert_eq!(samples.len(), 1);
-        assert_eq!(samples[0].kind, StreamKind::WristState);
-        assert_eq!(samples[0].value, RawValue::U8(1));
-    }
-
-    #[test]
-    fn an_event_packet_without_a_vocabulary_yields_no_samples() {
+    fn an_event_packet_without_a_device_codec_yields_no_samples() {
         let manifest = Manifest::from_json(
             r#"{
                 "schema": "connector-manifest/v1",

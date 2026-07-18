@@ -96,6 +96,12 @@ territory.
 | `mav-ffi`      | The UniFFI facade. The one crate the native shells link against. |
 | `mav-replay`   | A binary, not a library. It feeds a capture file (hex lines or a btsnoop subset) through the full pipeline and dumps every stage boundary to JSON. It is the main debugging tool and the substitute for hardware until the straps arrive. |
 
+Beside the twelve, `core/connectors/` holds the device codec crates (ADR-016): one crate per
+family, named `mav-connector-<family>`, holding exactly the decode logic the manifest DSL cannot
+express, boxed behind the `DeviceCodec` trait. Today that is `mav-connector-whoop`. These are not
+core crates — the core never depends on them; they are linked only by the two edge crates, which
+register each one's codec factory with the engine by id.
+
 ## Allowed dependency edges
 
 The crates are layered, and the layering is enforced. `tools/check_deps.py` reads the actual
@@ -116,8 +122,9 @@ no boundary left to reason about. The allowed edges are:
 | `mav-feature`  | `mav-model` |
 | `mav-analytic` | `mav-model`, `mav-feature` |
 | `mav-engine`   | `mav-model`, `mav-frame`, `mav-codec`, `mav-timeline`, `mav-sqi`, `mav-feature`, `mav-analytic`, `mav-store`, `mav-obs` |
-| `mav-ffi`      | `mav-model`, `mav-obs`, `mav-engine` |
-| `mav-replay`   | `mav-model`, `mav-obs`, `mav-engine` |
+| `mav-ffi`      | `mav-model`, `mav-obs`, `mav-engine`, `mav-connector-*` |
+| `mav-replay`   | `mav-model`, `mav-obs`, `mav-engine`, `mav-connector-*` |
+| `mav-connector-*` | `mav-model`, `mav-frame`, `mav-codec` |
 
 A few of these edges are worth a sentence. `mav-model` sits at the bottom and depends on nothing
 internal, which is what lets it be frozen: a change to `mav-model` ripples through everything, so
@@ -129,7 +136,11 @@ is allowed to depend on it. `mav-obs` may read from `mav-store` because the repo
 slice of the error journal, and the journal table lives in the store. `mav-ffi` and `mav-replay`
 are the only two crates that see the assembled pipeline, one for the apps and one for offline
 replay, and they are deliberately kept from depending on the individual stage crates so that the
-only path into the pipeline is through the engine.
+only path into the pipeline is through the engine. The device codec crates sit outside the core
+graph entirely: each may reach only the connector contract (`mav-model`, `mav-frame`,
+`mav-codec`), never the engine, storage, analytics, or another connector, and only the two edge
+crates may link one — the engine receives codecs as boxed factories registered by id, so the
+runtime graph carries no device knowledge (ADR-016).
 
 If a packet genuinely needs an edge that is not on this list, that is an interface dispute, and it
 is resolved by writing an ADR that adds the edge and explains it, not by adding the edge quietly
@@ -138,11 +149,14 @@ and hoping check_deps stays green.
 ## How a device is added, from up here
 
 The connector story has its own document, but the architectural claim belongs here: adding a new
-strap is one `manifest.json` under `connectors/`, plus at most one small codec crate for the logic
-that static data cannot express, and zero edits to the core. The manifest holds the static facts
-(GATT UUIDs, frame parameters, packet map, field layouts, unit conversions, record versions). The
-codec holds only the stateful or learned parts, and it is boxed in: it sees bytes, its own
-manifest, and a per-device key-value store, and it cannot touch storage, the network, analytics, or
-any other device. When that boundary holds, a new device cannot reach the parts of the system that
-would let a decode bug become a corruption bug. ADR-012's custom-frame tests challenge the boundary
-with a shape unlike WHOOP without creating a fake device family.
+strap is one `manifest.json` in the connectors repository, plus — only when the manifest DSL
+cannot express the whole decode — one `mav-connector-<family>` crate under `core/connectors/` and
+one `register_codec` line at each edge, and zero edits to the core crates. The manifest holds the
+static facts (GATT UUIDs, frame parameters, packet map, field layouts, unit conversions, record
+versions) and names its codec by id. The codec holds only what data cannot express — reviewed
+record and event decoders, stateful or learned behaviour — and it is boxed in: it sees bytes, its
+own manifest, and a per-device key-value store, and it cannot touch storage, the network,
+analytics, or any other device. When that boundary holds, a new device cannot reach the parts of
+the system that would let a decode bug become a corruption bug. ADR-012's custom-frame tests
+challenge the boundary with a shape unlike WHOOP without creating a fake device family, and
+ADR-016 is the record of the one time the boundary failed and how it was rebuilt.

@@ -13,6 +13,7 @@ members = [
     "crates/mav-engine",
     "crates/mav-ffi",
     "crates/mav-replay",
+    "connectors/mav-connector-whoop",
 ]
 
 [workspace.package]
@@ -39,6 +40,7 @@ mav-analytic = { path = "crates/mav-analytic" }
 mav-store = { path = "crates/mav-store" }
 mav-obs = { path = "crates/mav-obs" }
 mav-engine = { path = "crates/mav-engine" }
+mav-connector-whoop = { path = "connectors/mav-connector-whoop" }
 
 serde = { version = "1", features = ["derive"] }
 # float_roundtrip: parse floats with correct nearest-rounding so an f64 written as its shortest

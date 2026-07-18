@@ -58,13 +58,31 @@ pub struct RealtimeProcessor {
     manifest: Manifest,
     device: DeviceId,
     reassembler: Reassembler,
-    codec: ManifestCodec,
+    codec: Box<dyn DeviceCodec>,
     kv: MemoryKv,
     timeline: Timeline,
 }
 
 impl RealtimeProcessor {
+    /// The manifest-only entry: decoding is pure manifest interpretation. A manifest that names a
+    /// device codec needs [`Self::with_codec`] — the engine never knows a device crate, so the
+    /// caller at the edge resolves the id and errors if it cannot.
     pub fn new(manifest: Manifest, device: DeviceId) -> Result<Self> {
+        if let Some(id) = manifest.codec.as_deref() {
+            return Err(MavError::new(
+                codes::DECODE_CODEC_UNAVAILABLE,
+                "manifest names a device codec but none was supplied",
+            )
+            .context(id.to_owned()));
+        }
+        Self::with_codec(manifest, device, Box::new(ManifestCodec::new()))
+    }
+
+    pub fn with_codec(
+        manifest: Manifest,
+        device: DeviceId,
+        codec: Box<dyn DeviceCodec>,
+    ) -> Result<Self> {
         let reassembler = if manifest.frame.is_unframed() {
             Reassembler::passthrough_with_max(manifest.frame.max_frame_bytes as usize)
         } else {
@@ -74,7 +92,7 @@ impl RealtimeProcessor {
             manifest,
             device,
             reassembler,
-            codec: ManifestCodec::new(),
+            codec,
             kv: MemoryKv::new(),
             timeline: Timeline::new(),
         })
@@ -314,7 +332,29 @@ pub fn run_realtime_output(
     store: &Store,
     tap: &dyn Tap,
 ) -> Result<PipelineOutput> {
-    let mut processor = RealtimeProcessor::new(manifest.clone(), capture.device)?;
+    let processor = RealtimeProcessor::new(manifest.clone(), capture.device)?;
+    run_processor(processor, capture, store, tap)
+}
+
+/// The codec-supplied variant: the caller at the edge resolved the manifest's `codec` id to a
+/// device codec instance (the engine cannot — it never links a device crate).
+pub fn run_realtime_output_with_codec(
+    manifest: &Manifest,
+    capture: &Capture,
+    store: &Store,
+    tap: &dyn Tap,
+    codec: Box<dyn DeviceCodec>,
+) -> Result<PipelineOutput> {
+    let processor = RealtimeProcessor::with_codec(manifest.clone(), capture.device, codec)?;
+    run_processor(processor, capture, store, tap)
+}
+
+fn run_processor(
+    mut processor: RealtimeProcessor,
+    capture: &Capture,
+    store: &Store,
+    tap: &dyn Tap,
+) -> Result<PipelineOutput> {
     for chunk in &capture.chunks {
         processor.ingest_chunk(chunk, capture.capture_wall, store, tap)?;
     }

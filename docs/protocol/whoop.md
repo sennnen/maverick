@@ -167,7 +167,7 @@ byte `[2]`. A real worn 5.0/MG record carries the version there — 18 for the p
 record, 26 for the raw-PPG burst — and puts the on-wrist r22 command `0x80` in `[2]`. This resolves
 the "sequence or subtype byte" ambiguity below in favour of the sequence byte; it is pinned by the
 `[WRS]` real captures now in `fixtures/records/r20_k18_v1.json` and `r20_k26_v1.json`, and it is what
-`mav-codec`'s `decode_record` keys on. An earlier synthetic Maverick fixture placed the version in
+`mav-connector-whoop`'s `decode_record` keys on. An earlier synthetic Maverick fixture placed the version in
 byte `[2]`; no real frame agrees with it, which is exactly the drift the "regenerate from a real
 capture" rule exists to catch. [WRS]
 
@@ -242,7 +242,7 @@ fourth source lost five hours of recording to a daemon that trimmed on an error 
 
 ### Outbound alarm and haptic commands
 
-`mav-codec::commands` builds two families of outbound command frame, ported byte-for-byte from the
+`mav-connector-whoop::commands` builds two families of outbound command frame, ported byte-for-byte from the
 sixth source. Each is a pure function returning the complete `[COMMAND, seq, opcode] + body` frame
 for one generation; nothing sends yet, because the runtime has no outbound-command send lane (the
 handshake/historical machines produce commands, but the host runtime does not yet turn them into a
@@ -310,7 +310,7 @@ numbers were frame-relative). Known event numbers `[WRS]`: 3 battery level, 7/8 
 57/58 strap/app alarm executed, 60 haptics fired. Gen5 events carry an opaque residual past inner
 8 that the sixth source surfaces as hex; gen4 events have none. [XVAL fields, WRS byte positions]
 
-Admission (WHOOP-P5): the `whoop` event vocabulary in `mav-codec/src/events.rs` decodes the
+Admission (WHOOP-P5): the `whoop` event vocabulary in `mav-connector-whoop` (ADR-016) decodes the
 battery event to a `battery_soc` percent (deci-percent / 10, gated to 0..=100; the millivolts and
 charging bit have no stream kind yet and stay unemitted) and wrist on/off to `wrist_state` 1/0,
 each at the event's RTC second. Every other number is a state transition with no sample stream and
@@ -376,7 +376,7 @@ Each of these is asserted by one codebase, at medium confidence. [ONE each]
   bytes stay raw evidence, because a speculative decode of an unknown layout is exactly the kind of
   plausible-but-wrong reading this document keeps warning about. [ONE, Swift/Kotlin repo]
 
-**Admission status (WHOOP-P3).** Maverick's `mav-codec` admits three gen4 record decoders, each
+**Admission status (WHOOP-P3).** Maverick's `mav-connector-whoop` crate admits three gen4 record decoders, each
 range-gated: `gen4_v24` (also v12) — HR `body[14]`, the R-R block `body[15]`/`body[16]`, gravity as
 three `f32` from `body[33]` (accepted at `|g|` in `[0.5,1.5)`), the SpO2 red/IR raw ADC pair
 `body[61]`/`body[63]` (seq 0/1 on `spo2_raw`), the skin-temp register `body[65:67]` as a raw `u16`,
@@ -449,7 +449,7 @@ with no exceptions). 24 Hz is coarse for PPG: a 41.7 ms sample period quantises 
 ±21 ms, which alone floors RMSSD around 30 ms even with flawless peak detection. That floor is a
 constraint to design around, not a bug to fix. [SERIES]
 
-**Admission status (WHOOP-P2, extending M5-P4).** Maverick's `mav-codec` record decoders admit, from
+**Admission status (WHOOP-P2, extending M5-P4).** Maverick's `mav-connector-whoop` record decoders admit, from
 K=18, the full corpus-pinned field set, each range-gated so a wrong offset yields nothing: the primary
 HR at `body[11]` (zero is the no-lock sentinel); the R-R intervals (count `body[12]` clamped to four,
 values `body[13..]`, zero slots dropped); gravity as three `f32` from `body[34]`, accepted only at

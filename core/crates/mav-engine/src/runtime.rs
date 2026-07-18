@@ -1,5 +1,6 @@
 use crate::pipeline::{IngestStats, RealtimeProcessor};
 use crate::snapshot::{fnv1a_64, AnalyticsSnapshot, Snapshot};
+use mav_codec::codec::DeviceCodec;
 use mav_codec::manifest::Manifest;
 use mav_model::error::{codes, Category, MavError, Result, Severity};
 use mav_model::ids::DeviceId;
@@ -179,10 +180,15 @@ struct Session {
     processor: RealtimeProcessor,
 }
 
+/// Builds a fresh device-codec instance per session. Registered by the edge crate (the FFI, the
+/// replay binary) at startup, because the engine never links a device crate (ADR-016).
+pub type CodecFactory = Box<dyn Fn() -> Box<dyn DeviceCodec> + Send + Sync>;
+
 pub struct HostRuntime {
     config: RuntimeConfig,
     store: Store,
     connectors: BTreeMap<String, RegisteredConnector>,
+    codecs: BTreeMap<String, CodecFactory>,
     actions: VecDeque<TransportAction>,
     state: ConnectionState,
     session: Option<Session>,
@@ -199,6 +205,7 @@ impl HostRuntime {
             config,
             store,
             connectors: BTreeMap::new(),
+            codecs: BTreeMap::new(),
             actions: VecDeque::new(),
             state: ConnectionState::Disconnected,
             session: None,
@@ -214,6 +221,17 @@ impl HostRuntime {
         &self.historical
     }
 
+    /// Register a device-codec factory under its id. The edge crate calls this once per built-in
+    /// codec crate before installing connectors; a manifest whose `codec` names an id nothing
+    /// registered does not install.
+    pub fn register_codec(
+        &mut self,
+        id: &str,
+        factory: impl Fn() -> Box<dyn DeviceCodec> + Send + Sync + 'static,
+    ) {
+        self.codecs.insert(id.to_owned(), Box::new(factory));
+    }
+
     pub fn install_connector(&mut self, registration: ConnectorRegistration) -> Result<()> {
         if registration.connector_id.trim().is_empty() {
             return Err(runtime_state("connector id must not be empty"));
@@ -225,6 +243,16 @@ impl HostRuntime {
                 runtime_state("connector version must be semantic").context(error.to_string())
             })?;
         let manifest = Manifest::from_json(&registration.manifest_json)?;
+        if let Some(codec_id) = manifest.codec.as_deref() {
+            let factory = self.codecs.get(codec_id).ok_or_else(|| {
+                MavError::new(
+                    codes::DECODE_CODEC_UNAVAILABLE,
+                    "manifest names a codec this runtime has not registered",
+                )
+                .context(codec_id.to_owned())
+            })?;
+            manifest.validate_against_codec(factory().as_ref())?;
+        }
         if let Some(installed) = self.connectors.get(&registration.connector_id) {
             if version < installed.version {
                 return Err(MavError::new(
@@ -261,7 +289,19 @@ impl HostRuntime {
                 connector.manifest.clone(),
             )
         };
-        let processor = RealtimeProcessor::new(manifest, DeviceId::new(device_id))?;
+        let processor = match manifest.codec.as_deref() {
+            None => RealtimeProcessor::new(manifest, DeviceId::new(device_id))?,
+            Some(codec_id) => {
+                let factory = self.codecs.get(codec_id).ok_or_else(|| {
+                    MavError::new(
+                        codes::DECODE_CODEC_UNAVAILABLE,
+                        "manifest names a codec this runtime has not registered",
+                    )
+                    .context(codec_id.to_owned())
+                })?;
+                RealtimeProcessor::with_codec(manifest, DeviceId::new(device_id), factory())?
+            }
+        };
         self.enqueue_all(vec![TransportAction::StartScan {
             service_filters: vec![service],
         }])?;
@@ -862,6 +902,7 @@ mod tests {
         "identity": { "family": "fixture-events", "display_name": "Fixture events", "models": ["FIXTURE"] },
         "gatt": { "service": "s", "command": "c", "notify": ["n"] },
         "frame": { "wire_format": "gen5", "max_frame_bytes": 8192 },
+        "codec": "whoop",
         "packets": { "48": "event" },
         "event_vocabulary": "whoop",
         "capabilities": ["battery_soc", "wrist_state"]
@@ -884,6 +925,8 @@ mod tests {
     fn host_snapshot_surfaces_the_latest_battery_and_wrist_state() {
         let path = db_path();
         let mut runtime = runtime(&path);
+        // The same registration the FFI performs: the edge supplies the device codec by id.
+        runtime.register_codec("whoop", || Box::new(mav_connector_whoop::WhoopCodec::new()));
         runtime
             .install_connector(ConnectorRegistration {
                 connector_id: "fixture".to_owned(),

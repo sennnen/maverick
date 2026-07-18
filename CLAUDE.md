@@ -43,7 +43,9 @@ maverick/
     mav-engine            orchestration: triggers, task graph, caching
     mav-ffi               the uniffi facade the apps bind to
     mav-replay            runs a capture file through the whole pipeline; our stand-in for hardware
-  connectors/             development-only connector fixtures; real connectors live in the
+  core/connectors/        device codec crates (mav-connector-whoop), the compiled half of a
+                          connector; boxed behind DeviceCodec, linked only by ffi/replay (ADR-016)
+  connectors/             development-only connector fixtures; manifests live in the
                           separate sennnen/maverick-connectors repo (see ADR-011)
   fixtures/               golden fixtures, versioned; see fixtures/README for the naming rules
   apps/ios, apps/android  thin native apps; migration/release work lives in platform plan

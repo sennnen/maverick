@@ -3,7 +3,7 @@
 //! absent, and there is no fallback decode for unknown versions — their bytes stay raw evidence
 //! and the journal records the version byte.
 
-use crate::manifest::Manifest;
+use mav_codec::manifest::Manifest;
 use mav_model::error::{codes, MavError, Result};
 use mav_model::raw::RawSample;
 

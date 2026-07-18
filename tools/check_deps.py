@@ -24,9 +24,14 @@ ALLOWED = {
         "mav-model", "mav-frame", "mav-codec", "mav-timeline", "mav-sqi",
         "mav-feature", "mav-analytic", "mav-store", "mav-obs",
     },
-    "mav-ffi": {"mav-model", "mav-obs", "mav-engine"},
-    "mav-replay": {"mav-model", "mav-obs", "mav-engine"},
+    "mav-ffi": {"mav-model", "mav-obs", "mav-engine", "mav-connector-whoop"},
+    "mav-replay": {"mav-model", "mav-obs", "mav-engine", "mav-connector-whoop"},
 }
+
+# Device codec crates under core/connectors/ (ADR-016): each may reach only the connector
+# contract, never storage, analytics, the engine, or another connector. Only the two edge
+# crates above may link them.
+CONNECTOR_ALLOWED = {"mav-model", "mav-frame", "mav-codec"}
 
 SECTION = re.compile(r"^\s*\[(?P<name>[^\]]+)\]\s*$")
 DEP_KEY = re.compile(r"^\s*(?P<key>[A-Za-z0-9_-]+)\s*=")
@@ -67,12 +72,30 @@ def main() -> int:
                 f"(allowed: {sorted(ALLOWED[crate]) or 'none'})"
             )
 
+    connectors_dir = root / "core" / "connectors"
+    connectors = (
+        {p.name for p in connectors_dir.iterdir() if (p / "Cargo.toml").is_file()}
+        if connectors_dir.is_dir()
+        else set()
+    )
+    for crate in sorted(connectors):
+        if not crate.startswith("mav-connector-"):
+            failures.append(f"{crate}: connector crates must be named mav-connector-<family>")
+        for dep in sorted(internal_deps(connectors_dir / crate / "Cargo.toml") - CONNECTOR_ALLOWED):
+            failures.append(
+                f"{crate}: depends on {dep}, which architecture.md does not allow a "
+                f"connector crate (allowed: {sorted(CONNECTOR_ALLOWED)})"
+            )
+
     if failures:
         print("dependency edges do not match docs/architecture.md:")
         for f in failures:
             print(f"  {f}")
         return 1
-    print(f"check_deps: {len(found)} crates, all edges match docs/architecture.md")
+    print(
+        f"check_deps: {len(found)} crates + {len(connectors)} connector crates, "
+        "all edges match docs/architecture.md"
+    )
     return 0
 
 

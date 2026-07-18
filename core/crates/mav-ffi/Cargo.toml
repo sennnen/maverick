@@ -13,6 +13,7 @@ crate-type = ["lib", "cdylib", "staticlib"]
 mav-model = { workspace = true }
 mav-obs = { workspace = true }
 mav-engine = { workspace = true }
+mav-connector-whoop = { workspace = true }
 uniffi = { version = "0.28" }
 thiserror = { workspace = true }
 

@@ -3,7 +3,7 @@
 //! genuinely fail. See fixtures/control/README.md.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use mav_codec::control::decode_control;
+use mav_connector_whoop::control::decode_control;
 use mav_frame::reassembler::{Reassembler, ReassemblyEvent};
 use mav_frame::WireFormat;
 use mav_model::error::codes;

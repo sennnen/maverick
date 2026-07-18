@@ -1,5 +1,5 @@
 [package]
-name = "mav-replay"
+name = "mav-connector-whoop"
 version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
@@ -8,9 +8,10 @@ publish.workspace = true
 
 [dependencies]
 mav-model = { workspace = true }
-mav-obs = { workspace = true }
-mav-engine = { workspace = true }
-mav-connector-whoop = { workspace = true }
+mav-frame = { workspace = true }
+mav-codec = { workspace = true }
+
+[dev-dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
 

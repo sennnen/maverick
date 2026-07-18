@@ -4,13 +4,14 @@
 //! the command (0x80 on-wrist r22) is inner[2]. See fixtures/records/README.md.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use mav_codec::codec::{DeviceCodec, ManifestCodec};
+use mav_codec::codec::DeviceCodec;
 use mav_codec::kv::MemoryKv;
 use mav_codec::manifest::Manifest;
-use mav_codec::records::{
+use mav_connector_whoop::records::{
     decode_record, GEN4_V24_MIN_BODY_LEN, GEN5_V20_MIN_BODY_LEN, GEN5_V21_MIN_BODY_LEN,
     R20_K18_MIN_BODY_LEN, R20_K26_MIN_BODY_LEN,
 };
+use mav_connector_whoop::WhoopCodec;
 use mav_frame::reassembler::{Reassembler, ReassemblyEvent};
 use mav_frame::WireFormat;
 use mav_model::error::codes;
@@ -58,6 +59,7 @@ fn manifest() -> Manifest {
             },
             "gatt": { "service": "s", "command": "c", "notify": ["n"] },
             "frame": { "wire_format": "gen5", "max_frame_bytes": 8192 },
+            "codec": "whoop",
             "packets": { "47": "historical_data" },
             "record_versions": { "18": "r20_k18", "26": "r20_k26", "20": "gen5_v20", "21": "gen5_v21" },
             "capabilities": ["heart_rate", "rr_interval", "gravity", "skin_temp", "spo2_percent", "step_count", "activity_class", "sleep_state_raw", "signal_quality", "ppg", "imu", "gyro", "optical_raw"]
@@ -77,6 +79,7 @@ fn gen4_manifest() -> Manifest {
             },
             "gatt": { "service": "s", "command": "c", "notify": ["n"] },
             "frame": { "wire_format": "gen4", "max_frame_bytes": 8192 },
+            "codec": "whoop",
             "packets": { "47": "historical_data" },
             "record_versions": { "5": "gen4_v5", "7": "gen4_v5", "9": "gen4_v5", "12": "gen4_v24", "24": "gen4_v24", "25": "gen4_v25" },
             "capabilities": ["heart_rate", "rr_interval", "gravity", "spo2_raw", "skin_temp", "resp_raw"]
@@ -85,7 +88,7 @@ fn gen4_manifest() -> Manifest {
     .unwrap()
 }
 
-/// Reassemble the fixture frame and decode it through the same ManifestCodec path the engine
+/// Reassemble the fixture frame and decode it through the same WhoopCodec path the engine
 /// uses, so the packet-47 routing is part of what the fixture pins.
 fn decode_fixture(name: &str) -> Vec<RawSample> {
     let fixture = load(name);
@@ -104,7 +107,7 @@ fn decode_fixture(name: &str) -> Vec<RawSample> {
         })
         .collect();
     assert_eq!(frames.len(), 1, "{name} must reassemble to one frame");
-    let samples = ManifestCodec::new()
+    let samples = WhoopCodec::new()
         .decode(&frames[0], &manifest, &mut MemoryKv::new())
         .unwrap();
     assert_eq!(

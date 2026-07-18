@@ -18,6 +18,7 @@
     "wire_format": "gen5",
     "max_frame_bytes": 8192
   },
+  "codec": "whoop",
   "packets": {
     "40": "realtime_data",
     "47": "historical_data"

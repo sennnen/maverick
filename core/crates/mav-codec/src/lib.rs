@@ -3,16 +3,14 @@
 //! model string to a device family. The design and its boundaries are docs/connectors.md; the
 //! short form is that a manifest holds everything static, a codec holds only what data cannot
 //! express, and a codec's interface gives it no way to reach storage, the network, analytics, or
-//! another device.
+//! another device. This crate never learns a specific device's facts (ADR-011/ADR-016): device
+//! codecs live in their own crates under `core/connectors/` and reach the pipeline only through
+//! the trait. The one decoder family carried here is `standard`, the open Bluetooth SIG profiles.
 #![forbid(unsafe_code)]
 
 pub mod codec;
-pub mod commands;
-pub mod control;
-pub mod events;
 pub mod kv;
 pub mod manifest;
-pub mod records;
 pub mod registry;
 pub mod standard;
 

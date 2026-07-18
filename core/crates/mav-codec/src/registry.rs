@@ -40,13 +40,16 @@ impl Registry {
         self.register_with_codec(manifest, || Box::new(ManifestCodec::new()))
     }
 
-    /// Register a family that needs its own codec for stateful or learned behaviour.
+    /// Register a family that needs its own codec for stateful or learned behaviour. The decoder
+    /// ids the manifest names are checked against what a probe instance of the codec admits, so a
+    /// name/module mismatch fails here rather than decoding nothing later.
     pub fn register_with_codec(
         &mut self,
         manifest: Manifest,
         make_codec: impl Fn() -> Box<dyn DeviceCodec> + Send + Sync + 'static,
     ) -> Result<()> {
         manifest.validate()?;
+        manifest.validate_against_codec(make_codec().as_ref())?;
         self.entries.push(RegistryEntry {
             manifest: Arc::new(manifest),
             make_codec: Box::new(make_codec),
