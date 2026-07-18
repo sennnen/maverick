@@ -107,6 +107,10 @@ impl Artifact {
         &self.report
     }
 
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+
     pub fn canonical_unsigned_chunks(&self) -> CanonicalUnsigned<'_> {
         CanonicalUnsigned {
             before: Some(&self.bytes[..self.signature_range.start]),

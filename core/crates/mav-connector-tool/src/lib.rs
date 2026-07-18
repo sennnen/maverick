@@ -6,7 +6,8 @@ use mav_connector_abi::{
     SignatureRecord, Validate, SIGNATURE_SCHEMA,
 };
 use mav_connector_runtime::{
-    signature_digest, Artifact, KeyScope, KeyStatus, PublisherKey, RevocationSet, TrustPolicy,
+    signature_digest, Artifact, FixtureResult, KeyScope, KeyStatus, LimitProfile, PublisherKey,
+    RevocationSet, TrustPolicy,
 };
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
@@ -169,6 +170,16 @@ pub fn validate(bytes: &[u8], public_key: [u8; 32]) -> Result<(), ToolError> {
     };
     artifact
         .verify(&policy, &revocations, 0)
+        .map_err(|error| ToolError::Artifact(error.to_string()))
+}
+
+pub fn test_fixtures(
+    bytes: Vec<u8>,
+    public_key: [u8; 32],
+) -> Result<Vec<FixtureResult>, ToolError> {
+    validate(&bytes, public_key)?;
+    inspect(bytes)?
+        .run_fixtures(LimitProfile::mobile_v1())
         .map_err(|error| ToolError::Artifact(error.to_string()))
 }
 

@@ -1,8 +1,9 @@
 # Runtime-loaded connectors
 
-This document freezes target contracts selected by [ADR-017](adr/ADR-017.md). It is implementation
-architecture, not a claim that current code already implements the runtime. The ordered work lives
-in [plans/active/wasm-connectors.md](plans/active/wasm-connectors.md).
+This document freezes target contracts selected by [ADR-017](adr/ADR-017.md) and records the
+implemented boundary as packets land. Artifact schemas, trust, the public SDK/toolchain, and bounded
+Wasm execution are implemented through WC-P4; install, transport, migration, and frontend contracts
+remain targets. The ordered work lives in [plans/active/wasm-connectors.md](plans/active/wasm-connectors.md).
 
 ## Product invariants
 
@@ -203,17 +204,27 @@ while core caps actions, outstanding ops, timer count, fuel, and total session r
 
 ## Runtime limits
 
-WC-P0 froze development performance and footprint budgets in ADR-017. Later packets establish profiles
-for artifact size, section size/count, module memories/tables/functions, linear memory, stack depth,
-fuel per event and fixture, output bytes, action count, state bytes, diagnostic rate, and wall-time
-watchdog. Limits are signed manifest profile names chosen from host-defined profiles; a connector
-cannot request arbitrary larger values. Threads, shared memory, reference types not required by the
-SDK, WASI, sockets, and start functions are rejected in v1.
+WC-P0 froze development performance and footprint budgets in ADR-017. WC-P4 freezes `mobile-v1` at
+one memory (4 MiB), one function table (1,024 elements), 4,096 functions, 1,000 globals, 1,000 each
+of element and data segments, recursion depth 128, 262,144 value-stack slots, 64 KiB canonical event
+input, 1 MiB action output, 64 KiB state, and five million fuel per call. A signed fixture may lower
+that fuel allowance but cannot raise it. Profile fields are host-private and the runtime rejects any
+profile id or value drift. Later packets add session/action/diagnostic/watchdog bounds.
 
-The selected interpreter is pinned `wasmi` 1.1.0 with fuel enabled, parser/engine limits, store
-memory limits, and extra runtime checks. WC-P0 passed iOS/Android Rust static builds and
-representative realtime/history parity; the dependency first enters production in its owning runtime
-packet.
+Modules have zero imports and no start function. Shared, 64-bit, multi-memory, custom-page memory,
+exception, tail-call, and actual reference-type features are rejected before instantiation. Rust's
+current `wasm32-unknown-unknown` output uses an MVP `call_indirect` encoding that requires Wasmi's
+reference-types decoder to parse; preflight still rejects reference values, signatures, operators,
+and non-function tables. This parser compatibility switch grants no guest capability. WASI,
+filesystem, network, clocks, randomness, and threads therefore have no import surface.
+
+The selected interpreter is exact-version `wasmi` 1.1.0 with eager compilation, deterministic fuel,
+strict parser/engine limits, store memory/table/instance limiters, and extra runtime checks. Each ABI
+call canonicalizes bounded input, checks allocation and non-overlap, validates the packed output
+range before copying, and canonical-decodes the result. A guest trap invalidates only that instance.
+Embedded fixture cases each run in a fresh instance and compare exact actions plus final state hash.
+WC-P4 repeated the P0 latency gate, compiled all four mobile Rust targets, and executed a separately
+signed Rust SDK template through the packaged fixture runner.
 
 ## Installation API
 
@@ -299,8 +310,8 @@ Tooling provides:
   output self-verification; private keys never enter the process;
 - `mavconn-inspect`: metadata/signature/hash/limits display without execution;
 - `mavconn-validate`: identical host artifact, trust, import, export-name, and export-type validation;
-- `mavconn-test`: packaged structural fixture reporting; the SDK `TestDriver` runs exact native
-  state scripts, while Wasm execution/parity joins this command after WC-P4 adds instantiation;
+- `mavconn-test`: packaged fixture execution in fresh production-runtime instances with exact action
+  and final-state-hash checks; the SDK `TestDriver` runs the same state scripts natively;
 - registry publish command: digest-addressed upload and signed index update.
 
 Automated architecture gates inspect Cargo edges, SDK dependency trees, Wasm imports/exports and

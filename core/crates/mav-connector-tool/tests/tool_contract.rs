@@ -2,7 +2,7 @@
 
 use ed25519_dalek::{Signer, SigningKey};
 use mav_connector_abi::*;
-use mav_connector_tool::{finalize, prepare, validate, ToolError};
+use mav_connector_tool::{finalize, prepare, test_fixtures, validate, ToolError};
 use sha2::{Digest, Sha256};
 
 fn module(exports: bool) -> Vec<u8> {
@@ -36,6 +36,28 @@ fn malformed_export_module() -> Vec<u8> {
         )"#,
     )
     .expect("valid WAT")
+}
+
+fn executable_module() -> Vec<u8> {
+    let output = encode_canonical(&ActionBatch {
+        actions: Vec::new(),
+    })
+    .expect("batch encode");
+    let bytes: String = output.iter().map(|byte| format!("\\{byte:02x}")).collect();
+    let packed = ((1_024_u64) << 32) | output.len() as u64;
+    wat::parse_str(format!(
+        r#"(module
+            (memory (export "memory") 1 4)
+            (data (i32.const 1024) "{bytes}")
+            (func (export "mav_abi_version") (result i64) i64.const 4294967296)
+            (func (export "mav_alloc") (param i32) (result i32) i32.const 4096)
+            (func (export "mav_dealloc") (param i32 i32))
+            (func (export "mav_init") (param i32 i32) (result i64) i64.const {packed})
+            (func (export "mav_handle") (param i32 i32) (result i64) i64.const {packed})
+            (func (export "mav_snapshot") (result i64) i64.const 0)
+        )"#
+    ))
+    .expect("executable WAT")
 }
 
 fn records() -> (Manifest, AbiDescriptor, FixtureSet) {
@@ -137,13 +159,18 @@ fn records() -> (Manifest, AbiDescriptor, FixtureSet) {
 #[test]
 fn deterministic_pack_inspect_verify_round_trip() {
     let (manifest, abi, fixtures) = records();
-    let first = prepare(&module(true), &manifest, &abi, &fixtures).expect("prepare");
-    let second = prepare(&module(true), &manifest, &abi, &fixtures).expect("prepare again");
+    let first = prepare(&executable_module(), &manifest, &abi, &fixtures).expect("prepare");
+    let second = prepare(&executable_module(), &manifest, &abi, &fixtures).expect("prepare again");
     assert_eq!(first, second);
     let key = SigningKey::from_bytes(&[11; 32]);
     let signature = key.sign(&first.digest).to_bytes();
     let artifact = finalize(first, signature, key.verifying_key().to_bytes()).expect("finalize");
     assert_eq!(validate(&artifact, key.verifying_key().to_bytes()), Ok(()));
+    assert_eq!(
+        test_fixtures(artifact, key.verifying_key().to_bytes()).expect("fixture execution")[0]
+            .events_run,
+        1
+    );
 }
 
 #[test]

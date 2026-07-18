@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: in progress. WC-P0 through WC-P3 are complete; WC-P4 is next.
+Status: in progress. WC-P0 through WC-P4 are complete; WC-P5 is next.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -124,9 +124,10 @@ Status: complete
 
 ## Packet WC-P4: Instantiate hostile modules under deterministic limits
 
-Status: pending
+Status: complete
 
-- **Repositories touched:** `maverick`.
+- **Repositories touched:** `maverick`; the `maverick-connectors` template was corrected when real
+  execution exposed its exact feature/fuel declaration requirements.
 - **Likely files/modules:** `mav-connector-runtime/{engine,instance,memory,limits}.rs`, malicious test
   modules, Cargo/dependency rules.
 - **Dependencies introduced:** exact interpreter version accepted by P0.
@@ -483,3 +484,17 @@ the listed order minimizes simultaneous migration surfaces.
   finalization accepts public key/signature bytes from an external signer and self-verifies output.
   The connector repository now has an exact-version SDK consumer workspace, schema registry, and
   deep format/Clippy/test/Wasm/deterministic-package validator with no committed Maverick path.
+- 2026-07-18: WC-P4 entered exact pinned `wasmi` 1.1.0 into the production runtime and froze the
+  closed `mobile-v1` module, memory, table, recursion/value-stack, input/output/state, and
+  five-million-fuel limits.
+  Tests first failed on the absent instance API, then covered forbidden imports/features/start,
+  malformed exports, pointers, output bombs, fuel, recursion, growth, module bounds, canonical ABI,
+  fixture mismatch, and isolation. A separately signed Rust SDK template exposed that LLVM's MVP
+  `call_indirect` encoding needs Wasmi's reference-types parser and more than 10,000 fixture fuel;
+  preflight still rejects actual reference types, and both repository templates now declare the
+  exact mutable-global/sign-extension/bulk-memory features with one-million fixture fuel. The signed
+  artifact then ran its fixture successfully. The 8 KiB regression measured 15 microseconds cold
+  mean and 2 microseconds warm p95; a direct runtime test harness used 4,587,520 bytes maximum RSS.
+  Release runtime crates compiled for both Apple and both Android targets. Their rlibs measured
+  1,858,360, 1,858,856, 1,653,732, and 1,675,360 bytes respectively; these are not a replacement for
+  P0's full static-archive delta, which remains the linked-size gate until product integration.

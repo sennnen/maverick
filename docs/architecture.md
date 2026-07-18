@@ -38,10 +38,10 @@ or random source.
 
 The exact artifact, ABI, install, trust, and lifecycle contracts are in
 [connectors.md](connectors.md). [ADR-017](adr/ADR-017.md) records the decision. The current bundled
-driver and its deletion inventory are in [connector-audit.md](connector-audit.md). WC-P1 implements
-the leaf ABI crate and WC-P2 implements non-executing artifact/trust inspection. The interpreter is
-not implemented yet. Until the migration packets land, code still contains the audited ADR-016
-compiled path.
+driver and its deletion inventory are in [connector-audit.md](connector-audit.md). WC-P1 through
+WC-P4 implement the leaf ABI, non-executing artifact/trust inspection, public SDK/toolchain, and
+bounded interpreter instance. Until the later migration packets land, code still contains the
+audited ADR-016 compiled path and the new runtime is not yet the product transport path.
 
 ## Native/Rust line
 
@@ -81,7 +81,7 @@ remaining dependent actions. This preserves append-before-ack without encoding W
 | `mav-connector-abi` | Frozen no-device event, action, artifact metadata, and ABI wire types |
 | `mav-connector-sdk` | Public guest exports, allocation glue, bounded builders, metadata, and native harness |
 | `mav-connector-runtime` | `.mavconn` parser, verifier, interpreter adapter, limits, instance lifecycle |
-| `mav-connector-tool` | Deterministic pack, inspect, trust/export validation, and structural fixture CLIs |
+| `mav-connector-tool` | Deterministic pack, inspect, trust/export validation, and executable fixture CLIs |
 | `mav-connector-store` | Install records, trust records, connector-scoped state, activation and rollback transactions |
 | `mav-codec` | Normalized sample admission and any open-standard profiles retained by explicit ADR; no loadable-device registry |
 | `mav-timeline` | Ordering, deduplication, clock correction, canonical merge |

@@ -90,6 +90,25 @@ fails the build.
 | 11016 | CONNECTOR_TRUST_SIGNATURE_INVALID | Ed25519 verification failed for the signed digest |
 | 11017 | CONNECTOR_TRUST_POLICY_INVALID | publisher ids or validity intervals make the trust policy ambiguous or unusable |
 | 11018 | CONNECTOR_TRUST_REVOCATION_STALE | the revocation set is not yet valid, expired, or internally inverted |
+| 11019 | CONNECTOR_RUNTIME_LIMIT_PROFILE | the signed resource profile is unknown or differs from the selected host profile |
+| 11020 | CONNECTOR_RUNTIME_IMPORT_FORBIDDEN | the module imports a host, WASI, native, or other forbidden symbol |
+| 11021 | CONNECTOR_RUNTIME_FEATURE_FORBIDDEN | the module uses a start function, shared or 64-bit memory/table, or another disabled Wasm feature |
+| 11022 | CONNECTOR_RUNTIME_EXPORT_INVALID | a required ABI export is missing, has the wrong kind/signature, or reports the wrong ABI version |
+| 11023 | CONNECTOR_RUNTIME_MODULE_LIMIT | static function, global, table, memory, element, or data counts exceed the selected profile |
+| 11024 | CONNECTOR_RUNTIME_INSTANTIATION | bounded Wasm compilation or instantiation failed before a connector call |
+| 11025 | CONNECTOR_RUNTIME_FUEL_EXHAUSTED | one connector call consumed its deterministic fuel allowance |
+| 11026 | CONNECTOR_RUNTIME_STACK_LIMIT | connector recursion or value-stack use exceeded the selected profile |
+| 11027 | CONNECTOR_RUNTIME_RESOURCE_LIMIT | runtime memory, table, or instance growth exceeded the selected profile |
+| 11028 | CONNECTOR_RUNTIME_TRAP | connector code trapped for a reason other than a separately classified limit |
+| 11029 | CONNECTOR_RUNTIME_MEMORY_ACCESS | an ABI pointer, length, overlap, read, or write was outside guest memory |
+| 11030 | CONNECTOR_RUNTIME_INPUT_OVERSIZED | canonical event input exceeded the selected profile before allocation |
+| 11031 | CONNECTOR_RUNTIME_OUTPUT_OVERSIZED | an action-batch output length exceeded the selected profile before copying |
+| 11032 | CONNECTOR_RUNTIME_OUTPUT_INVALID | guest output was empty, malformed, noncanonical, or outside ABI action bounds |
+| 11033 | CONNECTOR_RUNTIME_STATE_OVERSIZED | snapshot output exceeded the selected state bound before copying |
+| 11034 | CONNECTOR_RUNTIME_INSTANCE_UNUSABLE | a prior hostile failure invalidated the instance for later calls |
+| 11035 | CONNECTOR_RUNTIME_INPUT_INVALID | the host supplied an event that failed canonical ABI validation before guest allocation |
+| 11036 | CONNECTOR_RUNTIME_FIXTURE_INVALID | an embedded fixture has no events, mismatched event/action counts, or an unusable fuel bound |
+| 11037 | CONNECTOR_RUNTIME_FIXTURE_MISMATCH | Wasm actions or final snapshot hash differ from the signed embedded fixture |
 
 Library code does not panic. `unwrap`, `expect`, and `panic!` are denied by the clippy
 configuration for library code and allowed in tests. An impossible state is an `Internal` error
@@ -97,8 +116,9 @@ with a code, not a crash, because a crash in an FFI'd library takes the host app
 
 `mav-connector-abi` is an isolated wire-schema leaf and deliberately does not depend on frozen
 `mav-model`. It returns a closed `WireError` while decoding untrusted CBOR. `mav-connector-runtime`
-maps every artifact/schema/trust failure into append-only Connector `MavError` codes before any ABI
-rejection can enter the journal or cross FFI.
+maps every artifact, schema, trust, instantiation, resource, memory, ABI input/output, and fixture
+failure into append-only Connector `MavError` codes before rejection can enter the journal or cross
+FFI.
 
 ## No silent drops
 
