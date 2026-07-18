@@ -120,8 +120,11 @@ frontend, analytics, tool, SDK, or native BLE API.
 The connector store depends only on runtime inspection/trust, the ABI records those reports expose,
 and `mav-model` errors. It owns a separate forward schema inside the install database; it cannot
 depend on engine, native transport, analytics, a device crate, or the evidence store.
-Engine depends on runtime; runtime never calls engine. FFI/replay do not link connector crates.
-Connector source lives only in `sennnen/maverick-connectors` and compiles against the public SDK.
+Engine depends on runtime; runtime never calls engine. Loadable connector source lives only in
+`sennnen/maverick-connectors` and compiles against the public SDK. During migration, FFI reaches
+ABI, runtime, and connector store only to translate frozen records, open verified sessions, and
+serialize all mutation. FFI/replay's WHOOP crate edges belong solely to the named compiled-codec
+compatibility surface and are deleted with that surface in WC-P12.
 
 ## Adding a device after migration
 

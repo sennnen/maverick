@@ -32,7 +32,10 @@ ALLOWED = {
         "mav-codec", "mav-timeline", "mav-sqi", "mav-feature", "mav-analytic",
         "mav-store", "mav-obs",
     },
-    "mav-ffi": {"mav-model", "mav-obs", "mav-engine", "mav-connector-whoop"},
+    "mav-ffi": {
+        "mav-model", "mav-obs", "mav-engine", "mav-connector-abi",
+        "mav-connector-runtime", "mav-connector-store", "mav-connector-whoop",
+    },
     "mav-replay": {"mav-model", "mav-obs", "mav-engine", "mav-connector-whoop"},
 }
 

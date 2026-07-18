@@ -807,6 +807,22 @@ impl ConnectorRepository {
         Ok(disabled)
     }
 
+    pub fn active_artifact(
+        &self,
+        connector_id: &str,
+        policy: &TrustPolicy,
+        revocations: &RevocationSet,
+        now_ms: i64,
+    ) -> Result<Artifact> {
+        let digest = self.active_digest(connector_id)?.ok_or_else(|| {
+            error(
+                codes::CONNECTOR_INSTALL_NOT_FOUND,
+                format!("connector {connector_id} has no active artifact"),
+            )
+        })?;
+        self.verified_artifact(&digest, policy, revocations, now_ms)
+    }
+
     fn active_version(&self, connector_id: &str) -> Result<Option<String>> {
         self.connection
             .query_row(
@@ -948,6 +964,17 @@ impl ConnectorRepository {
         revocations: &RevocationSet,
         now_ms: i64,
     ) -> Result<()> {
+        self.verified_artifact(digest, policy, revocations, now_ms)
+            .map(|_| ())
+    }
+
+    fn verified_artifact(
+        &self,
+        digest: &[u8],
+        policy: &TrustPolicy,
+        revocations: &RevocationSet,
+        now_ms: i64,
+    ) -> Result<Artifact> {
         let bytes = self
             .connection
             .query_row(
@@ -966,7 +993,7 @@ impl ConnectorRepository {
         let artifact = Artifact::inspect(bytes)?;
         artifact.verify(policy, revocations, now_ms)?;
         artifact.run_fixtures(LimitProfile::mobile_v1())?;
-        Ok(())
+        Ok(artifact)
     }
 }
 

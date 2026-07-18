@@ -688,13 +688,19 @@ dependencies = [
 name = "mav-ffi"
 version = "0.1.0"
 dependencies = [
+ "ed25519-dalek",
+ "mav-connector-abi",
+ "mav-connector-runtime",
+ "mav-connector-store",
  "mav-connector-whoop",
  "mav-engine",
  "mav-model",
  "mav-obs",
  "serde_json",
+ "sha2",
  "thiserror",
  "uniffi",
+ "wat",
 ]
 
 [[package]]

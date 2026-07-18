@@ -8,6 +8,10 @@
 //! in CI, and the simulator link is a documented local step until the app milestone.
 #![forbid(unsafe_code)]
 
+mod connector;
+
+pub use connector::*;
+
 use mav_model::error::MavError;
 use mav_obs::stage::Stage;
 use mav_obs::tap::{Tap, TapEvent};
@@ -131,12 +135,16 @@ pub struct HostSnapshotResult {
 #[derive(uniffi::Object)]
 pub struct MavRuntime {
     inner: Mutex<mav_engine::HostRuntime>,
+    connectors: Mutex<mav_connector_store::ConnectorRepository>,
+    connector_session: Mutex<Option<mav_engine::ConnectorHost>>,
+    database_path: String,
 }
 
 #[uniffi::export]
 impl MavRuntime {
     #[uniffi::constructor]
     pub fn new(config: RuntimeConfig) -> Result<Arc<Self>, FfiError> {
+        let database_path = config.database_path.clone();
         let mut runtime = mav_engine::HostRuntime::open(mav_engine::RuntimeConfig {
             database_path: config.database_path,
             timezone_id: config.timezone_id,
@@ -149,8 +157,12 @@ impl MavRuntime {
         runtime.register_codec(mav_connector_whoop::codec::CODEC_ID, || {
             Box::new(mav_connector_whoop::WhoopCodec::new())
         });
+        let connectors = mav_connector_store::ConnectorRepository::open(&database_path)?;
         Ok(Arc::new(Self {
             inner: Mutex::new(runtime),
+            connectors: Mutex::new(connectors),
+            connector_session: Mutex::new(None),
+            database_path,
         }))
     }
 
@@ -162,6 +174,234 @@ impl MavRuntime {
                 manifest_json: registration.manifest_json,
             })?;
         Ok(())
+    }
+
+    pub fn inspect_connector_bytes(
+        &self,
+        bytes: Vec<u8>,
+        source: ConnectorSourceMetadata,
+        policy: ConnectorTrustPolicy,
+        revocations: ConnectorTrustRevocations,
+        now_ms: i64,
+        approval_ttl_ms: i64,
+    ) -> Result<ConnectorInspection, FfiError> {
+        let source = connector::source_from_ffi(source)?;
+        let policy = connector::policy_from_ffi(policy)?;
+        let revocations = connector::revocations_from_ffi(revocations);
+        let approval = self.connectors_lock()?.inspect_connector(
+            bytes,
+            source,
+            &policy,
+            &revocations,
+            now_ms,
+            approval_ttl_ms,
+        )?;
+        Ok(ConnectorInspection {
+            artifact_digest: approval.report.artifact_digest.to_vec(),
+            manifest_digest: approval.report.manifest_digest.to_vec(),
+            connector_id: approval.report.manifest.connector_id.as_str().to_owned(),
+            version: approval.report.manifest.version,
+            display_name: approval.report.manifest.display_name,
+            description: approval.report.manifest.description,
+            publisher_key_id: approval.report.manifest.publisher_key_id,
+            state_schema: approval.report.manifest.state_schema,
+            fixture_count: approval.fixture_count,
+            source: connector::source_to_ffi(approval.source),
+            approval_token: approval.approval.to_bytes().to_vec(),
+            approval_expires_at_ms: approval.approval.expires_at_ms(),
+        })
+    }
+
+    pub fn install_connector_bytes(
+        &self,
+        request: ConnectorInstallRequest,
+        policy: ConnectorTrustPolicy,
+        revocations: ConnectorTrustRevocations,
+    ) -> Result<InstalledConnectorRecord, FfiError> {
+        let now_ms = request.now_ms;
+        let request = mav_connector_store::InstallRequest {
+            bytes: request.bytes,
+            source: connector::source_from_ffi(request.source)?,
+            approval: mav_connector_store::ApprovalToken::from_bytes(&request.approval_token)?,
+            activate: request.activate,
+        };
+        let policy = connector::policy_from_ffi(policy)?;
+        let revocations = connector::revocations_from_ffi(revocations);
+        let installed =
+            self.connectors_lock()?
+                .install_connector(request, &policy, &revocations, now_ms)?;
+        if installed.active {
+            self.retire_connector_session(mav_connector_abi::CancelReason::Update, now_ms)?;
+        }
+        Ok(connector::installed_to_ffi(installed))
+    }
+
+    pub fn list_installed_connectors(&self) -> Result<Vec<InstalledConnectorRecord>, FfiError> {
+        Ok(self
+            .connectors_lock()?
+            .list_connectors()?
+            .into_iter()
+            .map(connector::installed_to_ffi)
+            .collect())
+    }
+
+    pub fn activate_installed_connector(
+        &self,
+        connector_id: String,
+        version: String,
+        policy: ConnectorTrustPolicy,
+        revocations: ConnectorTrustRevocations,
+        now_ms: i64,
+    ) -> Result<(), FfiError> {
+        let policy = connector::policy_from_ffi(policy)?;
+        let revocations = connector::revocations_from_ffi(revocations);
+        self.connectors_lock()?.activate_connector(
+            &connector_id,
+            &version,
+            &policy,
+            &revocations,
+            now_ms,
+        )?;
+        self.retire_connector_session(mav_connector_abi::CancelReason::Update, now_ms)?;
+        Ok(())
+    }
+
+    pub fn rollback_installed_connector(
+        &self,
+        connector_id: String,
+        policy: ConnectorTrustPolicy,
+        revocations: ConnectorTrustRevocations,
+        now_ms: i64,
+    ) -> Result<(), FfiError> {
+        let policy = connector::policy_from_ffi(policy)?;
+        let revocations = connector::revocations_from_ffi(revocations);
+        self.connectors_lock()?
+            .rollback_connector(&connector_id, &policy, &revocations, now_ms)?;
+        self.retire_connector_session(mav_connector_abi::CancelReason::Update, now_ms)?;
+        Ok(())
+    }
+
+    pub fn remove_installed_connector(
+        &self,
+        connector_id: String,
+        version: String,
+        mode: ConnectorRemovalMode,
+        policy: ConnectorTrustPolicy,
+        revocations: ConnectorTrustRevocations,
+        now_ms: i64,
+    ) -> Result<(), FfiError> {
+        let policy = connector::policy_from_ffi(policy)?;
+        let revocations = connector::revocations_from_ffi(revocations);
+        let mode = match mode {
+            ConnectorRemovalMode::DeleteState => mav_connector_store::RemovalMode::DeleteState,
+            ConnectorRemovalMode::QuarantineState => {
+                mav_connector_store::RemovalMode::QuarantineState
+            }
+        };
+        self.connectors_lock()?.remove_connector(
+            &connector_id,
+            &version,
+            mode,
+            &policy,
+            &revocations,
+            now_ms,
+        )?;
+        self.retire_connector_session(mav_connector_abi::CancelReason::Removal, now_ms)?;
+        Ok(())
+    }
+
+    pub fn enforce_connector_trust(
+        &self,
+        policy: ConnectorTrustPolicy,
+        revocations: ConnectorTrustRevocations,
+        now_ms: i64,
+    ) -> Result<Vec<String>, FfiError> {
+        let policy = connector::policy_from_ffi(policy)?;
+        let revocations = connector::revocations_from_ffi(revocations);
+        let disabled = self
+            .connectors_lock()?
+            .enforce_policy(&policy, &revocations, now_ms)?;
+        if !disabled.is_empty() {
+            self.retire_connector_session(mav_connector_abi::CancelReason::Update, now_ms)?;
+        }
+        Ok(disabled)
+    }
+
+    pub fn open_connector_session(
+        &self,
+        config: ConnectorSessionConfig,
+        policy: ConnectorTrustPolicy,
+        revocations: ConnectorTrustRevocations,
+    ) -> Result<ConnectorLifecycleReport, FfiError> {
+        let policy = connector::policy_from_ffi(policy)?;
+        let revocations = connector::revocations_from_ffi(revocations);
+        let artifact = self.connectors_lock()?.active_artifact(
+            &config.connector_id,
+            &policy,
+            &revocations,
+            config.now_ms,
+        )?;
+        let store = mav_engine::Store::open(std::path::Path::new(&self.database_path))?;
+        let mut host = mav_engine::ConnectorHost::instantiate(
+            &artifact,
+            mav_connector_runtime::LimitProfile::mobile_v1(),
+            store,
+            mav_engine::ConnectorHostConfig {
+                session_id: config.session_id,
+                device_id: config.device_id,
+                transport_capacity: config.transport_capacity,
+            },
+        )?;
+        host.start()?;
+        let report = host.lifecycle_snapshot().into();
+        let mut session = self.connector_session_lock()?;
+        if let Some(previous) = session.as_mut() {
+            previous.terminate(mav_connector_abi::CancelReason::Update, Some(config.now_ms))?;
+        }
+        *session = Some(host);
+        Ok(report)
+    }
+
+    pub fn apply_connector_event(
+        &self,
+        event: ConnectorTransportEvent,
+        wall_time_ms: Option<i64>,
+    ) -> Result<ConnectorApplyOutcome, FfiError> {
+        let mut session = self.connector_session_lock()?;
+        let host = session.as_mut().ok_or_else(no_connector_session)?;
+        Ok(host
+            .apply(connector::event_from_ffi(event), wall_time_ms)?
+            .into())
+    }
+
+    pub fn cancel_connector_session(
+        &self,
+        reason: ConnectorCancelReason,
+        wall_time_ms: Option<i64>,
+    ) -> Result<ConnectorLifecycleReport, FfiError> {
+        let mut session = self.connector_session_lock()?;
+        let host = session.as_mut().ok_or_else(no_connector_session)?;
+        host.cancel(connector::cancel_from_ffi(reason), wall_time_ms)?;
+        Ok(host.lifecycle_snapshot().into())
+    }
+
+    pub fn drain_connector_actions(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<ConnectorTransportAction>, FfiError> {
+        let mut session = self.connector_session_lock()?;
+        let host = session.as_mut().ok_or_else(no_connector_session)?;
+        Ok(host
+            .drain_actions(limit)
+            .into_iter()
+            .map(ConnectorTransportAction::from)
+            .collect())
+    }
+
+    pub fn connector_lifecycle(&self) -> Result<ConnectorLifecycleReport, FfiError> {
+        let session = self.connector_session_lock()?;
+        let host = session.as_ref().ok_or_else(no_connector_session)?;
+        Ok(host.lifecycle_snapshot().into())
     }
 
     pub fn start_scan(&self, connector_id: String, device_id: u64) -> Result<(), FfiError> {
@@ -274,6 +514,51 @@ impl MavRuntime {
             .into()
         })
     }
+
+    fn connectors_lock(
+        &self,
+    ) -> Result<MutexGuard<'_, mav_connector_store::ConnectorRepository>, FfiError> {
+        self.connectors
+            .lock()
+            .map_err(|_| poisoned("connector repository"))
+    }
+
+    fn connector_session_lock(
+        &self,
+    ) -> Result<MutexGuard<'_, Option<mav_engine::ConnectorHost>>, FfiError> {
+        self.connector_session
+            .lock()
+            .map_err(|_| poisoned("connector session"))
+    }
+
+    fn retire_connector_session(
+        &self,
+        reason: mav_connector_abi::CancelReason,
+        now_ms: i64,
+    ) -> Result<(), FfiError> {
+        let mut session = self.connector_session_lock()?;
+        if let Some(host) = session.as_mut() {
+            host.terminate(reason, Some(now_ms))?;
+        }
+        *session = None;
+        Ok(())
+    }
+}
+
+fn poisoned(owner: &str) -> FfiError {
+    MavError::fatal(
+        mav_model::error::codes::INTERNAL_INVARIANT,
+        format!("{owner} lock is poisoned"),
+    )
+    .into()
+}
+
+fn no_connector_session() -> FfiError {
+    MavError::new(
+        mav_model::error::codes::CONNECTOR_HOST_STATE,
+        "no connector session is open",
+    )
+    .into()
 }
 
 impl From<mav_engine::ConnectionState> for RuntimeConnectionState {

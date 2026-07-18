@@ -13,12 +13,18 @@ crate-type = ["lib", "cdylib", "staticlib"]
 mav-model = { workspace = true }
 mav-obs = { workspace = true }
 mav-engine = { workspace = true }
+mav-connector-abi = { workspace = true }
+mav-connector-runtime = { workspace = true }
+mav-connector-store = { workspace = true }
 mav-connector-whoop = { workspace = true }
 uniffi = { version = "0.28" }
 thiserror = { workspace = true }
 
 [dev-dependencies]
+ed25519-dalek = { workspace = true }
+sha2 = { workspace = true }
 serde_json = { workspace = true }
+wat = "=1.245.1"
 
 [features]
 cli = ["uniffi/cli"]

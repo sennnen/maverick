@@ -63,8 +63,28 @@ structure, deterministic metadata, compatibility, signature, publisher/revocatio
 imports/limits, and embedded self-tests before atomic activation. It owns update, rollback, removal,
 and connector-scoped state. Native code never validates a connector as authoritative.
 
-The complete future API and transaction rules are in [connectors.md](connectors.md). Current
-`install_connector(package_json)` is a migration surface, not the target API.
+WC-P7 exposes the complete management path on serialized `MavRuntime`:
+
+```text
+inspect_connector_bytes(bytes, source, policy, revocations, now_ms, approval_ttl_ms)
+install_connector_bytes(request, policy, revocations)
+list_installed_connectors()
+activate_installed_connector(connector_id, version, policy, revocations, now_ms)
+rollback_installed_connector(connector_id, policy, revocations, now_ms)
+remove_installed_connector(connector_id, version, mode, policy, revocations, now_ms)
+enforce_connector_trust(policy, revocations, now_ms)
+```
+
+`ConnectorSourceMetadata` contains only kind, a safe display label, and a 32-byte locator digest;
+apps never pass a path or URL. Trust inputs contain public keys, scope, validity/status, and signed
+revocation data. `ConnectorInspection` returns safe manifest fields, both digests, fixture count,
+and a 40-byte opaque one-time approval token. `ConnectorInstallRequest` groups bytes, source, token,
+activation choice, and injected time so the large byte buffer crosses once per call.
+
+Every result is a value record: native code never receives a SQLite, artifact, Wasm, policy, or Rust
+handle. Current `install_connector(ConnectorRegistration)` remains explicitly as the compiled-codec
+migration surface until WC-P12. New frontend work uses the byte-oriented calls. The complete
+transaction rules are in [connectors.md](connectors.md).
 
 ## Native transport events
 
@@ -82,8 +102,17 @@ timer_fired(...) / cancelled(...)
 transport_failed(...) / disconnected(...)
 ```
 
-Byte payloads cross as `Vec<u8>`, never hex strings. `native_device_id` is an opaque identifier used
-only to route the current native connection; it is not treated as a stable physiological-device id.
+`open_connector_session(ConnectorSessionConfig, policy, revocations)` reverifies the active stored
+artifact and fixtures, creates one bounded P5 host, and returns its lifecycle report.
+`apply_connector_event`, `drain_connector_actions`, `cancel_connector_session`, and
+`connector_lifecycle` are the only live-session operations. Opening a later session atomically
+replaces the prior in-memory session. Activation, rollback, removal, or trust disable sends one
+bounded cancellation, journals a hostile cancellation failure, and force-drops the old instance;
+guest cooperation is never required for teardown.
+
+Byte payloads cross as `Vec<u8>`/`Data`/`ByteArray`, never hex strings. A transport address is an
+opaque identifier used only to route the current native connection; core does not treat it as a
+stable physiological-device id.
 Events that persist samples or diagnostics carry host time. Pure transport transitions do not read
 the clock. The runtime validates state and rejects an impossible event with a stable transport error
 instead of attempting to repair the sequence.
@@ -92,35 +121,43 @@ Core normalizes each result into the connector ABI, invokes the instance, valida
 actions, and admits emitted samples through SQI, timeline, provenance, and transactional storage.
 Native code cannot call stages or connector exports individually. Device protocol state remains
 inside connector; lifecycle and resource policy remain in core. The current app still calls the
-legacy compiled-codec runtime until WC-P7 and the switch packet connect this implemented host.
+legacy compiled-codec runtime until WC-P13/P14 connect native BLE callers to this implemented host.
 
 ## Core transport actions
 
 The host drains a bounded queue of closed `ConnectorTransportAction` values:
 
 ```text
-StartScan { service_filters }
+StartScan { service_uuids, manufacturer_ids }
 StopScan
-Connect { native_device_id }
-EnsurePaired { native_device_id }
-DiscoverServices { native_device_id }
-Subscribe { characteristic }
-Unsubscribe { characteristic }
-Read { characteristic, operation_id }
-Write { characteristic, bytes, with_response, sequence }
-Disconnect { native_device_id, reason }
+Connect { address }
+EnsurePaired
+DiscoverServices
+Subscribe { characteristic_id }
+Unsubscribe { characteristic_id }
+Read { characteristic_id }
+Write { characteristic_id, bytes, confirmed }
+Disconnect
+SetTimer { token, delay_ms }
+CancelTimer { token }
 ```
 
 Each value includes host-assigned operation id, deadline token, session id, and cancellation
-generation. Signed characteristic declarations constrain each action. A connector cannot write an undeclared
-characteristic or weaken required confirmed-write policy. A drained action leaves the queue exactly
-once. Failed native execution returns as a typed event; native code never silently retries.
+generation. Signed characteristic declarations constrain each action. A connector cannot write an
+undeclared characteristic or weaken required confirmed-write policy. A drained action leaves the
+queue exactly once. Failed native execution returns as a typed event; native code never silently retries.
 Protocol retry/sequence/order belongs to connector state, while core owns bounds, deadlines,
 cancellation, and action validity.
 
 Queue capacity is fixed at runtime construction. When the queue is full, the operation that would
 enqueue another action fails with a new FFI or transport error. Accepted actions remain intact and
 in order. Nothing is overwritten.
+
+WC-P7 exposes every P5 request variant as `ConnectorTransportRequest`, wrapped by
+`ConnectorTransportAction` with connector id, session id, cancellation generation, host operation
+id, and deadline token. The matching `ConnectorTransportEvent` carries only generic advertisements,
+transport results, notifications, timer results, and disconnect/error state. Raw handles, protocol
+opcodes, device families, retry policy, URL clients, and file openers are absent from both bindings.
 
 ## Host snapshot
 
@@ -226,7 +263,9 @@ the two platforms behaviourally aligned.
 
 ## Threading and blocking
 
-The runtime is safe to hold from Swift and Kotlin, but it serialises mutation internally. Hosts call
+The runtime is safe to hold from Swift and Kotlin. Legacy runtime, connector repository, and active
+connector session each serialize mutation behind a poison-safe mutex; concurrent management reads
+and writes return typed results rather than racing SQLite or a Wasm instance. Hosts call
 it from one dedicated background executor. No runtime method is called from the UI thread.
 
 Event application and action draining are synchronous and bounded. Database work is synchronous

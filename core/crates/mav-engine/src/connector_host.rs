@@ -19,7 +19,7 @@ const MAX_CHAINED_EVENTS: usize = 32;
 const MAX_SESSION_OPERATIONS: usize = 4_096;
 const MAX_ADVERTISED_ADDRESSES: usize = 256;
 
-trait ConnectorProgram {
+trait ConnectorProgram: Send {
     fn init(&mut self, event: &ConnectorEvent) -> Result<ActionBatch>;
     fn handle(&mut self, event: &ConnectorEvent) -> Result<ActionBatch>;
     fn snapshot(&mut self) -> Result<Vec<u8>>;
@@ -263,6 +263,17 @@ impl ConnectorHost {
             _ => ConnectorLifecycle::Disconnected,
         };
         self.dispatch(EventBody::Cancel { reason }, wall_time_ms, false, 0)
+    }
+
+    pub fn terminate(&mut self, reason: CancelReason, wall_time_ms: Option<i64>) -> Result<()> {
+        if let Err(error) = self.cancel(reason, wall_time_ms) {
+            self.store.record_error(
+                &error,
+                wall_time_ms.unwrap_or_default().saturating_mul(1_000_000),
+            )?;
+            self.lifecycle = ConnectorLifecycle::Failed;
+        }
+        Ok(())
     }
 
     pub fn drain_actions(&mut self, limit: u32) -> Vec<ConnectorTransportAction> {
@@ -1393,6 +1404,18 @@ mod tests {
             manufacturer_data: Vec::new(),
             name: Some("Test".to_owned()),
         }
+    }
+
+    #[test]
+    fn forced_termination_journals_hostile_cancel_failure() {
+        let mut host = host(vec![empty(), empty()], 4);
+        host.start().expect("start");
+        host.terminate(CancelReason::Update, Some(10))
+            .expect("forced termination");
+        assert_eq!(host.lifecycle, ConnectorLifecycle::Failed);
+        let errors = host.store.recent_errors(1).expect("errors");
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].code, codes::CONNECTOR_HOST_STATE);
     }
 
     #[test]

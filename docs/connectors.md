@@ -2,8 +2,8 @@
 
 This document freezes target contracts selected by [ADR-017](adr/ADR-017.md) and records the
 implemented boundary as packets land. Artifact schemas, trust, the public SDK/toolchain, bounded
-Wasm execution, the core transport session, and durable lifecycle storage are implemented through
-WC-P6; FFI and frontend contracts remain targets. The ordered work lives in
+Wasm execution, the core transport session, durable lifecycle storage, and the platform-neutral
+UniFFI boundary are implemented through WC-P7; frontend contracts remain targets. The ordered work lives in
 [plans/active/wasm-connectors.md](plans/active/wasm-connectors.md).
 
 ## Product invariants
@@ -231,6 +231,26 @@ Migration failure preserves old state and activation; rollback or removing an ac
 the archived version exactly. Removing the final active version deletes or quarantines state by
 explicit policy. On key rotation or revocation, policy enforcement disables the active artifact,
 retains state, and records the stable trust error for deliberate recovery.
+
+## Platform-neutral binding
+
+WC-P7 exposes management and the P5 event/action loop through `MavRuntime` without exposing a Rust,
+SQLite, Wasm, file, URL, or device-codec handle. Swift receives connector bytes as `Data`; Kotlin
+receives `ByteArray`; Rust receives the same `Vec<u8>`. Safe source, publisher policy, revocations,
+inspection report, one-time token, install request, installed record, removal policy, lifecycle
+report, cancel reason, transport event, and transport action are closed UniFFI records/enums.
+
+All later activation paths accept current trust/revocation records explicitly. Opening a live
+session reverifies the stored artifact and fixtures, instantiates `mobile-v1`, and starts the P5 host
+against the product database. Runtime mutexes serialize concurrent management and session calls.
+Cancellation increments the core generation, empties queued/pending work, and reports late native
+results as `IgnoredLate`; platforms cannot synthesize event sequence or cancellation generation.
+Activation, rollback, removal, revocation, and session replacement terminate any prior Wasm
+instance after one bounded cancellation; a hostile cancellation failure is journaled before force
+drop.
+
+Generated Swift and Kotlin checks pin the management methods plus both transport enums in CI. The
+legacy manifest/compiled-codec method remains named as migration-only until WC-P12.
 
 ## Errors, deadlines, and cancellation
 
