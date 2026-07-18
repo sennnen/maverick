@@ -55,6 +55,12 @@ pub struct Manifest {
     /// no samples, the raw bytes stay evidence, and the journal records the version (M5-P4).
     #[serde(default)]
     pub record_versions: BTreeMap<u8, String>,
+    /// An admitted event-vocabulary id (`whoop`): the interpretation of the event packet's number
+    /// byte and per-event bodies. Event numbers are a device-family fact the layout DSL cannot
+    /// express (one number selects a body layout), so the vocabulary is a reviewed module in
+    /// `events` and the manifest only names which one applies.
+    #[serde(default)]
+    pub event_vocabulary: Option<String>,
     /// The stream kinds this device can produce. Capability negotiation intersects these with
     /// what each analytic requires.
     pub capabilities: Vec<StreamKind>,
@@ -451,6 +457,15 @@ impl Manifest {
                 .context(decoder_id.clone()));
             }
         }
+        if let Some(vocabulary) = self.event_vocabulary.as_deref() {
+            if !crate::events::ADMITTED_EVENT_VOCABULARIES.contains(&vocabulary) {
+                return Err(MavError::new(
+                    codes::DECODE_LAYOUT_INVALID,
+                    "event_vocabulary names a vocabulary this build does not admit",
+                )
+                .context(vocabulary.to_owned()));
+            }
+        }
         for (key, layout) in &self.layouts {
             for repeat in &layout.repeats {
                 if repeat.stride == 0 || repeat.max_count == 0 {
@@ -553,6 +568,17 @@ mod tests {
         let json = minimal_json().replace("gen5", "gen9");
         let err = Manifest::from_json(&json).unwrap_err();
         assert_eq!(err.code, codes::DECODE_LAYOUT_INVALID);
+    }
+
+    #[test]
+    fn an_unadmitted_event_vocabulary_is_refused() {
+        let json = minimal_json().replace(
+            "\"capabilities\"",
+            "\"event_vocabulary\": \"acme\", \"capabilities\"",
+        );
+        let err = Manifest::from_json(&json).unwrap_err();
+        assert_eq!(err.code, codes::DECODE_LAYOUT_INVALID);
+        assert!(err.to_string().contains("acme"), "{err}");
     }
 
     #[test]

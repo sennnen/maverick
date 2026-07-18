@@ -58,6 +58,13 @@ device family and known before any strap is ever connected:
   conversion is a fixed constant.
 - **Record versions.** The historical record versions the device emits, keyed by their version or
   subtype byte, each with its own field layout and a maturity note.
+- **Event vocabulary.** A device whose event packet carries a number byte selecting a per-event
+  body layout names one admitted vocabulary — `event_vocabulary: "whoop"` — instead of a layout.
+  One number choosing among body layouts is the same DSL-can't-express shape as the standard
+  profile, so each vocabulary is a reviewed module in `mav-codec/src/events.rs` and the manifest
+  can only name it. Admitted mappings decode to samples at the event's RTC timestamp (WHOOP:
+  battery state of charge, wrist on/off); event numbers without a stream mapping decode to
+  nothing, like control packets (WHOOP-P5).
 - **Standard profile.** A pure standards connector (the built-in BLE Heart Rate connector) names
   one admitted profile decoder — `standard_profile: "heart_rate"` — instead of a packet map. The
   Heart Rate Measurement layout is flag-driven, which the layout DSL cannot express, so the

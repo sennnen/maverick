@@ -59,12 +59,18 @@ impl DeviceCodec for ManifestCodec {
         let layout = match manifest.layout_for_packet(packet_type)? {
             Some(layout) => layout,
             None => {
-                // Historical records route through the admitted per-version decoders rather than
-                // a manifest layout; every other layout-less packet is control or not-yet-decoded.
+                // Historical records route through the admitted per-version decoders and events
+                // through the admitted vocabulary rather than a manifest layout; every other
+                // layout-less packet is control or not-yet-decoded.
                 if manifest.packet_name(packet_type) == Some("historical_data")
                     && !manifest.record_versions.is_empty()
                 {
                     return crate::records::decode_record(manifest, &frame.payload);
+                }
+                if manifest.packet_name(packet_type) == Some("event") {
+                    if let Some(vocabulary) = manifest.event_vocabulary.as_deref() {
+                        return crate::events::decode_event(vocabulary, &frame.payload);
+                    }
                 }
                 return Ok(Vec::new());
             }
@@ -312,6 +318,55 @@ mod tests {
     fn truncated_payload_is_a_typed_error_not_a_panic() {
         let err = decode(vec![40, 1, 0, 0]).unwrap_err();
         assert_eq!(err.code, codes::DECODE_FIELD_UNREADABLE);
+    }
+
+    #[test]
+    fn an_event_packet_routes_through_the_admitted_vocabulary() {
+        let manifest = Manifest::from_json(
+            r#"{
+                "schema": "connector-manifest/v1",
+                "identity": { "family": "t", "display_name": "T", "models": ["T"] },
+                "gatt": { "service": "s", "command": "c", "notify": ["n"] },
+                "frame": { "wire_format": "gen5", "max_frame_bytes": 8192 },
+                "packets": { "48": "event" },
+                "event_vocabulary": "whoop",
+                "capabilities": ["battery_soc", "wrist_state"]
+            }"#,
+        )
+        .unwrap();
+        // A wrist-on event: number at payload[2], RTC unix at payload[4..8].
+        let mut payload = vec![48u8, 1, 9, 0, 0, 0, 0, 0];
+        payload[4..8].copy_from_slice(&1_752_600_000u32.to_le_bytes());
+        let mut codec = ManifestCodec::new();
+        let mut kv = MemoryKv::new();
+        let samples = codec
+            .decode(&RawFrame { payload }, &manifest, &mut kv)
+            .unwrap();
+        assert_eq!(samples.len(), 1);
+        assert_eq!(samples[0].kind, StreamKind::WristState);
+        assert_eq!(samples[0].value, RawValue::U8(1));
+    }
+
+    #[test]
+    fn an_event_packet_without_a_vocabulary_yields_no_samples() {
+        let manifest = Manifest::from_json(
+            r#"{
+                "schema": "connector-manifest/v1",
+                "identity": { "family": "t", "display_name": "T", "models": ["T"] },
+                "gatt": { "service": "s", "command": "c", "notify": ["n"] },
+                "frame": { "wire_format": "gen5", "max_frame_bytes": 8192 },
+                "packets": { "48": "event" },
+                "capabilities": ["heart_rate"]
+            }"#,
+        )
+        .unwrap();
+        let payload = vec![48u8, 1, 9, 0, 0, 0, 0, 0];
+        let mut codec = ManifestCodec::new();
+        let mut kv = MemoryKv::new();
+        let samples = codec
+            .decode(&RawFrame { payload }, &manifest, &mut kv)
+            .unwrap();
+        assert_eq!(samples, Vec::new());
     }
 
     #[test]

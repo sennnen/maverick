@@ -266,9 +266,16 @@ inner-relative ones (its realtime decoder reads ts@2/HR@8/count@9/rr@10 against 
 one decoder serves both generations). The HR value was cross-checked against the standard `2A37`
 characteristic to within half a beat per minute. [XVAL fields, WRS byte positions]
 
-The on-wrist live r22 biometric rides packet 47 (not 40) and is forked on the inner command byte
-`[2]` being `0x80`/`0x82` — see the historical-records section; the version-keyed decode and this
-live fork share the packet type.
+The on-wrist live r22 biometric rides packet 47 (not 40), and it is not a separate record: the
+sixth source's live decoder reads the same K=18 shape the historical path pins — unix at
+`body[4]`, HR at `body[11]`, the secondary HR at `body[26]`, gravity at `body[34]` — just
+minimally, for display. Its "fork on the command byte" (`0x80`/`0x82`, the on-wrist marker) is
+that codebase's structure, not a wire difference; the committed real K=18 and K=26 sync-buffer
+records carry `0x80` at inner `[2]` too, so the command byte cannot select a decoder. Maverick
+routes every type-47 record, live or replayed, through the one version-keyed path. The secondary
+HR stays unadmitted even for live parity: it would ride the same `heart_rate` stream as the
+primary and skew every downstream statistic, so admitting it needs its own stream kind and an ADR.
+[WRS]
 
 R22_REALTIME (packet `0x10`): battery percentage is a direct `u8` in `0..=100`, and HR is a `u16`
 of milli-bpm divided by 10. [ONE, Rust repo]
@@ -282,6 +289,12 @@ numbers were frame-relative). Known event numbers `[WRS]`: 3 battery level, 7/8 
 9/10 wrist on/off, 14 double tap, 17 temperature level, 23 BLE bonded, 33/34 realtime HR on/off,
 57/58 strap/app alarm executed, 60 haptics fired. Gen5 events carry an opaque residual past inner
 8 that the sixth source surfaces as hex; gen4 events have none. [XVAL fields, WRS byte positions]
+
+Admission (WHOOP-P5): the `whoop` event vocabulary in `mav-codec/src/events.rs` decodes the
+battery event to a `battery_soc` percent (deci-percent / 10, gated to 0..=100; the millivolts and
+charging bit have no stream kind yet and stay unemitted) and wrist on/off to `wrist_state` 1/0,
+each at the event's RTC second. Every other number is a state transition with no sample stream and
+decodes to nothing.
 
 The standard `2A37` RR conversion is `raw * 1000 / 1024` milliseconds. [XVAL]
 

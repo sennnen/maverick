@@ -8,6 +8,7 @@
 
 pub mod codec;
 pub mod control;
+pub mod events;
 pub mod kv;
 pub mod manifest;
 pub mod records;
