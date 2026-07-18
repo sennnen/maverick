@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: in progress. WC-P0 through WC-P5 are complete; WC-P6 is next.
+Status: in progress. WC-P0 through WC-P6 are complete; WC-P7 is next.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -173,7 +173,7 @@ Status: complete
 
 ## Packet WC-P6: Install, activate, update, rollback, remove, and migrate state
 
-Status: pending
+Status: complete
 
 - **Repositories touched:** `maverick`.
 - **Likely files/modules:** new connector install/state tables and forward migration in `mav-store`
@@ -508,3 +508,14 @@ the listed order minimizes simultaneous migration surfaces.
   closed stream/unit mapping and traverse SQI, timeline, provenance, and transactional storage before
   a later write enters the native queue. Durable namespaced connector state remains WC-P6-owned; the
   old compiled host remains only as the named WC-P12 compatibility path.
+- 2026-07-18: WC-P6 added the independent forward-only `mav-connector-store` schema and core APIs
+  for inspect, install, list, activate, migrate, rollback, remove, and trust enforcement. Approval
+  tokens bind bytes, safe source provenance, trust/revocation revisions, and expiry, and are issued
+  and consumed exactly once; installation repeats signature and embedded-fixture checks before one
+  atomic transaction. Content-addressed
+  artifacts retain manifest/source/trust/test provenance and append-only audit rows. State uses the
+  exact connector/publisher/device/schema namespace with a 64 KiB digest-checked bound; publisher or
+  schema changes require atomic migration, and rollback or active-update removal restores the prior
+  snapshot. Tests cover restart recovery, stale approvals, verification/self-test/activation
+  failure, downgrade refusal, four interrupted transaction boundaries, namespace isolation,
+  migration failure/success, delete/quarantine, rollback restoration, key rotation, and revocation.

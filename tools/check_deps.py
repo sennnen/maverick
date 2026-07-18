@@ -16,6 +16,9 @@ ALLOWED = {
     "mav-connector-sdk": {"mav-connector-abi"},
     "mav-connector-runtime": {"mav-model", "mav-connector-abi"},
     "mav-connector-tool": {"mav-connector-abi", "mav-connector-runtime"},
+    "mav-connector-store": {
+        "mav-model", "mav-connector-abi", "mav-connector-runtime",
+    },
     "mav-frame": {"mav-model"},
     "mav-store": {"mav-model"},
     "mav-obs": {"mav-model", "mav-store"},

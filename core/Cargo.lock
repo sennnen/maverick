@@ -621,6 +621,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "mav-connector-store"
+version = "0.1.0"
+dependencies = [
+ "ed25519-dalek",
+ "mav-connector-abi",
+ "mav-connector-runtime",
+ "mav-model",
+ "rusqlite",
+ "sha2",
+ "wat",
+]
+
+[[package]]
 name = "mav-connector-tool"
 version = "0.1.0"
 dependencies = [

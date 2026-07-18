@@ -106,7 +106,7 @@ Exact edges are enforced by `tools/check_deps.py`:
 mav-model       mav-connector-abi <- mav-connector-sdk
       ^              ^
       |              +--------- mav-connector-tool
-stage crates    mav-connector-runtime <-+
+stage crates    mav-connector-runtime <- mav-connector-store
       ^              ^
       +------ mav-engine ------+
                   ^             |
@@ -117,6 +117,9 @@ stage crates    mav-connector-runtime <-+
 developer tool depends on ABI plus runtime so its checks cannot drift from the host. Runtime depends
 only on the ABI and `mav-model` error vocabulary inside Maverick. Runtime cannot depend on a device,
 frontend, analytics, tool, SDK, or native BLE API.
+The connector store depends only on runtime inspection/trust, the ABI records those reports expose,
+and `mav-model` errors. It owns a separate forward schema inside the install database; it cannot
+depend on engine, native transport, analytics, a device crate, or the evidence store.
 Engine depends on runtime; runtime never calls engine. FFI/replay do not link connector crates.
 Connector source lives only in `sennnen/maverick-connectors` and compiles against the public SDK.
 

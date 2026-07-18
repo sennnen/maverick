@@ -2,8 +2,8 @@
 
 This document freezes target contracts selected by [ADR-017](adr/ADR-017.md) and records the
 implemented boundary as packets land. Artifact schemas, trust, the public SDK/toolchain, bounded
-Wasm execution, and the core transport session are implemented through WC-P5; install, migration,
-FFI, and frontend contracts remain targets. The ordered work lives in
+Wasm execution, the core transport session, and durable lifecycle storage are implemented through
+WC-P6; FFI and frontend contracts remain targets. The ordered work lives in
 [plans/active/wasm-connectors.md](plans/active/wasm-connectors.md).
 
 ## Product invariants
@@ -202,6 +202,35 @@ before any later transport action becomes visible. V1 units are `beats-per-minut
 `boolean` according to the closed stream mapping in the host. The exact canonical event/action trace
 has a stable hash in the lifecycle snapshot. P5 state actions use a bounded session-local staging
 map; WC-P6 replaces that temporary compatibility with namespaced durable state transactions.
+
+## Installation, activation, and durable state
+
+`mav-connector-store` owns the product install path. `inspect_connector` accepts bytes plus safe
+source provenance, then performs artifact inspection, publisher/revocation verification, and every
+embedded fixture under `mobile-v1` limits. Its approval token is short-lived and binds the artifact
+digest, source kind/display/locator digest, trust-policy revision, revocation-set revision, and
+expiry. Core records and atomically consumes each token once, so a caller cannot forge or replay it.
+`install_connector` repeats those checks before an atomic content-addressed write. Changing any
+bound input, presenting an expired/consumed token, failing verification/self-test, attempting a
+downgrade, or failing activation leaves the old active row and state untouched.
+Every later activate, migrate, rollback, or prior-version restoration re-inspects stored bytes,
+rechecks current publisher/revocation policy, and reruns embedded fixtures before opening its write
+transaction; installation-time trust can never be used to bypass a later rotation or revocation.
+
+Installed records retain artifact and manifest digests, exact bytes, connector/version/publisher,
+state schema, safe source metadata, install time, policy/revocation revisions, fixture count,
+disabled reason, and activation status. Lifecycle audit rows record install, activate, migrate,
+rollback, removal, and trust disable using ids, digests, revisions, and stable codes—never a local
+path, URL, health payload, or connector state.
+
+State lookup has no fallback: the full key is connector id, publisher key id, device id, and state
+schema. Writes must match the active artifact and the 64 KiB state limit/digest. A schema or
+publisher change with existing state can activate only through `migrate_and_activate`, which
+archives prior state, replaces every device namespace, and switches activation in one transaction.
+Migration failure preserves old state and activation; rollback or removing an active update restores
+the archived version exactly. Removing the final active version deletes or quarantines state by
+explicit policy. On key rotation or revocation, policy enforcement disables the active artifact,
+retains state, and records the stable trust error for deliberate recovery.
 
 ## Errors, deadlines, and cancellation
 

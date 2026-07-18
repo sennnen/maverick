@@ -117,6 +117,12 @@ fails the build.
 | 11043 | CONNECTOR_HOST_SAMPLE_INVALID | an emitted sample cannot enter the frozen pipeline vocabulary or bounds |
 | 11044 | CONNECTOR_HOST_LATE_RESULT | a cancelled, completed, or unknown result was journaled and ignored |
 | 11045 | CONNECTOR_HOST_OPERATION_DUPLICATE | operation/deadline ids repeat, are zero, or exhaust the session budget |
+| 11046 | CONNECTOR_INSTALL_APPROVAL_INVALID | install approval expired or no longer binds the artifact, source, or trust revisions |
+| 11047 | CONNECTOR_INSTALL_DOWNGRADE | requested connector version is older than the active semantic version |
+| 11048 | CONNECTOR_INSTALL_NOT_FOUND | requested installed, active, or rollback connector version does not exist |
+| 11049 | CONNECTOR_INSTALL_STATE_NAMESPACE | connector state is invalid, oversized, or outside the exact active namespace |
+| 11050 | CONNECTOR_INSTALL_MIGRATION | state migration failed or activation attempted to skip a required migration |
+| 11051 | CONNECTOR_INSTALL_STORAGE | connector lifecycle schema, query, transaction, or stored value is invalid |
 
 Library code does not panic. `unwrap`, `expect`, and `panic!` are denied by the clippy
 configuration for library code and allowed in tests. An impossible state is an `Internal` error

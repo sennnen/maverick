@@ -61,6 +61,36 @@ and snapshots it for update rollback. WC-P6 owns the forward migration and WC-P1
 `DeviceCodec` access. Learned values remain outside disposable derived tiers because dropping them
 would lose accumulated device state.
 
+## Connector installation and state
+
+WC-P6 implements a dedicated `mav-connector-store` schema in the install database. Its schema
+version is recorded in `connector_store_meta`, independently of the evidence store's forward-only
+version, so either owner can migrate without taking ownership of the other's tables. The connector
+schema stores content-addressed artifact bytes, manifest digest, safe source display metadata and a
+locator digest, publisher id, trust-policy and revocation revisions, embedded-test count, activation
+and rollback pointers, scoped state, state history, quarantine, and an append-only lifecycle audit.
+Raw paths and URLs are never persisted or placed in diagnostics.
+
+Inspection parses, verifies, and executes every embedded fixture before returning a short-lived
+approval token. That one-time repository-issued token binds artifact bytes, source provenance,
+policy revision, revocation revision, and expiry; install consumes it in the same transaction as the
+artifact write. Installation repeats all checks, rejects downgrades, stale tokens, and replays, and
+stores the artifact plus optional activation in one SQLite transaction. A failure before any commit
+boundary leaves the previous artifact and state exact; tests simulate interruption after source,
+artifact, activation, and audit writes.
+
+Connector state is keyed exactly by `(connector_id, publisher_key_id, device_id, state_schema)` and
+limited to 64 KiB with a verified SHA-256 digest. Writes must match the active artifact's publisher
+and schema. Activating a new publisher or schema while state exists is rejected unless the caller
+uses the atomic migration API. Migration computes replacements before opening the write transaction,
+archives the prior version's state, replaces all namespaces, and switches activation together.
+Failure preserves the old version; rollback or removal of the active update restores its prior state
+snapshot. Final removal either deletes current state or moves it into quarantine. Trust rotation or
+revocation removes activation and records only the stable error code, retaining state for an
+explicitly approved recovery.
+All activation paths reverify stored artifact bytes, current trust/revocation policy, and embedded
+fixtures before beginning a write transaction.
+
 ## The round-trip guarantee
 
 Derived data is disposable, and this is a tested guarantee rather than an aspiration: delete every
