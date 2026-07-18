@@ -14,3 +14,4 @@
 - [ADR-012](ADR-012.md) — Frame parameters become manifest data
 - [ADR-013](ADR-013.md) — One stateful host runtime beside the stateless fixture runner
 - [ADR-014](ADR-014.md) — Additive stream kinds for the WHOOP gen5 K=18 record
+- [ADR-015](ADR-015.md) — Stream kinds for the WHOOP gen5 deep buffers (v20 optical, v21 IMU)

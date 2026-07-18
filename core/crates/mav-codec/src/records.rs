@@ -9,7 +9,9 @@ use mav_model::raw::RawSample;
 
 /// Every decoder id a manifest may name in `record_versions`. Admission means a reviewed module
 /// below; manifest validation rejects any other id at parse time.
-pub const ADMITTED_DECODERS: &[&str] = &["r20_k18", "r20_k26", "gen4_v24", "gen4_v5", "gen4_v25"];
+pub const ADMITTED_DECODERS: &[&str] = &[
+    "r20_k18", "r20_k26", "gen4_v24", "gen4_v5", "gen4_v25", "gen5_v20", "gen5_v21",
+];
 
 /// Decode one historical-record payload through the decoder the manifest admits for its version.
 ///
@@ -40,6 +42,8 @@ pub fn decode_record(manifest: &Manifest, payload: &[u8]) -> Result<Vec<RawSampl
         "gen4_v24" => gen4_v24::decode(body),
         "gen4_v5" => gen4_v5::decode(body),
         "gen4_v25" => gen4_v25::decode(body),
+        "gen5_v20" => gen5_v20::decode(body),
+        "gen5_v21" => gen5_v21::decode(body),
         other => Err(MavError::new(
             codes::DECODE_LAYOUT_INVALID,
             "manifest names a record decoder this build does not carry",
@@ -91,8 +95,18 @@ fn u16_le(body: &[u8], at: usize) -> u16 {
     u16::from_le_bytes([body[at], body[at + 1]])
 }
 
+fn i16_le(body: &[u8], at: usize) -> i16 {
+    i16::from_le_bytes([body[at], body[at + 1]])
+}
+
 fn u32_le(body: &[u8], at: usize) -> u32 {
     u32::from_le_bytes([body[at], body[at + 1], body[at + 2], body[at + 3]])
+}
+
+/// Sign-extend a 20-bit ADC sample carried in the low bits of a 4-byte LE word (the v20 optical
+/// channel format): shift the sign bit up to bit 31, then arithmetic-shift back down.
+fn sign_extend_20(v: u32) -> i32 {
+    ((v << 12) as i32) >> 12
 }
 
 fn seconds_to_nanos(seconds: u32) -> i64 {
@@ -404,9 +418,109 @@ mod gen4_v25 {
     }
 }
 
+/// The WHOOP 5.0/MG v21 IMU deep buffer: one strap-second of 100-sample, 6-axis motion, columnar
+/// `i16` LE. Accelerometer axes at `body[17]`/`body[217]`/`body[417]`, gyroscope at
+/// `body[629]`/`body[829]`/`body[1029]`, each a stride-2 run of 100. Gated on both in-packet sample
+/// counts (`body[13]` and `body[619]`, each must equal 100), not the version byte, so a mis-routed
+/// or short frame yields nothing. Accelerometer emits as `Imu`, gyroscope as `Gyro`, both
+/// `seq = sample * 3 + axis`, raw `i16` LSB with no scale applied. `[PROV]`/UNVERIFIED: pinned by a
+/// synthetic invariant test; no real fill has been captured (ADR-015).
+mod gen5_v21 {
+    use super::{i16_le, seconds_to_nanos, truncated, u16_le, u32_le};
+    use mav_model::error::Result;
+    use mav_model::raw::{RawSample, RawValue};
+    use mav_model::stream::StreamKind;
+    use mav_model::time::DeviceTime;
+
+    const SAMPLES: usize = 100;
+    const COUNT_A: usize = 13;
+    const COUNT_B: usize = 619;
+    const ACCEL_AXES: [usize; 3] = [17, 217, 417];
+    const GYRO_AXES: [usize; 3] = [629, 829, 1029];
+
+    /// Enough to read the last gyro sample at `body[1029 + 99*2 .. +2]`.
+    pub const MIN_BODY_LEN: usize = GYRO_AXES[2] + SAMPLES * 2;
+
+    pub fn decode(body: &[u8]) -> Result<Vec<RawSample>> {
+        if body.len() < MIN_BODY_LEN {
+            return Err(truncated("gen5_v21", MIN_BODY_LEN, body.len()));
+        }
+        // The identifying gate: both columnar sample counts are exactly the buffer's 100 samples.
+        if u16_le(body, COUNT_A) as usize != SAMPLES || u16_le(body, COUNT_B) as usize != SAMPLES {
+            return Ok(Vec::new());
+        }
+        let time = DeviceTime::from_nanos(seconds_to_nanos(u32_le(body, 4)));
+        let mut samples = Vec::with_capacity(SAMPLES * 6);
+        let mut push_triplet = |kind, axes: [usize; 3]| {
+            for sample in 0..SAMPLES {
+                for (axis, &base) in axes.iter().enumerate() {
+                    samples.push(RawSample {
+                        kind,
+                        device_time: time,
+                        seq: (sample * 3 + axis) as u16,
+                        value: RawValue::I16(i16_le(body, base + sample * 2)),
+                    });
+                }
+            }
+        };
+        push_triplet(StreamKind::Imu, ACCEL_AXES);
+        push_triplet(StreamKind::Gyro, GYRO_AXES);
+        Ok(samples)
+    }
+}
+
+/// The WHOOP 5.0/MG v20 optical deep buffer: ~25 Hz across six photodiode channels, each 25 samples
+/// of a 20-bit signed ADC count in a 4-byte LE word. Channels start at
+/// `body[36]`/`body[236]`/`body[1302]`/`body[1502]`/`body[1724]`/`body[1924]`. Gated on the config
+/// anchor every real buffer holds — the 2×-green-LED echo (`body[20]` == 2 × `body[17]`, green
+/// nonzero) — so a wrong-length or misrouted frame drops. Emits as `OpticalRaw`,
+/// `seq = channel * 25 + sample`, sign-extended `i32` counts with no invented scale.
+/// `[PROV]`/UNVERIFIED: pinned by a synthetic invariant test; no real fill captured (ADR-015).
+mod gen5_v20 {
+    use super::{seconds_to_nanos, sign_extend_20, truncated, u16_le, u32_le};
+    use mav_model::error::Result;
+    use mav_model::raw::{RawSample, RawValue};
+    use mav_model::stream::StreamKind;
+    use mav_model::time::DeviceTime;
+
+    const SAMPLES_PER_CHANNEL: usize = 25;
+    const CHANNELS: [usize; 6] = [36, 236, 1302, 1502, 1724, 1924];
+    const GREEN: usize = 17;
+    const GREEN_ECHO: usize = 20;
+
+    /// Enough to read the last sample of the last channel at `body[1924 + 24*4 ..]`.
+    pub const MIN_BODY_LEN: usize = CHANNELS[5] + (SAMPLES_PER_CHANNEL - 1) * 4 + 4;
+
+    pub fn decode(body: &[u8]) -> Result<Vec<RawSample>> {
+        if body.len() < MIN_BODY_LEN {
+            return Err(truncated("gen5_v20", MIN_BODY_LEN, body.len()));
+        }
+        // The identifying gate: the green LED value echoed at 2x in the config header.
+        let green = u16_le(body, GREEN);
+        if green == 0 || u16_le(body, GREEN_ECHO) != green.wrapping_mul(2) {
+            return Ok(Vec::new());
+        }
+        let time = DeviceTime::from_nanos(seconds_to_nanos(u32_le(body, 4)));
+        let mut samples = Vec::with_capacity(CHANNELS.len() * SAMPLES_PER_CHANNEL);
+        for (channel, &base) in CHANNELS.iter().enumerate() {
+            for sample in 0..SAMPLES_PER_CHANNEL {
+                samples.push(RawSample {
+                    kind: StreamKind::OpticalRaw,
+                    device_time: time,
+                    seq: (channel * SAMPLES_PER_CHANNEL + sample) as u16,
+                    value: RawValue::I32(sign_extend_20(u32_le(body, base + sample * 4))),
+                });
+            }
+        }
+        Ok(samples)
+    }
+}
+
 // Re-exported so tests can pin the exact boundary lengths.
 pub use gen4_v24::MIN_BODY_LEN as GEN4_V24_MIN_BODY_LEN;
 pub use gen4_v25::MIN_BODY_LEN as GEN4_V25_MIN_BODY_LEN;
 pub use gen4_v5::MIN_BODY_LEN as GEN4_V5_MIN_BODY_LEN;
+pub use gen5_v20::MIN_BODY_LEN as GEN5_V20_MIN_BODY_LEN;
+pub use gen5_v21::MIN_BODY_LEN as GEN5_V21_MIN_BODY_LEN;
 pub use r20_k18::MIN_BODY_LEN as R20_K18_MIN_BODY_LEN;
 pub use r20_k26::MIN_BODY_LEN as R20_K26_MIN_BODY_LEN;

@@ -311,11 +311,15 @@ Each of these is asserted by one codebase, at medium confidence. [ONE each]
   step counter, `skin_temp_raw` in centidegrees, and a sleep-state nibble. The Rust repo notes that
   the HR offset was corrected after cross-validation against a Garmin, because an earlier offset was
   reading a dead zero region; the offsets here were partly guessed. [PROV on the exact offsets]
-- **gen5 v20 / v21:** bulk multi-channel data. The v20 optical layout is **unknown**; nothing is
-  decoded from it. [FIELD] The v21 IMU block is decoded but **unverified against a real fill**,
-  because a full v21 buffer needs the R22 deep-data stream running on a worn band, and that has not
-  been captured (see the subscription-gating note below). Treat v21 as [PROV] until a real fill
-  confirms it. [FIELD]
+- **gen5 v20 / v21:** bulk multi-channel deep buffers, both decoded from the sixth source `[WRS]`
+  but **unverified against a real fill**, because a full buffer needs the R22 deep-data stream
+  running on a worn, subscribed band, and that has not been captured (see the subscription-gating
+  note below). v20 is the ~25 Hz 6-channel optical buffer: 25 samples per channel of a 20-bit signed
+  ADC count in a 4-byte LE word, at `body[36]`/`body[236]`/`body[1302]`/`body[1502]`/`body[1724]`/
+  `body[1924]`, identified by the 2×-green-LED echo anchor (`body[20]` == 2 × `body[17]`). v21 is the
+  100 Hz 6-axis IMU buffer: columnar `i16`, accel at `body[17]`/`body[217]`/`body[417]` and gyro at
+  `body[629]`/`body[829]`/`body[1029]`, identified by both in-packet sample counts equalling 100.
+  Treat both as `[PROV]` until a real fill confirms them. `[WRS]`
 - **gen5 v26:** a 24 Hz optical PPG waveform, 24 `i16` LE per record, one record per second. Raw
   ADC, with no invented scale.
 - **Unmapped versions:** the upstream RE falls back to the V24 layout, then **rejects** if the
@@ -407,9 +411,20 @@ the `[5, 45)` °C band; the sleep-only tri-mode SpO2 percent at `body[71]` kept 
 activity class at `body[52]` kept only in `{0,1,2}` (the new `activity_class` stream, ADR-014); the
 packed sleep state in bits 5–4 of `body[70]`; and the PPG confidence `signal_quality` `u8` at
 `body[29]`. From K=26, the 24-sample photodiode burst as raw ADC. The empirical `signal_flags`
-bitfield at `body[22]` has no clean stream kind and stays recorded but unemitted; the secondary HR,
-everything marked residual/refuted/[PROV]-only above, and v20/v21 stay unadmitted, and unknown version
-bytes produce a typed `DECODE_UNKNOWN_RECORD_VERSION` rather than a fallback decode.
+bitfield at `body[22]` has no clean stream kind and stays recorded but unemitted; the secondary HR
+and everything marked residual/refuted/[PROV]-only above stay unadmitted, and unknown version bytes
+produce a typed `DECODE_UNKNOWN_RECORD_VERSION` rather than a fallback decode.
+
+**Admission status (WHOOP-P4, the deep buffers).** `gen5_v21` and `gen5_v20` are admitted as
+`[PROV]`/UNVERIFIED (ADR-015), pinned by synthetic invariant tests because no real fill has been
+captured. v21 emits the 100-sample 6-axis IMU — accelerometer as `imu`, gyroscope as `gyro`, both
+`seq = sample*3 + axis`, raw `i16` — gated on both sample counts equalling 100. v20 emits the
+6-channel × 25-sample optical buffer as `optical_raw`, `seq = channel*25 + sample`, 20-bit
+sign-extended `i32`, gated on the 2×-green anchor. **Routing caveat:** Maverick routes these by the
+manifest version byte (20/21), whereas the upstream RE tries the IMU layout first because a real deep
+buffer's version byte was once seen colliding with v18. With no real deep capture to settle which
+version byte these carry, the internal count/anchor gates are the safety net — a mis-routed frame
+that fails them decodes to nothing. Revisit the routing when a real fill arrives.
 
 **The off-by-eleven trap.** Each MG record arrives inside an 8-byte frame header plus a 3-byte inner
 prefix (type, sequence, subtype) before the body, so a position measured from the frame start is 11

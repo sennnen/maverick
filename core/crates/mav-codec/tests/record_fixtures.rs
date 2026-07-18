@@ -8,7 +8,8 @@ use mav_codec::codec::{DeviceCodec, ManifestCodec};
 use mav_codec::kv::MemoryKv;
 use mav_codec::manifest::Manifest;
 use mav_codec::records::{
-    decode_record, GEN4_V24_MIN_BODY_LEN, R20_K18_MIN_BODY_LEN, R20_K26_MIN_BODY_LEN,
+    decode_record, GEN4_V24_MIN_BODY_LEN, GEN5_V20_MIN_BODY_LEN, GEN5_V21_MIN_BODY_LEN,
+    R20_K18_MIN_BODY_LEN, R20_K26_MIN_BODY_LEN,
 };
 use mav_frame::reassembler::{Reassembler, ReassemblyEvent};
 use mav_frame::WireFormat;
@@ -58,8 +59,8 @@ fn manifest() -> Manifest {
             "gatt": { "service": "s", "command": "c", "notify": ["n"] },
             "frame": { "wire_format": "gen5", "max_frame_bytes": 8192 },
             "packets": { "47": "historical_data" },
-            "record_versions": { "18": "r20_k18", "26": "r20_k26" },
-            "capabilities": ["heart_rate", "rr_interval", "gravity", "skin_temp", "spo2_percent", "step_count", "activity_class", "sleep_state_raw", "signal_quality", "ppg"]
+            "record_versions": { "18": "r20_k18", "26": "r20_k26", "20": "gen5_v20", "21": "gen5_v21" },
+            "capabilities": ["heart_rate", "rr_interval", "gravity", "skin_temp", "spo2_percent", "step_count", "activity_class", "sleep_state_raw", "signal_quality", "ppg", "imu", "gyro", "optical_raw"]
         }"#,
     )
     .unwrap()
@@ -264,11 +265,11 @@ fn truncated_records_fail_with_the_exact_boundary() {
 
 #[test]
 fn unknown_versions_produce_no_samples_and_a_typed_error() {
-    // v20 is deliberately unadmitted: the ledger marks its optical layout unknown.
-    let payload = [&[0x2F, 20, 0x00][..], &[0u8; 200][..]].concat();
+    // Version 99 is in no manifest's record_versions: no fallback decode, a typed error instead.
+    let payload = [&[0x2F, 99, 0x00][..], &[0u8; 200][..]].concat();
     let error = decode_record(&manifest(), &payload).unwrap_err();
     assert_eq!(error.code, codes::DECODE_UNKNOWN_RECORD_VERSION);
-    assert!(error.context.iter().any(|c| c.contains("20")));
+    assert!(error.context.iter().any(|c| c.contains("99")));
 }
 
 #[test]
@@ -355,4 +356,100 @@ fn gen4_v24_truncated_fails_with_the_exact_boundary() {
     assert_eq!(error.code, codes::DECODE_FIELD_UNREADABLE);
     let exact = [&[0x2F, 24, 0x00][..], &vec![0u8; GEN4_V24_MIN_BODY_LEN][..]].concat();
     assert!(decode_record(&manifest, &exact).is_ok());
+}
+
+// The v20/v21 deep buffers have no real capture, so they are pinned by synthetic invariant tests
+// (ADR-015): a constructed buffer decodes to exactly its planted samples, and a buffer that fails
+// the structural gate decodes to nothing rather than to plausible garbage.
+
+fn gen5_v21_payload(set: impl Fn(&mut [u8])) -> Vec<u8> {
+    let mut body = vec![0u8; GEN5_V21_MIN_BODY_LEN];
+    set(&mut body);
+    [&[0x2F, 21, 0x00][..], &body].concat()
+}
+
+#[test]
+fn gen5_v21_imu_decodes_100_sample_6axis() {
+    let payload = gen5_v21_payload(|b| {
+        b[13..15].copy_from_slice(&100u16.to_le_bytes()); // accel sample count
+        b[619..621].copy_from_slice(&100u16.to_le_bytes()); // gyro sample count
+        b[17..19].copy_from_slice(&4096i16.to_le_bytes()); // ax[0] (= 1 g)
+        b[629..631].copy_from_slice(&250i16.to_le_bytes()); // gx[0]
+    });
+    let samples = decode_record(&manifest(), &payload).unwrap();
+    let accel: Vec<_> = samples
+        .iter()
+        .filter(|s| s.kind == StreamKind::Imu)
+        .collect();
+    let gyro: Vec<_> = samples
+        .iter()
+        .filter(|s| s.kind == StreamKind::Gyro)
+        .collect();
+    assert_eq!(accel.len(), 300); // 100 samples x 3 axes
+    assert_eq!(gyro.len(), 300);
+    // seq = sample*3 + axis, so ax[0] is seq 0 and ay[0]/az[0] are seq 1/2 (zero here).
+    assert_eq!(accel[0].seq, 0);
+    assert_eq!(
+        serde_json::to_value(accel[0].value).unwrap(),
+        serde_json::json!({ "i16": 4096 })
+    );
+    assert_eq!(
+        serde_json::to_value(accel[1].value).unwrap(),
+        serde_json::json!({ "i16": 0 })
+    );
+    assert_eq!(
+        serde_json::to_value(gyro[0].value).unwrap(),
+        serde_json::json!({ "i16": 250 })
+    );
+}
+
+#[test]
+fn gen5_v21_imu_rejects_wrong_sample_count() {
+    // Accel count 99, not 100: the gate fails and the buffer decodes to nothing.
+    let payload = gen5_v21_payload(|b| {
+        b[13..15].copy_from_slice(&99u16.to_le_bytes());
+        b[619..621].copy_from_slice(&100u16.to_le_bytes());
+    });
+    assert!(decode_record(&manifest(), &payload).unwrap().is_empty());
+}
+
+fn gen5_v20_payload(set: impl Fn(&mut [u8])) -> Vec<u8> {
+    let mut body = vec![0u8; GEN5_V20_MIN_BODY_LEN];
+    set(&mut body);
+    [&[0x2F, 20, 0x00][..], &body].concat()
+}
+
+#[test]
+fn gen5_v20_optical_decodes_6_channels_25_samples() {
+    let payload = gen5_v20_payload(|b| {
+        b[17..19].copy_from_slice(&1400u16.to_le_bytes()); // green LED
+        b[20..22].copy_from_slice(&2800u16.to_le_bytes()); // 2x-green echo anchor
+        b[36..40].copy_from_slice(&12345u32.to_le_bytes()); // ch0[0]
+        b[40..44].copy_from_slice(&0x000F_FFFBu32.to_le_bytes()); // ch0[1] = -5 (20-bit signed)
+    });
+    let optical: Vec<_> = decode_record(&manifest(), &payload)
+        .unwrap()
+        .into_iter()
+        .filter(|s| s.kind == StreamKind::OpticalRaw)
+        .collect();
+    assert_eq!(optical.len(), 150); // 6 channels x 25 samples
+    assert_eq!(
+        serde_json::to_value(optical[0].value).unwrap(),
+        serde_json::json!({ "i32": 12345 })
+    );
+    // The 20-bit sign extension makes 0x000FFFFB come back as -5, not a large positive.
+    assert_eq!(
+        serde_json::to_value(optical[1].value).unwrap(),
+        serde_json::json!({ "i32": -5 })
+    );
+}
+
+#[test]
+fn gen5_v20_optical_rejects_without_led_anchor() {
+    // Echo is not 2x green: the anchor gate fails and the buffer decodes to nothing.
+    let payload = gen5_v20_payload(|b| {
+        b[17..19].copy_from_slice(&1400u16.to_le_bytes());
+        b[20..22].copy_from_slice(&999u16.to_le_bytes());
+    });
+    assert!(decode_record(&manifest(), &payload).unwrap().is_empty());
 }

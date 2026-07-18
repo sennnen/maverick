@@ -14,7 +14,15 @@ pub enum StreamKind {
     HeartRate,
     RrInterval,
     Ppg,
+    /// Raw multi-channel optical ADC from the WHOOP 5.0/MG v20 deep buffer: 20-bit signed counts,
+    /// six photodiode channels flattened into `seq = channel * samples_per_channel + sample`. Raw
+    /// counts, no invented scale; distinct from `Ppg` (single-channel) — see ADR-015.
+    OpticalRaw,
     Imu,
+    /// Raw 3-axis gyroscope from the WHOOP 5.0/MG v21 deep buffer, `seq = sample * 3 + axis`. Raw
+    /// `i16` LSB (× 2000/32768 deg/s per the upstream scale); distinct from `Imu` (accelerometer).
+    /// See ADR-015.
+    Gyro,
     Gravity,
     SkinTemp,
     Spo2Raw,
