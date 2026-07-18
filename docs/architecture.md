@@ -79,7 +79,9 @@ remaining dependent actions. This preserves append-before-ack without encoding W
 | `mav-model` | Frozen health-data and error vocabulary; no device protocol types |
 | `mav-frame` | Generic byte/frame primitives usable by host and SDK tests |
 | `mav-connector-abi` | Frozen no-device event, action, artifact metadata, and ABI wire types |
+| `mav-connector-sdk` | Public guest exports, allocation glue, bounded builders, metadata, and native harness |
 | `mav-connector-runtime` | `.mavconn` parser, verifier, interpreter adapter, limits, instance lifecycle |
+| `mav-connector-tool` | Deterministic pack, inspect, trust/export validation, and structural fixture CLIs |
 | `mav-connector-store` | Install records, trust records, connector-scoped state, activation and rollback transactions |
 | `mav-codec` | Normalized sample admission and any open-standard profiles retained by explicit ADR; no loadable-device registry |
 | `mav-timeline` | Ordering, deduplication, clock correction, canonical merge |
@@ -100,19 +102,20 @@ Names may change only in the owning packet before public interfaces freeze. No c
 Exact edges are enforced by `tools/check_deps.py`:
 
 ```text
-mav-model       mav-connector-abi
+mav-model       mav-connector-abi <- mav-connector-sdk
       ^              ^
-      |              |
-stage crates    mav-connector-runtime -> interpreter + crypto + CBOR
+      |              +--------- mav-connector-tool
+stage crates    mav-connector-runtime <-+
       ^              ^
       +------ mav-engine ------+
                   ^             |
               mav-ffi       mav-replay
 ```
 
-`mav-connector-abi` depends on no Maverick crate. `mav-connector-runtime` depends only on the ABI and
-`mav-model` error vocabulary inside Maverick. Runtime cannot depend on a device, frontend, analytics,
-or native BLE API.
+`mav-connector-abi` depends on no Maverick crate. The public SDK depends only on that leaf. The
+developer tool depends on ABI plus runtime so its checks cannot drift from the host. Runtime depends
+only on the ABI and `mav-model` error vocabulary inside Maverick. Runtime cannot depend on a device,
+frontend, analytics, tool, SDK, or native BLE API.
 Engine depends on runtime; runtime never calls engine. FFI/replay do not link connector crates.
 Connector source lives only in `sennnen/maverick-connectors` and compiles against the public SDK.
 

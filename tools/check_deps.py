@@ -13,7 +13,9 @@ from pathlib import Path
 ALLOWED = {
     "mav-model": set(),
     "mav-connector-abi": set(),
+    "mav-connector-sdk": {"mav-connector-abi"},
     "mav-connector-runtime": {"mav-model", "mav-connector-abi"},
+    "mav-connector-tool": {"mav-connector-abi", "mav-connector-runtime"},
     "mav-frame": {"mav-model"},
     "mav-store": {"mav-model"},
     "mav-obs": {"mav-model", "mav-store"},

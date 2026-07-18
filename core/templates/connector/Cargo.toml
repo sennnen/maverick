@@ -1,0 +1,14 @@
+[package]
+name = "mav-connector-template"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.96"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+mav-connector-sdk = { path = "../../crates/mav-connector-sdk" }
+
+[workspace]

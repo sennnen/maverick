@@ -3,7 +3,9 @@ resolver = "2"
 members = [
     "crates/mav-model",
     "crates/mav-connector-abi",
+    "crates/mav-connector-sdk",
     "crates/mav-connector-runtime",
+    "crates/mav-connector-tool",
     "crates/mav-frame",
     "crates/mav-codec",
     "crates/mav-timeline",
@@ -34,7 +36,9 @@ unimplemented = "deny"
 [workspace.dependencies]
 mav-model = { path = "crates/mav-model" }
 mav-connector-abi = { path = "crates/mav-connector-abi" }
+mav-connector-sdk = { path = "crates/mav-connector-sdk" }
 mav-connector-runtime = { path = "crates/mav-connector-runtime" }
+mav-connector-tool = { path = "crates/mav-connector-tool" }
 mav-frame = { path = "crates/mav-frame" }
 mav-codec = { path = "crates/mav-codec" }
 mav-timeline = { path = "crates/mav-timeline" }

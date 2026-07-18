@@ -287,22 +287,32 @@ and normalized platform restoration facts, and requires connector to re-establis
 
 ## SDK and tools
 
-`mav-connector-sdk` provides no-std-friendly ABI types, deterministic CBOR, export macros, allocator
-glue, bounded action builders, state-machine helpers, diagnostics, test harness, fixture authoring,
-and artifact metadata macros. It contains no WHOOP UUID, command, retry, record, or generation rule.
+`mav-connector-sdk` re-exports the frozen ABI types and provides deterministic CBOR metadata,
+Wasm export macros, allocator glue, bounded action builders, a native state-machine test driver,
+fixture authoring, and artifact metadata macros. Its device-neutral template compiles for
+`wasm32-unknown-unknown` with no imports. It contains no WHOOP UUID, command, retry, record, or
+generation rule.
 
 Tooling provides:
 
-- `mavconn-pack`: build, canonical-section injection, fixture embedding, signature creation;
+- `mavconn-pack`: canonical-section injection, fixture embedding, external-signature assembly, and
+  output self-verification; private keys never enter the process;
 - `mavconn-inspect`: metadata/signature/hash/limits display without execution;
-- `mavconn-validate`: identical host validation and self-tests;
-- `mavconn-test`: native unit plus Wasm parity/state scripts;
+- `mavconn-validate`: identical host artifact, trust, import, export-name, and export-type validation;
+- `mavconn-test`: packaged structural fixture reporting; the SDK `TestDriver` runs exact native
+  state scripts, while Wasm execution/parity joins this command after WC-P4 adds instantiation;
 - registry publish command: digest-addressed upload and signed index update.
 
 Automated architecture gates inspect Cargo edges, SDK dependency trees, Wasm imports/exports and
 features, custom-section determinism, repository stale names, generated FFI, and packaged artifact
 self-tests. They fail if core/FFI/frontends link a device crate, if a connector path-depends on
 Maverick internals, or if a generic module contains a device UUID/opcode allowlist.
+
+The companion connector repository consumes the exact released SDK version. Its pre-release deep
+validator uses a command-line Cargo patch to test the local SDK source without committing a path
+dependency, then runs format, Clippy, native tests, repeatable Wasm builds, metadata generation, and
+deterministic unsigned packaging. Production pack finalization accepts only public key and signature
+bytes produced by an external Ed25519 signer.
 
 ## Registry
 

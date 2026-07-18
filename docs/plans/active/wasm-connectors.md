@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: in progress. WC-P0 through WC-P2 are complete; WC-P3 is next.
+Status: in progress. WC-P0 through WC-P3 are complete; WC-P4 is next.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -100,7 +100,7 @@ Status: complete
 
 ## Packet WC-P3: Ship public SDK, packer, inspector, validator, and test harness
 
-Status: pending
+Status: complete
 
 - **Repositories touched:** `maverick` and `maverick-connectors`.
 - **Likely files/modules:** SDK crate/API docs in `maverick`; connector repo Cargo workspace,
@@ -476,3 +476,10 @@ the listed order minimizes simultaneous migration surfaces.
   Ed25519 verification. ADR-018 reserves Connector error codes 11000-11999; all 18 failure classes
   journal round-trip. Frozen digest, malicious corpus, truncation, and byte-flip tests pass without
   module instantiation.
+- 2026-07-18: WC-P3 added the device-neutral `mav-connector-sdk`, exact native `TestDriver`, bounded
+  action builder, ABI allocation/export glue, canonical metadata macro, and a zero-import Rust
+  template that compiles reproducibly for `wasm32-unknown-unknown`. `mav-connector-tool` supplies
+  pack digest/finalize, inspect, validate, and structural fixture CLIs using the host parser/runtime;
+  finalization accepts public key/signature bytes from an external signer and self-verifies output.
+  The connector repository now has an exact-version SDK consumer workspace, schema registry, and
+  deep format/Clippy/test/Wasm/deterministic-package validator with no committed Maverick path.
