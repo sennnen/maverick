@@ -301,32 +301,24 @@ screen-level UI/screenshot tests.
 
 ---
 
-## Packet PL-P8: Connector import and built-in standard heart-rate transport
+## Packet PL-P8: Built-in standard heart-rate transport
 
-**Owns:** connector package validation/import UI, native connector registry adapters, standard BLE
-Heart Rate transport, and docs split between the core and `maverick-connectors`.
+**Owns:** standard BLE Heart Rate transport only. Runtime-loaded connector import and management are
+owned by WC-P13/P14 after ADR-017's runtime migration.
 
-**Must not touch:** proprietary connector contents inside the app repo or add runtime code loading.
+**Must not touch:** proprietary connectors, `.mavconn` runtime/import UI, or compiled device codecs.
 
 **Contract:** Maverick ships only a built-in standards connector for BLE Heart Rate Service
 `0x180D`/measurement `0x2A37` plus standard battery/device-information services where available.
 WHOOP and future proprietary connectors remain in the private, separate connector repository.
 
-An imported connector is a signed/versioned data package that conforms to the core manifest schema.
-Native app code validates identity, schema range, declared capabilities, hashes, and required GATT
-permissions before registration. iOS does not dynamically load arbitrary native code; connector
-logic that cannot be declarative must be compiled into a reviewed core extension at build time and
-versioned separately. The UI must say when a connector requires an app rebuild.
-
 Tests use the standards-defined heart-rate payload and checked-in connector fixtures. They do not
 invent a fake wearable family.
 
-**Tests first:** valid package import, tamper rejection, unsupported schema, duplicate version,
-downgrade refusal, capability display, standard 8/16-bit HR and RR decode, permission denial,
-disconnect, and package removal without deleting user data.
+**Tests first:** standard 8/16-bit HR and RR decode, permission denial, disconnect, and honest
+unavailable state.
 
-**Exit:** a real standard BLE HR sensor can feed the core; a WHOOP package can be validated and
-registered without being committed to this repository.
+**Exit:** a real standard BLE HR sensor can feed the core without a proprietary device path.
 
 **Status: in progress.** The core side of the standards connector is done: `wire_format:
 "unframed"` runs the reassembler in passthrough (a GATT notification value is one frame), and
@@ -338,8 +330,7 @@ and exact truncation errors. Decision log: standard characteristics carry no dev
 the pipeline stamps samples with the phone-side receive time *without* the implausible-timestamp
 flag (that flag means a broken device clock, and there is no device clock), and the codec keeps
 a session-monotonic sequence so equal readings in one session stay distinct through dedup.
-Remaining: connector package import/validation UI on both apps, native registry adapters, and
-the docs split with `maverick-connectors`.
+Remaining here: native standard-profile transport. Connector import/management moved to the WC lane.
 
 ---
 

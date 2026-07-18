@@ -54,13 +54,12 @@ new ones.
 
 ## The per-device KV table
 
-There is a small key-value table scoped by device, and it exists for the codecs. A `DeviceCodec`
-that learns something about its specific physical device (the gen4 skin-temp anchor being the
-standing example, see [connectors.md](connectors.md)) stores it here. The table is codec-scoped in
-both directions: codecs are the only writers, and a codec sees only its own device's keys. Learned
-values live here rather than in tier three because they are not derived from stored samples by a
-rerunnable algorithm; they are accumulated device state, and dropping them would genuinely lose
-something, so they sit outside the disposable tiers.
+The current per-device KV table exists for compiled codecs. ADR-017 replaces direct access with
+transactional connector-scoped state keyed by connector id, publisher key, device id, and state
+schema. A `.mavconn` emits bounded state actions; core selects the namespace, journals digest/schema,
+and snapshots it for update rollback. WC-P6 owns the forward migration and WC-P12 deletes direct
+`DeviceCodec` access. Learned values remain outside disposable derived tiers because dropping them
+would lose accumulated device state.
 
 ## The round-trip guarantee
 

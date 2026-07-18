@@ -44,7 +44,14 @@ The Rust core with UniFFI bindings, both platforms always, is kept. Vertical-sli
 
 **2. No forty algorithms up front. A fixture-admission rule instead.** The earlier work accreted around forty analytic engines, many of them speculative, whose tests proved only that the Swift and Kotlin versions agreed with each other. An algorithm lands in Maverick only when it has one of two things: a golden fixture derived from a real capture or a published reference implementation, or property and invariant tests that can genuinely fail. Anything without one of those stays an explicit stub, and capability negotiation reports it as unavailable rather than pretending it works. This kills speculative code before it is written and kills the always-green test that asserts nothing, which was the most common defect in both surveyed codebases. A parity test that shows two platforms agree is necessary but not sufficient: two platforms can be consistently wrong. A number is validated only against ground truth or a published reference; otherwise it is merely consistent, and it must be labelled provisional.
 
-**3. Manifests are declarative data plus a small boxed-in codec, not pure data.** It is tempting to describe every device as a JSON file and have one generic decoder read it. Reality from the surveyed codebases says that does not hold: the WHOOP 4.0 needs a per-device learned skin-temperature anchor, handshakes are stateful, and some decodes carry memory across records. So `manifest.json` holds everything static — identity, GATT UUIDs, frame parameters, the packet map, field layouts, unit conversions, record versions, sensor configs — and a small `DeviceCodec` Rust trait holds only the logic that data cannot express. The codec is boxed in by its interface. It receives bytes, its own manifest, and a per-device key-value store for learned values like that skin-temp anchor, and it returns frames and samples. It cannot reach storage, the network, analytics, or any other device. Adding a device is one manifest and, when the logic genuinely needs it, one small codec crate. The core is not touched.
+**3. Connectors are signed, runtime-loaded WebAssembly programs behind an event/action ABI.** Pure
+manifest data cannot express stateful handshakes, authentication, historical acknowledgements, or
+per-device learned state. Compiled Rust connector crates isolate that logic but still require an app
+rebuild. ADR-017 replaces both incomplete models: one valid-Wasm `.mavconn` embeds deterministic
+metadata, fixtures, ABI requirements, and an Ed25519 signature. A no-JIT interpreter runs identical
+bytes on both platforms. Core supplies normalized events and executes only validated declarative
+actions; connectors receive no filesystem, network, native BLE, clock, randomness, process, or
+thread capability. Adding a device changes neither Maverick nor either app binary.
 
 **4. Errors and observability are milestone zero, not the last milestone.** The prior plan left error handling and forensics to the end. For a swarm that is backwards. A swarm with no forensics ships silent corruption, and by the time you notice, you cannot tell which of a hundred merged changes did it. So the error taxonomy, tracing, the error journal, and the user-facing report bundle are all M0 deliverables. From the first milestone, nothing is dropped silently: every discarded packet, sample, or frame logs a stable error code and a reason.
 
@@ -66,7 +73,8 @@ maverick/
     architecture.md    system map, crate ownership, the allowed dependency edges
     pipeline.md        stage-by-stage contracts of the data pipeline
     platform.md        native runtime, transport-event, read-model, and compatibility contract
-    connectors.md      manifest schema, the DeviceCodec contract, how to add a device
+    connectors.md      .mavconn format, ABI, trust, install, lifecycle, SDK and registry
+    connector-audit.md current bundled-driver audit, WHOOP comparison, deletion inventory
     protocol/
       whoop.md         every known WHOOP protocol fact, each with a confidence tag
     testing.md         test policy: fixture rules, property tests, parity, anti-faux rules
@@ -80,14 +88,14 @@ maverick/
   skills/
     work-packet/SKILL.md          how to execute one packet start to finish
     golden-fixtures/SKILL.md      how to generate and version a golden fixture
-    connector-authoring/SKILL.md  how to write a manifest and, if needed, a codec
+    connector-authoring/SKILL.md  how to author, test, package, sign, and publish a .mavconn
     doc-gardening/SKILL.md        how to keep docs and code from drifting apart
   core/
     Cargo.toml         the Rust workspace
     crates/
       mav-model/       frozen types: ids, time, streams, samples, quality, errors, versions
       mav-frame/       CRC 8/16/32, the reassembler, the TypedReader
-      mav-codec/       the DeviceCodec trait, manifest types, the device registry
+      mav-codec/       current decode/manifest layer; migrated to normalized admission by WC
       mav-timeline/    ordering, dedup, clock correction, historical merge
       mav-sqi/         signal quality scoring
       mav-feature/     primitive, derived, and aggregate features
@@ -97,8 +105,8 @@ maverick/
       mav-engine/      orchestration: triggers, the task graph, caching
       mav-ffi/         the UniFFI facade both apps link
       mav-replay/      binary: run a capture file through the pipeline, for hardware-free dev
-  connectors/             no proprietary connectors; real device connectors live in the
-                          separate maverick-connectors repo (ADR-011)
+  connectors/             development-only fixtures; connector source and releases live in the
+                          separate maverick-connectors repo (ADR-017)
   fixtures/            golden fixtures, versioned; README explains naming and the rules
   apps/
     ios/               native iOS app and its platform tests
@@ -181,14 +189,15 @@ Milestones are gated by exit criteria, not dates. A milestone is done when its e
 | M4 | Sleep | Gravity, HR, RR, and respiration features; staging (rule-based first, an ML stager only behind the admission rule); sleep windows, efficiency, and a night-summary snapshot | A capture produces a night summary with staged sleep and the numbers trace back to samples |
 | M5 | Historical sync and canonical merge | A fail-closed backfill controller, every evidence-admitted record version, clock-correction segments, plausibility gates, and recompute triggers | A historical capture backfills, merges canonically, and recomputes affected days without inventing, dropping, or acknowledging uncommitted data |
 | M6 | Analytics breadth and ML | Strain and the remaining metrics that pass the admission rule; Rust preprocessing plus native inference wired with golden vectors; every analytic engine justified in writing or culled | Every shipped metric has a fixture or a published reference, and no engine exists without one |
-| M7 | Cloud connector | A manifest of kind `cloud`, an ingest adapter, the same pipeline, proving the connector abstraction covers non-BLE sources too | A cloud source streams through the same pipeline the straps use, with no core edits |
+| M7 | Host-mediated cloud source | Re-plan after WC-P16: native acquisition supplies bounded source events through an explicitly reviewed ABI capability; connector code still gets no network | Cloud data reaches the same admission/pipeline path with provenance and no connector network access or device special case |
 | M8 | Hardening | Observability audit demonstrating the walk-back requirement, the error-report UX, a fixture-coverage audit, doc gardening, a dependency-edge audit, and ADR backfill | Walk-back is demonstrated end to end, coverage gaps are closed or documented, and the docs match the code |
 
 Two standing lanes sit beside the numbered milestones because neither belongs at one point in the
 data sequence. The [platform lane](plans/active/platform.md) packages the core, migrates the existing
-Aura product shell without its old internals, plumbs admitted values into it, adds connector import,
-and produces signed release candidates. It starts as soon as the first read model exists; later
-milestones turn unavailable cards into real ones through the same contract. The hardware epoch
+Aura product shell without its old internals, plumbs admitted values into it, and produces signed
+release candidates. The [WebAssembly connector lane](plans/active/wasm-connectors.md) owns runtime,
+SDK, migration, import, management, and deletion of the bundled path. It starts with evidence probes;
+later milestones turn unavailable cards into real ones through the same contract. The hardware epoch
 starts when the straps arrive. Every fact currently marked as code-inferred then gets verified or
 corrected against live captures, its ledger tag flips to hardware-verified, and fixtures are
 regenerated from our own captures. The hardware checklist lives in `docs/protocol/whoop.md`.
@@ -197,6 +206,15 @@ regenerated from our own captures. The hardware checklist lives in `docs/protoco
 
 Some things are out of scope on purpose, and naming them is as useful as naming the scope, because it stops an agent from helpfully building something nobody asked for.
 
-There is no plugin marketplace or store, and no community plugin ecosystem. There is no WASM and no in-app code execution of any kind; connectors are data and a narrow Rust trait, not sandboxed programs, and they get no network, filesystem, or BLE access of their own. ML inference does not run in Rust — it runs natively on CoreML and TFLite, with Rust owning only the deterministic preprocessing. BLE transport does not live in Rust either; the native platforms own the radios, and the Rust core receives bytes through one bounded channel. There are no event buses, which is principle 1 restated as a boundary. There are no speculative algorithms without fixtures, and no analytics knowledge baked into manifests. The timeline does not interpolate. HealthKit, Health Connect, widgets, and notifications are not built until after M8. The native apps are real product shells, but they stay thin: they render immutable core read models, own radio and platform presentation concerns, and never become a second analytics implementation.
+There is no general-purpose plugin environment: no JavaScript runtime, JIT, WASI, arbitrary host
+imports, connector filesystem/network/native API access, or downloaded native library. The signed
+`.mavconn` runtime is limited to the closed connector event/action ABI in ADR-017. A registry is
+discovery metadata, not a marketplace or execution privilege. ML inference does not run in the
+connector runtime; admitted models use native CoreML/TFLite with deterministic Rust preprocessing.
+Native platforms still own radios and execute only core-validated generic actions. There are no
+event buses, speculative algorithms without fixtures, analytics knowledge in connector manifests,
+or timeline interpolation. HealthKit, Health Connect, widgets, and notifications remain after M8.
+Native apps render immutable read models and never become a second protocol or analytics
+implementation.
 
 A note honest enough to write down: neither surveyed codebase actually shipped a neural model. Everything they computed was classical DSP and statistics. The native-inference boundary in `docs/ml.md` is kept as architecture for the day a real model with a golden vector exists, but we do not add a CoreML or TFLite dependency until that day comes. Building the runway before there is a plane is exactly the speculative work the admission rule exists to prevent.

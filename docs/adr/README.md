@@ -16,3 +16,4 @@
 - [ADR-014](ADR-014.md) — Additive stream kinds for the WHOOP gen5 K=18 record
 - [ADR-015](ADR-015.md) — Stream kinds for the WHOOP gen5 deep buffers (v20 optical, v21 IMU)
 - [ADR-016](ADR-016.md) — Device codec crates: WHOOP moves out of the core
+- [ADR-017](ADR-017.md) — Runtime-loaded WebAssembly connectors

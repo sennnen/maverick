@@ -1,192 +1,341 @@
-# Connectors
+# Runtime-loaded connectors
 
-A connector is how Maverick knows how to talk to one family of device. It is a `manifest.json` file
-and, when the device needs logic that a file cannot express, a small `DeviceCodec`. The rule that
-governs the whole design is short: adding a device is one manifest plus at most one small codec, and
-zero edits to the core. If adding a device requires touching a crate under `core/`, the abstraction
-has failed and the fix is to widen the manifest or the codec contract, not to special-case the new
-device inside the pipeline.
+This document freezes target contracts selected by [ADR-017](adr/ADR-017.md). It is implementation
+architecture, not a claim that current code already implements the runtime. The ordered work lives
+in [plans/active/wasm-connectors.md](plans/active/wasm-connectors.md).
 
-## Why not purely declarative
+## Product invariants
 
-The tempting version of this design is a pure manifest: describe every device as data, decode
-everything by interpreting that data, and never write device-specific code at all. Maverick does
-not do that, because the prior codebases showed it does not hold. Some device behaviour is stateful
-(authentication and handshakes), and some decoding needs memory or a value that has to be learned
-from the device over time. A static file cannot carry a value that does not exist until the device
-has been worn for a while.
+- One `.mavconn` file is both the import unit and a valid WebAssembly module.
+- Identical bytes run through identical Rust runtime code on iOS, Android, replay, and tests.
+- Adding, updating, rolling back, or removing a connector never rebuilds Maverick.
+- Metadata, compatibility, trust, signatures, and embedded tests are checked before activation.
+- Connector code is hostile: no ambient capabilities, bounded resources, typed actions only.
+- No device family is named by generic core or frontend code.
+- Frontends acquire bytes; core validates, verifies, tests, installs, and activates them.
 
-The clearest example is skin temperature on the WHOOP 4.0. The gen5 straps report skin temperature
-as centidegrees, so degrees Celsius is `raw / 100`, and that is a fixed conversion a manifest states
-directly. The gen4 is not so kind. The two surveyed codebases disagree on its absolute scale: one
-uses a fixed anchor (`delta_c = (raw - 930) / 30`, with raw 930 read as 33 °C), and the other uses
-a per-device affine fit (`°C = 33.0 + (raw - anchorRaw) * 0.05`, where `anchorRaw` defaults to 826
-but is learned from the worn-band median for that specific device). Both codebases say plainly that
-the gen4 absolute figure is provisional and that only deviation from the device's own baseline is
-defensible until there is hardware calibration. See [protocol/whoop.md](protocol/whoop.md) for the
-tags on these facts.
+## Trust boundaries
 
-That learned per-device anchor cannot live in a manifest, because it is different for every physical
-strap and it does not exist until the strap has been worn. It is a value the connector computes and
-remembers. So the connector contract has two parts: a manifest for everything static, and a codec
-for the small amount of logic and state that static data cannot represent. Maverick models skin
-temperature the general way, as a per-device learned anchor and slope (which makes the fixed-anchor
-approach a special case), stored in the per-device key-value table and surfaced as a deviation from
-personal baseline rather than an absolute thermometer reading.
+Untrusted inputs are connector bytes, custom-section payloads, Wasm bytecode, imported source
+metadata, registry responses, connector state, device advertisements, BLE values, and every action a
+connector emits. Parser success never establishes trust. Validation order is:
 
-## What goes in the manifest
+1. size and structural limits;
+2. Wasm magic/version and section scan without instantiation;
+3. required/duplicate/unknown-critical custom-section rules;
+4. deterministic CBOR and schema validation;
+5. ABI/core compatibility;
+6. artifact digest and Ed25519 signature;
+7. publisher policy and revocation;
+8. Wasm validation, import/export allowlist, feature limits;
+9. ephemeral instantiation under hard limits;
+10. embedded fixture self-tests;
+11. explicit user approval and atomic install.
 
-`manifest.json` holds everything about a device that is static, meaning it is true for the whole
-device family and known before any strap is ever connected:
+Failure leaves active artifact and state unchanged. Diagnostics contain safe ids/hashes, never raw
+health payloads or local file paths by default.
 
-- **Identity.** The device family name and the model strings that map to it, including how to
-  disambiguate models that are indistinguishable at scan time. (WHOOP 5.0 and MG share a service
-  UUID and are told apart only by a registry or model string; an unknown model string defaults to
-  gen5.)
-- **GATT.** Service, command, and notify characteristic UUIDs, and any standard GATT characteristics
-  the device also exposes.
-- **Frame parameters.** The start-of-frame byte, the header layout, the CRC families and their
-  parameters, the padding rule, and the maximum frame size. `wire_format` is `gen4`, `gen5`, a
-  `custom` spec described as data (ADR-012), or `unframed` — a standard GATT characteristic whose
-  notification values arrive whole, with no header and no CRC, so the reassembler runs in
-  passthrough (PL-P8).
-- **Packet map.** The numeric packet types and what each one is (realtime data, historical data,
-  event, metadata, command response, and so on).
-- **Field layouts.** For each packet type and record version, the offset, width, endianness, and
-  meaning of each field.
-- **Unit conversions.** The scale and offset that turn a raw field into a physical value, where that
-  conversion is a fixed constant.
-- **Record versions.** The historical record versions the device emits, keyed by their version or
-  subtype byte, each with its own field layout and a maturity note.
-- **Codec id.** A device whose decode the DSL cannot fully express names its codec — `codec:
-  "whoop"`. The id resolves to a compiled `mav-connector-<family>` crate the edge registered
-  (ADR-016); naming `record_versions` or an `event_vocabulary` without naming a codec is a
-  validation error, because nothing in the core can decode them.
-- **Event vocabulary.** A device whose event packet carries a number byte selecting a per-event
-  body layout names one admitted vocabulary — `event_vocabulary: "whoop"` — instead of a layout.
-  One number choosing among body layouts is the same DSL-can't-express shape as the standard
-  profile, so each vocabulary is a reviewed module in the device's codec crate and the manifest
-  can only name it; the name is checked against what the codec admits when the connector
-  installs. Admitted mappings decode to samples at the event's RTC timestamp (WHOOP: battery
-  state of charge, wrist on/off); event numbers without a stream mapping decode to nothing, like
-  control packets (WHOOP-P5).
-- **Standard profile.** A pure standards connector (the built-in BLE Heart Rate connector) names
-  one admitted profile decoder — `standard_profile: "heart_rate"` — instead of a packet map. The
-  Heart Rate Measurement layout is flag-driven, which the layout DSL cannot express, so the
-  decoder is a reviewed module in `mav-codec/src/standard.rs` — the one decoder family that stays
-  in the core, because a Bluetooth SIG profile is an open standard, not a device family — and the
-  manifest can only name it. Standard characteristics carry no device clock; the pipeline stamps
-  each sample with the phone-side receive time, unflagged, because that is the honest time of a
-  clockless reading.
-- **Capabilities and interval source.** The stream kinds the device produces, plus `ppg`, `ecg`, or
-  `unknown` for beat-to-beat intervals. This controls whether variability may be labelled optical
-  PRV or ECG HRV; the presence of RR alone cannot answer that.
-- **Sensor configs.** The commands and parameters used to start, stop, and configure raw-sensor
-  streams.
+## `.mavconn` format v1
 
-Everything in that list is data, and data is the right home for it because a manifest can be
-reviewed, diffed, and validated without reading Rust, and because a wrong offset in a manifest is a
-one-line fix that does not risk the pipeline. Where a protocol fact is uncertain, the manifest
-records it with the same confidence honesty the protocol document uses; a guessed offset is marked
-as such rather than presented as settled.
+The file starts with normal WebAssembly magic/version bytes. The packer emits required custom
+sections after standard Wasm sections in this exact order:
 
-## What goes in the codec
+1. `mav:manifest`
+2. `mav:abi`
+3. `mav:fixtures`
+4. `mav:signature`
 
-A `DeviceCodec` holds only the logic that data cannot express. In practice that is a short list:
+Each appears exactly once. Any duplicate `mav:*` section, malformed length, trailing bytes, or
+unknown `mav:critical:*` section rejects the artifact. Non-Maverick custom sections are allowed but
+count toward artifact limits and signature bytes. Custom sections are valid metadata containers
+under the [WebAssembly core specification](https://webassembly.github.io/spec/core/appendix/custom).
 
-- Reviewed decoders where one byte selects among body layouts (historical record versions, event
-  vocabularies) — dispatch, not data, so the manifest names them and the codec carries them.
-- Stateful handshakes and authentication sequences.
-- Decodes that need memory across frames.
-- Values learned from the device over time, such as the gen4 skin-temp anchor.
-- The device's outbound command builders (alarm, haptics), which are opcode tables and body
-  layouts no other device shares.
+Payloads use RFC 8949 deterministic CBOR: definite lengths, shortest integer encoding, canonical map
+key order, no duplicate keys, no indefinite items, and no floats in manifest/ABI/signature payloads.
+The validator rejects a semantically valid but non-deterministic encoding. Fixture numeric values use
+explicit integer/fixed-point or byte encodings defined by their schema.
 
-If a piece of behaviour can be written as a manifest field, it must be, and it does not belong in the
-codec. The codec is for the residue that genuinely cannot be a table.
+### `mav:manifest`
 
-A codec is a compiled crate under `core/connectors/`, named `mav-connector-<family>`
-(ADR-016). It may depend only on `mav-model`, `mav-frame`, and `mav-codec` — check_deps enforces
-this — and it reaches the pipeline in exactly one way: `mav-ffi` (at startup) and `mav-replay`
-(per run) register its factory with the engine under its id, and the engine resolves a manifest's
-`codec` field against that set. A manifest naming an id nothing registered refuses to install
-with `DECODE_CODEC_UNAVAILABLE`. The first such crate is `mav-connector-whoop`, which carries the
-WHOOP record decoders, event vocabulary, historical-control layouts, and command builders, and
-delegates every layout-DSL packet to the core's `ManifestCodec`.
+Required fields:
 
-Its shape, at sketch level:
-
-```rust
-trait DeviceCodec {
-    fn decode(&mut self, frame: &Frame, manifest: &Manifest, kv: &mut DeviceKv)
-        -> Result<RawSampleBatch, MavError>;
-}
+```text
+schema: "mavconn-manifest/v1"
+connector_id: reverse-DNS stable id
+version: SemVer without build metadata
+display_name, description
+publisher_key_id
+abi: { major, min_minor, max_minor }
+core: { min_version, max_version? }
+state_schema: u32
+artifact_limits_profile: named v1 profile
+device_families: [identity + advertisement match rules]
+services: [service + characteristic declarations]
+capabilities: [declared stream kinds and transport operations]
+permissions: [closed enum; BLE-only in v1]
+entrypoints: fixed v1 export names
+fixture_set_hash
+update: { channel, downgrade_policy }
 ```
 
-A codec receives three things and nothing else: the bytes of a frame, its own manifest, and a
-per-device key-value store scoped to that one device. It returns frames or samples, or an error. The
-key-value store is where a learned anchor is read and written, and it is per-device, so one strap's
-learned values never leak into another's.
+Advertisement rules can match declared service UUIDs, manufacturer id plus bounded masked bytes,
+and normalized name prefixes. Regex, arbitrary code, and hidden registry lookup are forbidden.
+Characteristics declare logical ids, UUIDs, properties, sensitivity, and whether confirmed writes
+are required. Actions may reference only logical ids declared here.
 
-## The boxing rules
+### `mav:abi`
 
-The codec is boxed in by its interface, and the boundary is the point of the whole design. A codec:
+Contains `schema: "mavconn-abi/v1"`, ABI major/minor, canonical ABI schema hash, required exports,
+required imports (empty in v1), enabled Wasm features, and SDK version. Major mismatch rejects.
+Core may run a connector with an older minor only when every emitted/received variant is supported.
 
-- **may** read the frame bytes it is given,
-- **may** read its own manifest,
-- **may** read and write its own per-device key-value store,
-- **may not** touch storage directly,
-- **may not** touch the network,
-- **may not** touch analytics, features, or metrics,
-- **may not** see or affect any other device.
+### `mav:fixtures`
 
-A codec cannot reach the parts of the system where a decode bug would become a storage corruption or
-a cross-device contamination. The worst a broken codec can do is produce wrong samples for its own
-device, and wrong samples are caught by signal quality, plausibility gates, and golden fixtures. It
-cannot write directly to a table, cannot phone home, and cannot reach into another strap's state.
-That containment is what lets a new codec be written by an agent working a single packet without
-putting the rest of the system at risk.
+Contains bounded cases with an initial state, ordered input events, expected ordered actions,
+expected final state hash, maximum fuel, and optional expected normalized samples/diagnostics. Raw
+fixtures are versioned and content-hashed. Install runs all required cases in a fresh namespace; no
+test can use network, filesystem, native BLE, or installed user state.
 
-## Adding a device
+### `mav:signature`
 
-The whole procedure for a new device is:
+Contains schema id, `Ed25519`, publisher key id, SHA-256 digest, and 64-byte signature. Signing is
+separate from mobile app signing.
 
-1. Write `<device>/manifest.json` in the connectors repository with the static facts above.
-2. If, and only if, the device needs logic the DSL cannot express, add a
-   `core/connectors/mav-connector-<device>` crate implementing `DeviceCodec`, name it in the
-   manifest's `codec` field, and add its `register_codec` line in `mav-ffi` and `mav-replay`.
-3. Install the manifest through the runtime (`install_connector`), which validates it — including
-   every decoder id it names against what its codec admits.
+Canonical unsigned bytes are the original module bytes with the entire unique `mav:signature`
+section removed, preserving every other byte and section order. The signed digest is:
 
-There is no step that edits a core crate. ADR-012 came from challenging this promise with an
-adversarial frame description: it exposed that framing was still a closed WHOOP enum, so framing
-became manifest data. ADR-016 came from the promise actually failing — WHOOP decoders had
-accreted inside `mav-codec` because compiled device logic had no home — and is why the codec
-crates and the registration seam exist. The probe remains as focused unit tests, not as a fake
-device connector.
+```text
+SHA-256("mavconn-signature-v1\0" || canonical_unsigned_module_bytes)
+```
 
-## Where connectors live
+Ed25519 signs those 32 digest bytes. Validator recomputes and constant-time compares the digest,
+then verifies the signature. Packer always appends signature last, rejects an existing signature,
+and verifies its own output. This avoids reserializing Wasm and avoids the signature signing itself.
 
-Device *manifests* are not part of this repository and are not bundled in the app. They live in
-their own repository, `sennnen/maverick-connectors`, and are imported rather than built in, for the
-reasons in [ADR-011](adr/ADR-011.md). The app reads connector manifests from that repository or a
-local copy of it; the core does not depend on it. The dependency runs one way only: a connector is
-validated against the `mav-codec` schema in this repository, and `mav-codec` never learns about any
-specific device, which is the boxed-in boundary from [ADR-007](adr/ADR-007.md) expressed as a
-repository split.
+Publisher keys are distinct from registry and app-release keys. A key record has stable id,
+public key, scope, validity interval, status, replacement id, and revocation reason/time. Rotation
+requires old-key cross-signature or registry-root authorization. Revocation policy is cached and
+versioned; lack of network cannot silently turn a revoked key trusted. Previously installed
+connectors remain disabled or quarantined according to signed policy, with explicit diagnostics.
 
-Device *codecs* are the amendment [ADR-016](adr/ADR-016.md) makes: compiled code cannot be
-imported at runtime on a phone, so the codec crates live in this repository under
-`core/connectors/`, outside the core crates and boxed behind the trait, linked only by the two
-edge crates. A manifest update still ships on the connectors repository's own cadence; a codec
-change is an app release, which is what compiled code costs everywhere.
+## ABI v1
 
-Device manifests needed by core tests are constructed inline rather than pulled from the connectors
-repository, so the core stays self-contained. Developing a real vertical slice against a WHOOP
-capture needs the connectors repository checked out alongside this one.
+V1 has no host imports. A connector exports memory plus:
 
-The single connector the app itself may carry is a generic Bluetooth heart-rate connector for the
-standard GATT profile (`0x180D` / `0x2A37`). That profile is an open standard, not a device family,
-so a zero-configuration fallback for it can live in the app without making the app a home for
-device-specific code. Everything that decodes a proprietary format is a connector and belongs in the
-connectors repository.
+```text
+mav_abi_version() -> i64              # packed major/minor
+mav_alloc(len: i32) -> i32
+mav_dealloc(ptr: i32, len: i32)
+mav_init(ptr: i32, len: i32) -> i64   # packed output ptr/len
+mav_handle(ptr: i32, len: i32) -> i64
+mav_snapshot() -> i64
+```
+
+Inputs/outputs are deterministic CBOR. Packed pointer/length uses unsigned high/low 32-bit halves,
+specified by SDK tests. Host validates ranges, overlap, allocation accounting, output length, CBOR,
+and action count before copying. It calls `mav_dealloc` after copying. A trap, invalid pointer,
+oversized output, malformed message, fuel exhaustion, or unexpected export fails that invocation
+without unwinding across FFI.
+
+### Events
+
+Closed versioned event families:
+
+- lifecycle: `Init`, `Activate`, `Deactivate`, `Suspend`, `Resume`, `Cancel`, `RestoreState`;
+- discovery: `Advertisement`, `ScanStopped`, `ServicesDiscovered`, `IdentityRead`;
+- transport: `Connected`, `PairingResult`, `MtuChanged`, `Subscribed`, `Unsubscribed`, `ReadResult`,
+  `WriteResult`, `Notification`, `Disconnected`, `TransportError`;
+- time: `TimerFired` with opaque token and monotonic ordering only;
+- persistence/pipeline: `StateCommitted`, `SamplesCommitted`, `SamplesRejected`;
+- update: `PrepareStateMigration`, `StateMigrationCommitted`.
+
+Each carries connector/session ids, an event sequence, cancellation generation, bounded byte fields,
+and only the data needed for that event. UUIDs are normalized strings at the ABI edge. Host wall
+time may accompany evidence/sample events as an explicit value; connectors cannot query a clock.
+
+### Actions
+
+Closed actions:
+
+- `StartScan`, `StopScan`, `Connect`, `EnsurePaired`, `DiscoverServices`, `Subscribe`, `Unsubscribe`,
+  `Read`, `Write`, `Disconnect`;
+- `SetTimer`, `CancelTimer`;
+- `StatePut`, `StateDelete`, `StateCommit`;
+- `EmitSamples`, `EmitDiagnostic`, `DeclareCapabilities`, `CompleteOperation`.
+
+Actions are ordered and bounded. Core executes one action at a time and returns its result before
+continuing where a barrier is required. `EmitSamples` must reach `SamplesCommitted` before a later
+device acknowledgement write can execute. The host rejects undeclared characteristic ids,
+unsupported properties, forbidden operations, stale session/cancellation ids, unbounded values,
+and impossible lifecycle transitions. Native layers cannot retry on their own.
+
+## Errors, deadlines, and cancellation
+
+Artifact, trust, ABI, trap, limit, lifecycle, transport, state, sample-admission, update, and
+revocation failures have stable core error codes. Connector diagnostics are untrusted data: host
+rate-limits, sizes, redacts, and namespaces them, then maps only safe summaries to UI. A connector
+trap fails its current operation/session; it never panics core or poisons another instance.
+
+Host assigns operation ids and deadline tokens. Connector requests only a named host limit profile
+and opaque timers; it cannot read elapsed or wall time. Timer expiry returns `TimerFired`. User,
+platform, disconnect, suspend, update, and removal cancellation increments a session generation,
+returns `Cancel`, invalidates queued work, and rejects late native results. Cancellation is
+idempotent. Core may force-terminate an instance after its bounded cancellation event; teardown does
+not depend on connector cooperation. Protocol-specific retry decisions live in connector state,
+while core caps actions, outstanding ops, timer count, fuel, and total session resource use.
+
+## Runtime limits
+
+Initial numbers are prototype outputs, not guesses committed as policy. WC-P0 establishes profiles
+for artifact size, section size/count, module memories/tables/functions, linear memory, stack depth,
+fuel per event and fixture, output bytes, action count, state bytes, diagnostic rate, and wall-time
+watchdog. Limits are signed manifest profile names chosen from host-defined profiles; a connector
+cannot request arbitrary larger values. Threads, shared memory, reference types not required by the
+SDK, WASI, sockets, and start functions are rejected in v1.
+
+The initial interpreter candidate is `wasmi` with fuel enabled, parser/engine limits, store memory
+limits, and extra runtime checks evaluated in WC-P0. No runtime dependency lands until iOS/Android
+static builds and representative decode/history benchmarks pass.
+
+## Installation API
+
+Future shared-core API, exposed through UniFFI as byte/string records only:
+
+```text
+inspect_connector(bytes, source) -> InspectionReport
+install_connector(bytes, source, approval_token) -> InstalledConnector
+list_connectors() -> [InstalledConnector]
+activate_connector(connector_id, version) -> ActivationResult
+rollback_connector(connector_id) -> ActivationResult
+remove_connector(connector_id, remove_state) -> RemovalResult
+set_publisher_trust(key_id, decision) -> TrustResult
+refresh_revocations(bytes, source) -> RevocationResult
+```
+
+`ConnectorSource` records `kind` (`url`, `local_file`, `share`, `registry`, `bundled_test`), sanitized
+locator/display label, acquired-at host time, optional expected digest, registry id, and provenance
+chain. Core never fetches the URL or opens the path. It receives bytes already acquired by native
+code. Reports include artifact hash, connector/publisher identity, capabilities, compatibility,
+signature/trust result, fixture results, requested limit profile, warnings, and an expiring approval
+token bound to exact bytes and policy revision.
+
+Install stages bytes and metadata, verifies again, runs self-tests, snapshots old active artifact
+and state, commits artifact/source/trust/test records atomically, then optionally activates. A failed
+activation restores old artifact/state. Updates cannot silently downgrade. Explicit developer-mode
+downgrade on Android is policy-gated and retains audit provenance. Uninstall cancels sessions,
+removes artifact and source metadata, then either deletes or quarantines scoped state by explicit
+choice.
+
+## Import flows
+
+URL flow: user supplies URL → native HTTPS client applies platform transport/security/size policy →
+native receives bounded bytes and redirect/final-URL metadata → optional expected digest is checked
+early → native calls `inspect_connector` → UI shows core-produced identity, publisher, capabilities,
+warnings, and self-tests → explicit approval yields token → `install_connector` revalidates exact
+bytes and commits atomically. Core never performs HTTP and GitHub raw is only another HTTPS source.
+
+Local/share flow: document picker, open-in-place, AirDrop, Android content URI, or share intent gives
+native a file handle/stream → native copies bounded bytes into app-private memory/storage while the
+permission is valid → records sanitized source kind/display label, not a diagnostic-leaked absolute
+path → calls the identical inspect/approval/install sequence. Source mechanism cannot bypass trust,
+compatibility, fixture, or downgrade rules. Failure/cancel deletes staging bytes and leaves current
+activation untouched.
+
+## Connector persistence
+
+State keys are scoped by `(connector_id, publisher_key_id, device_id, state_schema)`. Connector code
+never chooses another namespace. Values and aggregate namespace bytes are bounded. Writes stage
+within one event and become visible only at `StateCommit`. Core journals schema, digest, source
+version, and migration result.
+
+Update runs `PrepareStateMigration` in an ephemeral copy. Success returns bounded replacement state
+and a deterministic hash; core commits it with artifact activation. Failure leaves prior artifact
+and state active. Rollback restores the prior snapshot. Cross-publisher state adoption is forbidden
+without explicit user-approved transfer metadata.
+
+## Discovery and connection lifecycle
+
+Core selects installed connectors whose signed declarative advertisement rules match. Ambiguous
+matches are surfaced; core does not guess by device family. Selected connector receives the
+advertisement and drives connection through actions. Native executes generic actions only. Service
+discovery results return as data, so connector can verify firmware/generation-specific layouts.
+
+Session state is explicit: installed, selected, scanning, connecting, discovering, pairing,
+configuring, streaming, historical, suspending, disconnected, failed. Connectors may refine their
+private protocol state but cannot bypass host state. Every action has operation id, deadline token,
+and cancellation generation. Disconnect or app suspension invalidates outstanding generations;
+late native results are logged and ignored. Restoration creates a new instance, sends scoped state
+and normalized platform restoration facts, and requires connector to re-establish subscriptions.
+
+## SDK and tools
+
+`mav-connector-sdk` provides no-std-friendly ABI types, deterministic CBOR, export macros, allocator
+glue, bounded action builders, state-machine helpers, diagnostics, test harness, fixture authoring,
+and artifact metadata macros. It contains no WHOOP UUID, command, retry, record, or generation rule.
+
+Tooling provides:
+
+- `mavconn-pack`: build, canonical-section injection, fixture embedding, signature creation;
+- `mavconn-inspect`: metadata/signature/hash/limits display without execution;
+- `mavconn-validate`: identical host validation and self-tests;
+- `mavconn-test`: native unit plus Wasm parity/state scripts;
+- registry publish command: digest-addressed upload and signed index update.
+
+Automated architecture gates inspect Cargo edges, SDK dependency trees, Wasm imports/exports and
+features, custom-section determinism, repository stale names, generated FFI, and packaged artifact
+self-tests. They fail if core/FFI/frontends link a device crate, if a connector path-depends on
+Maverick internals, or if a generic module contains a device UUID/opcode allowlist.
+
+## Registry
+
+Registry is discovery metadata, not an execution privilege. Signed index entries bind connector id,
+version, artifact digest/URL/size, publisher key, ABI/core ranges, release channel, supersedence,
+and revocation status. Clients download bytes through native networking, then use normal inspect and
+install APIs. Direct URL and local imports remain first-class. Registry compromise cannot forge a
+publisher signature; publisher compromise is handled by revocation and rotation.
+
+## Platform policy
+
+iOS defaults to official reviewed publishers and may disable arbitrary URL/local activation if App
+Review evidence requires it. Android may allow user-approved third-party keys and sideloading.
+Both parse the same artifact, use the same core verifier/runtime, show connector identity and
+capabilities, and retain source provenance. No compiled-in proprietary fallback is the long-term
+escape hatch.
+
+## Security and validation
+
+Required suites cover malformed Wasm/CBOR/sections, duplicate/signature confusion, invalid pointers,
+traps, infinite loops, memory growth, output/action bombs, undeclared BLE access, stale results,
+cross-connector state attempts, fixture lies, corrupted state, cancellation, reconnect storms,
+upgrade/downgrade/rollback, revocation, publisher rotation, and deterministic cross-platform replay.
+Fuzz parsers and ABI message boundaries. Run malicious connectors under the same production limits.
+
+Performance gates measure cold parse/verify/instantiate, warm event latency, fuel per representative
+notification, sustained realtime throughput, history burst throughput, peak/steady memory, artifact
+size, binary-size delta, and battery/thermal behaviour on both platform classes. Thresholds are set
+from WC-P0 evidence before runtime selection is final.
+
+## Unresolved evidence gates
+
+- `wasmi` remains candidate until WC-P0 proves mobile targets, limits, overhead, and crash isolation;
+  interpreter replacement requires equivalent vectors and an ADR amendment.
+- Numeric limit profiles and performance budgets come from P0 measurements, not prose guesses.
+- Apple Guideline 2.5.2 acceptance for remotely acquired interpreted connectors requires review or
+  counsel evidence before iOS release; official-only/disabled remote activation is fallback policy.
+- CBOR/crypto/Wasm parser crates require dependency, maintenance, fuzz, and platform audits in owning
+  packets before versions freeze.
+- Initial official publisher roots, offline revocation freshness, registry operator/hosting, and
+  recovery after publisher-key loss need operational evidence before WC-P15 ships.
+- WHOOP manifest/reference conflicts, MG/deep-stream gating, gen4 temperature calibration, and
+  hardware restoration remain confidence-tagged until traceable captures adjudicate them.
+- Component Model/WIT is not ABI v1 because current interpreter/tooling evidence is insufficient;
+  adopting it later is an ABI-major ADR, not an invisible encoding change.
+
+## Migration
+
+WHOOP 4 and WHOOP 5 become separate public-SDK projects in `sennnen/maverick-connectors`. Pure
+protocol logic may be shared as source libraries there. Native compiled code remains only behind a
+fixture parity adapter, with owner and deletion packet. The switch requires frozen native-vs-Wasm
+outputs, connection-state traces, history persist-before-ack tests, and both platform paths. WC-P12
+deletes the compiled crate and all registration hooks. WC-P16 performs whole-application cleanup and
+proves no permanent dual architecture remains.

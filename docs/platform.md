@@ -25,8 +25,10 @@ and owns no live session. The same manifest and capture must return the same ses
 hashes in Rust, Swift, and Kotlin.
 
 The product surface is one stateful `MavRuntime` object. A runtime owns the database connection,
-registered connector metadata, acquisition state, current session, pipeline state, bounded action
-queue, and immutable host snapshot. Native code never holds a stage object or database handle.
+installed connector artifacts, trust and source metadata, acquisition state, connector instance,
+pipeline state, bounded action queue, and immutable host snapshot. Native code never holds a stage,
+database, interpreter, or connector handle. Current code still uses the audited manifest/compiled
+codec path until the WC migration switches it.
 
 ## Runtime construction
 
@@ -53,37 +55,31 @@ a frozen fixture hash.
 Opening a newer database schema fails with `MAV-5003`. Opening or migrating any other invalid store
 returns its existing stable storage code. A failed constructor never returns a half-open runtime.
 
-## Connector registration
+## Connector installation
 
-`install_connector(package_json)` validates and registers a package. Registration does not scan,
-connect, or write to a device. The package must declare:
+All sources converge on byte-oriented core calls: inspect exact `.mavconn` bytes plus sanitized
+source metadata, obtain an approval report/token, then install those same bytes. Core checks artifact
+structure, deterministic metadata, compatibility, signature, publisher/revocation policy, Wasm
+imports/limits, and embedded self-tests before atomic activation. It owns update, rollback, removal,
+and connector-scoped state. Native code never validates a connector as authoritative.
 
-- connector id and version;
-- manifest schema and core compatibility range;
-- content hashes;
-- identity, capabilities, GATT facts, framing, packet layouts, and command templates;
-- signature metadata once package signing lands.
-
-The runtime stores the validated package, not the untrusted input string. A connector cannot replace
-another connector with a lower version unless a future explicit recovery operation permits it.
-Removing a connector removes its ability to start new sessions; it never deletes user data.
-
-The built-in standard Heart Rate Service connector follows the same registered representation even
-though its package ships with the app. Proprietary connectors do not.
+The complete future API and transaction rules are in [connectors.md](connectors.md). Current
+`install_connector(package_json)` is a migration surface, not the target API.
 
 ## Native transport events
 
-The runtime accepts a closed set of typed UniFFI methods. It is not JSON and it is not an open RPC
-surface. Named methods keep invalid payload combinations unrepresentable in Swift and Kotlin:
+The target runtime accepts closed typed UniFFI transport results. It is not an open RPC surface.
+WC-P7 freezes generated platform records for:
 
 ```text
-start_scan(connector_id, device_id)
-device_discovered(connector_id, native_device_id, display_name)
-connected(native_device_id)
-subscribed(characteristic)
-notification(characteristic, bytes, at_unix_ms)
-transport_failed(operation, native_code, safe_message, at_unix_ms)
-disconnected(native_device_id)
+advertisement(...)
+connected(...)
+pairing_result(...)
+services_discovered(...)
+subscribed(...) / read_result(...) / write_result(...)
+notification(...)
+timer_fired(...) / cancelled(...)
+transport_failed(...) / disconnected(...)
 ```
 
 Byte payloads cross as `Vec<u8>`, never hex strings. `native_device_id` is an opaque identifier used
@@ -92,13 +88,10 @@ Events that persist samples or diagnostics carry host time. Pure transport trans
 the clock. The runtime validates state and rejects an impossible event with a stable transport error
 instead of attempting to repair the sequence.
 
-`notification` is the only entry for sensor and protocol bytes. It runs reassembly, decode, SQI,
-timeline, storage, features, analytics, and snapshot publication in core-defined order. Native code
-cannot call those stages individually.
-
-Bond readiness, command completion, command responses, ticks, and reason-bearing disconnects are
-added only when a real connector requires them. They must be narrow typed methods, not a generic
-event map.
+Core normalizes each result into the connector ABI, invokes the instance, validates returned
+actions, and admits emitted samples into the fixed pipeline. Native code cannot call stages or
+connector exports individually. Device protocol state remains inside connector; lifecycle and
+resource policy remain in core.
 
 ## Core transport actions
 
@@ -108,15 +101,20 @@ The host drains a bounded queue of closed `TransportAction` values:
 StartScan { service_filters }
 StopScan
 Connect { native_device_id }
+EnsurePaired { native_device_id }
+DiscoverServices { native_device_id }
 Subscribe { characteristic }
+Unsubscribe { characteristic }
+Read { characteristic, operation_id }
 Write { characteristic, bytes, with_response, sequence }
 Disconnect { native_device_id, reason }
 ```
 
-WHOOP command writes require `with_response = true`; a connector template cannot override a
-core-enforced safety requirement. A drained action leaves the queue exactly once. Failed native
-execution comes back as `TransportFailed`; native code does not silently retry. Retry limits,
-sequence matching, and command order remain core policy.
+Signed characteristic declarations constrain each action. A connector cannot write an undeclared
+characteristic or weaken required confirmed-write policy. A drained action leaves the queue exactly
+once. Failed native execution returns as a typed event; native code never silently retries.
+Protocol retry/sequence/order belongs to connector state, while core owns bounds, deadlines,
+cancellation, and action validity.
 
 Queue capacity is fixed at runtime construction. When the queue is full, the operation that would
 enqueue another action fails with a new FFI or transport error. Accepted actions remain intact and

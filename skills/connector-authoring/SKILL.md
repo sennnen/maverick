@@ -1,47 +1,39 @@
 ---
 name: connector-authoring
 description: >
-  How to add a new device to Maverick: write connectors/<device>/manifest.json for everything
-  static, add a small DeviceCodec only for logic that data cannot express, and keep every core
-  crate untouched. Load this when adding a strap or other device, writing or changing a
-  connector manifest, or when a task says "add support for <device>".
+  How to add a new device through the public mav-connector-sdk as one signed .mavconn: implement a
+  deterministic event/action state machine, embed fixtures, compile to WebAssembly, validate, and
+  publish without editing Maverick. Load when adding a device or changing connector source/metadata.
 ---
 
-# Adding a device
+# Authoring a runtime-loaded connector
 
-The whole point of the connector layer is that a new device is data, not core surgery. So the
-rule comes first, before any step:
+Target architecture is ADR-017. Runtime/SDK implementation is tracked by WC-P0 through WC-P16; do
+not pretend this workflow is runnable before WC-P3 lands.
 
-**Adding a device must not require editing any crate under `core/`.** If you find yourself
-opening `mav-codec`, `mav-frame`, or any other core crate to make a device work, stop. What
-you need is either missing from the manifest schema or missing from the DeviceCodec contract,
-and that is a change to `docs/connectors.md` backed by an ADR, decided deliberately, not a
-quiet edit buried in a device connector.
+Rule: **adding a device never edits Maverick core, FFI, iOS, Android, or Cargo workspace.** Connector
+source belongs in `sennnen/maverick-connectors` or an independent repository and depends only on the
+released public SDK. A missing ABI capability is an ADR/SDK design issue, not permission to add a
+device special case.
 
-`docs/connectors.md` is the authority for the manifest schema and the codec contract. Read it
-before you start; the notes below are the shape, not the specification.
+Read `docs/connectors.md` for artifact, ABI, trust, lifecycle, state, and security contracts. Then:
 
-## Steps
+1. Create a standalone Rust SDK project for one device-family artifact. Share pure code only where
+   evidence proves behaviour is common.
+2. Declare deterministic metadata: identity/advertisement rules, services/logical characteristics,
+   capabilities, ABI/core ranges, state schema, resource profile, and publisher id.
+3. Implement protocol as event in, bounded ordered actions out. UUIDs, framing, commands,
+   handshake/auth, ACKs, history, retries, firmware quirks, and learned state stay here. Never call
+   BLE/native APIs, filesystem, network, clock, randomness, thread, or process.
+4. Write exact native/state-machine tests first. Include malformed input, timeout, cancellation,
+   reconnect, restart, state corruption, and persist-before-ack ordering.
+5. Add provenance-tagged golden fixtures. Use `skills/golden-fixtures` for Maverick-owned fixtures;
+   never hand-edit captured evidence.
+6. Compile `wasm32-unknown-unknown`; run native/Wasm parity and production-limit malicious tests.
+7. Package deterministic custom sections with `mavconn-pack`, sign through a dedicated external
+   Ed25519 publisher signer, then run `mavconn-inspect` and `mavconn-validate`.
+8. Prove install, update, downgrade refusal, rollback, revocation, uninstall, replay, and both
+   platform paths before publishing exact digest-addressed bytes.
 
-1. **Write `connectors/<device>/manifest.json`.** This holds everything static about the
-   device, all as data: identity and how to disambiguate it at scan time, GATT service and
-   characteristic UUIDs, frame parameters, the packet-type map, field layouts, unit
-   conversions, the record versions it emits, and its sensor configs. Most devices are
-   nothing more than this file.
-
-2. **Add a `DeviceCodec` crate only if data cannot express the logic.** Some things a manifest
-   genuinely cannot describe: a stateful handshake, a decode that needs memory of earlier
-   frames, or a learned per-device value like the WHOOP 4.0 skin-temperature anchor, which is
-   fitted per band rather than fixed. Those go in a small codec. The codec is boxed in by its
-   interface: it receives bytes, its own manifest, and a per-device key-value store for learned
-   state, and it returns frames or samples. It cannot reach storage, the network, analytics, or
-   any other device. If your codec wants any of those, the design is wrong.
-
-3. **Prove it with a fixture.** Take a capture from the device, generate a golden fixture
-   through `skills/golden-fixtures`, and run it through the pipeline with `mav-replay`. A
-   device without a fixture is not really supported, just asserted.
-
-The `mock` connector exists to keep this honest: it is a deliberately odd fake device with a
-different frame format and a codec that needs per-device state, and it streams through the
-untouched pipeline. If adding a real device tempts you toward a core edit, the mock is the
-proof that it should not be necessary.
+Never reuse Android JKS, Apple distribution, or registry keys for connector signing. Never commit or
+print private keys. iOS and Android may trust different publishers; artifact and ABI remain one.

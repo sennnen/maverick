@@ -21,7 +21,8 @@ maverick/
     pipeline.md           the stage-by-stage contracts data moves through
     platform.md           native runtime, transport events/actions, host snapshots, compatibility
     analytics.md          admitted formulas, HRV/PRV distinction, capability availability
-    connectors.md         manifest schema, the DeviceCodec contract, how to add a device
+    connectors.md         .mavconn format, ABI, trust, install, lifecycle, SDK and registry
+    connector-audit.md    current bundled-driver audit and deletion inventory
     protocol/whoop.md     every known WHOOP fact, each carrying a confidence tag
     testing.md            fixture rules, property tests, parity, what counts as a real test
     errors.md             the error taxonomy, numeric codes, logging, the report bundle
@@ -33,7 +34,7 @@ maverick/
   core/crates/
     mav-model             the frozen types every other crate speaks in; changes need an ADR
     mav-frame             CRC 8/16/32, the reassembler, the TypedReader
-    mav-codec             the DeviceCodec trait, manifest types, the device registry
+    mav-codec             current decode/manifest layer; target migration is ADR-017/WC
     mav-timeline          ordering, dedup, clock correction, historical merge
     mav-sqi               signal quality, scored on raw signals before normalization
     mav-feature           primitive, derived, and aggregate features
@@ -43,10 +44,9 @@ maverick/
     mav-engine            orchestration: triggers, task graph, caching
     mav-ffi               the uniffi facade the apps bind to
     mav-replay            runs a capture file through the whole pipeline; our stand-in for hardware
-  core/connectors/        device codec crates (mav-connector-whoop), the compiled half of a
-                          connector; boxed behind DeviceCodec, linked only by ffi/replay (ADR-016)
-  connectors/             development-only connector fixtures; manifests live in the
-                          separate sennnen/maverick-connectors repo (see ADR-011)
+  core/connectors/        current compiled connector path; deletion is owned by WC-P12
+  connectors/             development-only fixtures; connector source/releases live in the
+                          separate sennnen/maverick-connectors repo (ADR-017)
   fixtures/               golden fixtures, versioned; see fixtures/README for the naming rules
   apps/ios, apps/android  thin native apps; migration/release work lives in platform plan
   tools/                  check_docs.sh and check_deps.py, the mechanical gates
@@ -73,7 +73,7 @@ Skills, loaded when the task calls for them:
 
 - `skills/work-packet`: executing a packet from docs/plans/active/. Load it before you start one.
 - `skills/golden-fixtures`: creating or regenerating a fixture. Load it before you touch fixtures/.
-- `skills/connector-authoring`: adding a device. Load it before writing a manifest or a codec.
+- `skills/connector-authoring`: adding a device. Load before connector source or metadata work.
 - `skills/doc-gardening`: the periodic sweep for docs that have drifted from the code.
 
 ## Rules that always apply

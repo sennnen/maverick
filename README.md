@@ -27,13 +27,13 @@ There is no app to install today.
 
 The Rust workspace under `core/` is a set of small crates, each owning one job: frozen shared
 types, frame handling, device decoding, the timeline, signal quality, features, analytics,
-storage, observability, orchestration, the FFI facade, and a replay tool that runs a capture
-file through the whole pipeline so the thing can be exercised without a radio. Device support
-lives outside the core in `connectors/`, where each device is mostly a `manifest.json` of
-static facts plus a small amount of Rust only when the logic cannot be expressed as data.
-Everything an agent or a contributor needs to know is written down under `docs/`, which is
-the system of record. `CLAUDE.md` (and its identical twin `AGENTS.md`) is the short map that
-points into it.
+storage, observability, orchestration, the FFI facade, and replay without a radio. Device support
+is migrating to signed, runtime-loaded WebAssembly connectors: one `.mavconn` file runs through the
+same Rust interpreter on iOS, Android, replay, and tests without rebuilding Maverick. Current code
+still contains the audited compiled WHOOP path while
+[the migration plan](docs/plans/active/wasm-connectors.md) replaces and deletes it. Everything an
+agent or contributor needs is under `docs/`, the system of record. `CLAUDE.md` (and identical
+`AGENTS.md`) is the short map.
 
 ## Building the core
 

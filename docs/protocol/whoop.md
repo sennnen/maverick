@@ -527,9 +527,10 @@ The design consequence for Maverick is set out in [../connectors.md](../connecto
 worth restating here because it drives a piece of the architecture. Skin temperature is modelled as
 a per-device learned anchor plus slope, which makes the fixed-anchor approach a special case of the
 learned one, stored in the per-device key-value table, and surfaced as a deviation from personal
-baseline rather than as an absolute thermometer reading, until there is a hardware calibration. This
-is exactly the kind of value a manifest cannot hold and a `DeviceCodec` must, which is why manifests
-in Maverick are not purely declarative.
+baseline rather than as an absolute thermometer reading, until there is a hardware calibration.
+This is exactly the kind of device-local state a static manifest cannot hold. Under ADR-017 the
+WHOOP 4 connector learns it and persists it through connector-scoped state actions; generic core
+never learns WHOOP calibration rules.
 
 ## Raw sensor streaming
 

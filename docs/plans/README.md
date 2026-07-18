@@ -18,5 +18,6 @@ Milestones are gated by exit criteria, not dates. The full table with scope and 
 | M7 | Cloud connector | A manifest of kind `cloud` through the same pipeline, proving the abstraction covers non-BLE sources | not yet broken into packets |
 | M8 | Hardening | Observability and fixture-coverage audits, error-report UX, doc gardening, ADR backfill | not yet broken into packets |
 | PL | Platform lane | Native apps, cleaned Aura shell, core plumbing, connector import, signed RC artifacts | [active/platform.md](active/platform.md) |
+| WC | WebAssembly connectors | Signed runtime-loaded connectors, SDK, WHOOP migration, legacy deletion, import and final audit | [active/wasm-connectors.md](active/wasm-connectors.md) |
 
 One item stands outside the sequence. The hardware epoch is the standing checklist that activates when the physical straps arrive: every code-inferred protocol fact gets verified or corrected against live captures, ledger tags flip to hardware-verified, and fixtures are regenerated from real captures. It has no fixed place in the milestone order because it starts on a delivery date we do not control; it lives in `docs/protocol/whoop.md`, not here.

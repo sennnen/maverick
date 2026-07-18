@@ -94,7 +94,7 @@ with one reason vocabulary, rather than scattered through the decoder.
 
 ### 3. Decode
 
-**In:** `Frame` plus the device's manifest and, where the device needs one, its `DeviceCodec`.
+**In today:** `Frame` plus the device manifest and current compiled `DeviceCodec`.
 **Out:** `RawSampleBatch` — a batch of raw samples, one stream kind at a time, with device
 timestamps and raw (un-normalised, un-scored) values.
 
@@ -102,8 +102,11 @@ Decode turns a frame's body into samples using the field layouts in the manifest
 parts a manifest cannot express, the device's codec. Most of a WHOOP record is pure field slicing
 that the manifest describes directly. The parts that need memory or a learned value (the gen4
 skin-temp anchor is the standing example) go through the codec, which reads and writes the
-per-device key-value store for exactly that purpose. The contract for what belongs in a manifest
-versus a codec is in [connectors.md](connectors.md).
+per-device key-value store for exactly that purpose. This is current code, not the target connector
+boundary. ADR-017 moves device-specific reassembly, decode, protocol state, and learned state into a
+sandboxed `.mavconn`; core admits the connector's bounded `EmitSamples` actions here. During parity
+migration both paths must produce the same batch before WC-P12 deletes the compiled route. Target
+contract: [connectors.md](connectors.md).
 
 Decode **may** read the manifest and the per-device store and produce raw samples. It **may not**
 score signal quality, correct clocks, normalise units into calibrated physical values that hide the
