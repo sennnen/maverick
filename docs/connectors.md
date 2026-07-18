@@ -186,16 +186,17 @@ while core caps actions, outstanding ops, timer count, fuel, and total session r
 
 ## Runtime limits
 
-Initial numbers are prototype outputs, not guesses committed as policy. WC-P0 establishes profiles
+WC-P0 froze development performance and footprint budgets in ADR-017. Later packets establish profiles
 for artifact size, section size/count, module memories/tables/functions, linear memory, stack depth,
 fuel per event and fixture, output bytes, action count, state bytes, diagnostic rate, and wall-time
 watchdog. Limits are signed manifest profile names chosen from host-defined profiles; a connector
 cannot request arbitrary larger values. Threads, shared memory, reference types not required by the
 SDK, WASI, sockets, and start functions are rejected in v1.
 
-The initial interpreter candidate is `wasmi` with fuel enabled, parser/engine limits, store memory
-limits, and extra runtime checks evaluated in WC-P0. No runtime dependency lands until iOS/Android
-static builds and representative decode/history benchmarks pass.
+The selected interpreter is pinned `wasmi` 1.1.0 with fuel enabled, parser/engine limits, store
+memory limits, and extra runtime checks. WC-P0 passed iOS/Android Rust static builds and
+representative realtime/history parity; the dependency first enters production in its owning runtime
+packet.
 
 ## Installation API
 
@@ -313,13 +314,14 @@ Fuzz parsers and ABI message boundaries. Run malicious connectors under the same
 Performance gates measure cold parse/verify/instantiate, warm event latency, fuel per representative
 notification, sustained realtime throughput, history burst throughput, peak/steady memory, artifact
 size, binary-size delta, and battery/thermal behaviour on both platform classes. Thresholds are set
-from WC-P0 evidence before runtime selection is final.
+from WC-P0 evidence and may only tighten with final-device measurements.
 
 ## Unresolved evidence gates
 
-- `wasmi` remains candidate until WC-P0 proves mobile targets, limits, overhead, and crash isolation;
-  interpreter replacement requires equivalent vectors and an ADR amendment.
-- Numeric limit profiles and performance budgets come from P0 measurements, not prose guesses.
+- `wasmi` passed WC-P0 mobile-target, limit, parity, and overhead probes; interpreter replacement
+  requires equivalent vectors and an ADR amendment.
+- P0 development budgets are frozen in ADR-017. Final device energy, thermal, linked-size, and
+  crash-recovery gates remain owned by WC-P13, WC-P14, and WC-P16.
 - Apple Guideline 2.5.2 acceptance for remotely acquired interpreted connectors requires review or
   counsel evidence before iOS release; official-only/disabled remote activation is fallback policy.
 - CBOR/crypto/Wasm parser crates require dependency, maintenance, fuzz, and platform audits in owning

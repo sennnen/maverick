@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: planned. No implementation packet has started.
+Status: in progress. WC-P0 is complete; WC-P1 is next.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -26,7 +26,7 @@ and Wasm fixture parity. Packet-specific gates supplement, never replace, these.
 
 ## Packet WC-P0: Prove interpreter, limits, performance, and policy viability
 
-Status: pending
+Status: complete
 
 - **Repositories touched:** `maverick` only.
 - **Likely files/modules:** temporary `core/tools/wasm-probe/`, benchmark fixtures under
@@ -456,5 +456,10 @@ the listed order minimizes simultaneous migration surfaces.
   by filename only and excluded from connector signing.
 - 2026-07-18: ABI boundary widened from decode trait to event/action because real WHOOP connection
   and historical flows require ordered transport, timers, cancellation, and persistence barriers.
-- 2026-07-18: `wasmi` remains prototype-gated. Apple Guideline 2.5.2 remains release risk; artifact
-  format and iOS publisher policy are deliberately separate.
+- 2026-07-18: At plan time, `wasmi` was prototype-gated. Apple Guideline 2.5.2 remains release risk;
+  artifact format and iOS publisher policy are deliberately separate.
+- 2026-07-18: WC-P0 selected pinned `wasmi` 1.1.0 with `extra-checks`. Deterministic fuel, memory,
+  malformed-module, custom-section, and realtime/history parity probes passed; all four Rust mobile
+  static-library targets compiled. The 8 KiB development gates are 250 microseconds cold mean and
+  warm p95, 40 MiB harness RSS, and 10 MiB static-archive delta. Full Xcode/device measurements and
+  Apple review evidence remain named release gates; the disposable probe was deleted.
