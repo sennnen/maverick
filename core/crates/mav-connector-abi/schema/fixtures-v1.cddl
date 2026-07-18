@@ -1,0 +1,12 @@
+; mav:fixtures payload v1. connector-event/action-batch are defined by abi-v1.cddl.
+fixture-set = {0: "mavconn-fixtures/v1", 1: [1*64 fixture-case]}
+fixture-case = {
+  0: tstr .size (1..128),
+  1: bstr .size (0..65536),
+  2: [* connector-event],
+  3: [* action-batch],
+  4: bstr .size 32,
+  5: 1..18446744073709551615,
+  ? 6: [* wire-sample],
+  ? 7: [* {0: tstr .size (1..64), 1: tstr .size (1..1024)}]
+}

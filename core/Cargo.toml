@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/mav-model",
+    "crates/mav-connector-abi",
     "crates/mav-frame",
     "crates/mav-codec",
     "crates/mav-timeline",
@@ -31,6 +32,7 @@ unimplemented = "deny"
 
 [workspace.dependencies]
 mav-model = { path = "crates/mav-model" }
+mav-connector-abi = { path = "crates/mav-connector-abi" }
 mav-frame = { path = "crates/mav-frame" }
 mav-codec = { path = "crates/mav-codec" }
 mav-timeline = { path = "crates/mav-timeline" }
@@ -49,6 +51,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 thiserror = "1"
 proptest = "1"
+minicbor = { version = "=2.2.2", features = ["derive", "std"] }
 
 [profile.release]
 opt-level = 3

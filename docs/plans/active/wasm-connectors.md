@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: in progress. WC-P0 is complete; WC-P1 is next.
+Status: in progress. WC-P0 and WC-P1 are complete; WC-P2 is next.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -54,7 +54,7 @@ Status: complete
 
 ## Packet WC-P1: Freeze artifact schemas and ABI wire types
 
-Status: pending
+Status: complete
 
 - **Repositories touched:** `maverick`.
 - **Likely files/modules:** new `core/crates/mav-connector-abi/`, schema fixtures, architecture edge
@@ -463,3 +463,9 @@ the listed order minimizes simultaneous migration surfaces.
   static-library targets compiled. The 8 KiB development gates are 250 microseconds cold mean and
   warm p95, 40 MiB harness RSS, and 10 MiB static-archive delta. Full Xcode/device measurements and
   Apple review evidence remain named release gates; the disposable probe was deleted.
+- 2026-07-18: WC-P1 added the `mav-connector-abi` leaf with no Maverick dependencies and pinned
+  `minicbor` 2.2.2. Ascending integer-key maps plus canonical decode/re-encode equality reject
+  duplicate, unknown, indefinite, unordered, non-shortest, and float encodings. All 27 event and 19
+  action variants, artifact records, bounds, packed pointers, CDDL sources, byte vectors, and four
+  schema hashes are frozen. SHA-256 exists only as a test dependency that checks schema source bytes;
+  runtime hashing and trust remain WC-P2-owned.

@@ -1,0 +1,16 @@
+[package]
+name = "mav-connector-abi"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+minicbor = { workspace = true }
+
+[dev-dependencies]
+sha2 = "=0.11.0"
+
+[lints]
+workspace = true

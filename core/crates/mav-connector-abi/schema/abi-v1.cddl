@@ -1,0 +1,86 @@
+; Maverick connector event/action ABI v1.
+; Integer keys and variant indexes are append-only and part of the wire contract.
+abi-version = { 0: 1, 1: uint }
+connector-id = tstr .size (1..128)
+logical-id = tstr .size (1..64)
+uuid = tstr .size (1..64)
+bytes-64k = bstr .size (0..65536)
+
+connector-event = {
+  0: connector-id,
+  1: uint, ; session id
+  2: uint, ; event sequence
+  3: uint, ; cancellation generation
+  ? 4: int, ; explicit host wall time in milliseconds
+  5: event-body
+}
+
+; minicbor enum representation is [variant-index, variant-map].
+event-body =
+    [0,  {0: bstr .size 32}]                                      ; Init
+  / [1,  {}]                                                       ; Activate
+  / [2,  {}]                                                       ; Deactivate
+  / [3,  {}]                                                       ; Suspend
+  / [4,  {}]                                                       ; Resume
+  / [5,  {0: 0..5}]                                               ; Cancel
+  / [6,  {0: bstr .size (0..65536)}]                              ; RestoreState
+  / [7,  {0: tstr .size (1..128), 1: int, 2: [* uuid],
+           3: bstr .size (0..512), ? 4: tstr .size (1..128)}]      ; Advertisement
+  / [8,  {0: uint}]                                                ; ScanStopped
+  / [9,  {0: [* uuid]}]                                           ; ServicesDiscovered
+  / [10, {0: logical-id, 1: bytes-64k}]                            ; IdentityRead
+  / [11, {0: uint}]                                                ; Connected
+  / [12, {0: bool, ? 1: uint}]                                     ; PairingResult
+  / [13, {0: uint}]                                                ; MtuChanged
+  / [14, {0: logical-id}]                                          ; Subscribed
+  / [15, {0: logical-id}]                                          ; Unsubscribed
+  / [16, {0: uint, 1: logical-id, 2: bytes-64k}]                   ; ReadResult
+  / [17, {0: uint, 1: logical-id}]                                 ; WriteResult
+  / [18, {0: logical-id, 1: bytes-64k}]                            ; Notification
+  / [19, {0: uint}]                                                ; Disconnected
+  / [20, {? 0: uint, 1: uint, 2: tstr .size (1..1024)}]            ; TransportError
+  / [21, {0: uint}]                                                ; TimerFired
+  / [22, {0: uint}]                                                ; StateCommitted
+  / [23, {0: uint, 1: uint}]                                       ; SamplesCommitted
+  / [24, {0: uint, 1: uint}]                                       ; SamplesRejected
+  / [25, {0: uint, 1: uint, 2: bstr .size (0..65536)}]             ; PrepareStateMigration
+  / [26, {0: uint}]                                                ; StateMigrationCommitted
+
+wire-sample = {0: logical-id, 1: int, ? 2: int, 3: uint, 4: logical-id}
+
+connector-action = {
+  0: connector-id,
+  1: uint, ; session id
+  2: uint, ; causing event sequence
+  3: uint, ; cancellation generation
+  4: uint, ; operation id
+  5: uint, ; deadline token
+  6: action-body
+}
+
+action-body =
+    [0,  {0: [* uuid], 1: [* uint]}]                               ; StartScan
+  / [1,  {}]                                                       ; StopScan
+  / [2,  {0: tstr .size (1..128)}]                                ; Connect
+  / [3,  {}]                                                       ; EnsurePaired
+  / [4,  {}]                                                       ; DiscoverServices
+  / [5,  {0: logical-id}]                                         ; Subscribe
+  / [6,  {0: logical-id}]                                         ; Unsubscribe
+  / [7,  {0: logical-id}]                                         ; Read
+  / [8,  {0: logical-id, 1: bytes-64k, 2: bool}]                  ; Write
+  / [9,  {}]                                                       ; Disconnect
+  / [10, {0: uint, 1: 1..86400000}]                               ; SetTimer
+  / [11, {0: uint}]                                                ; CancelTimer
+  / [12, {0: tstr .size (1..128), 1: bstr .size (0..65536)}]      ; StatePut
+  / [13, {0: tstr .size (1..128)}]                                ; StateDelete
+  / [14, {}]                                                       ; StateCommit
+  / [15, {0: uint, 1: [* wire-sample]}]                            ; EmitSamples
+  / [16, {0: 0..3, 1: logical-id, 2: tstr .size (1..1024)}]       ; EmitDiagnostic
+  / [17, {0: [* logical-id]}]                                     ; DeclareCapabilities
+  / [18, {0: uint}]                                                ; CompleteOperation
+
+action-batch = {0: [* connector-action]}
+connector-lifecycle = 0..11
+
+; All arrays/maps use definite lengths. Floats, duplicate/unknown keys, indefinite items,
+; non-shortest integers, and non-canonical key order are rejected by decode-and-reencode equality.

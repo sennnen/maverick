@@ -55,6 +55,15 @@ key order, no duplicate keys, no indefinite items, and no floats in manifest/ABI
 The validator rejects a semantically valid but non-deterministic encoding. Fixture numeric values use
 explicit integer/fixed-point or byte encodings defined by their schema.
 
+ABI v1 uses ascending unsigned integer map keys and append-only numeric enum indexes. Canonical
+decoding re-encodes the typed value and requires byte equality, which also rejects unknown or
+duplicate fields. The frozen CDDL SHA-256 hashes are
+`b901e5a701e7af5794b74ff5beb05512a1e6fa0e3e76cc7c97dc72f8b66d2ea8` for ABI events and actions,
+`4ebeb126d4c17eeaccdab69320cb6d085d3b060a3d413c1e3bc8c8362ec7912b` for manifests,
+`1daaa3a4ea07e1c130461c61fc9a0e0d8433db60ac56f8b9bbc1073ba9cbf1ff` for fixtures, and
+`be8508dcc5fb1089828ddb7beb9fdcd5303dfaa8a95bf5c4c52f21cd5751587e` for signatures. Hash bytes are
+public constants in `mav-connector-abi` and mechanically checked against the schema sources.
+
 ### `mav:manifest`
 
 Required fields:

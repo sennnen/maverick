@@ -1,0 +1,8 @@
+; mav:signature payload v1.
+signature = {
+  0: "mavconn-signature/v1",
+  1: 0,                         ; Ed25519
+  2: tstr .size (1..64),        ; publisher key id
+  3: bstr .size 32,             ; SHA-256 digest
+  4: bstr .size 64              ; Ed25519 signature
+}

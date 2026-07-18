@@ -38,9 +38,9 @@ or random source.
 
 The exact artifact, ABI, install, trust, and lifecycle contracts are in
 [connectors.md](connectors.md). [ADR-017](adr/ADR-017.md) records the decision. The current bundled
-driver and its deletion inventory are in [connector-audit.md](connector-audit.md). Runtime work is
-not implemented yet; until the migration packets land, code still contains the audited ADR-016
-compiled path.
+driver and its deletion inventory are in [connector-audit.md](connector-audit.md). WC-P1 implements
+the leaf ABI crate; the interpreter runtime is not implemented yet. Until the migration packets
+land, code still contains the audited ADR-016 compiled path.
 
 ## Native/Rust line
 
@@ -96,7 +96,7 @@ Names may change only in the owning packet before public interfaces freeze. No c
 
 ## Allowed dependency direction
 
-Exact edges land with WC-P1 and are enforced by `tools/check_deps.py`. Direction is fixed now:
+Exact edges are enforced by `tools/check_deps.py`:
 
 ```text
 mav-model       mav-connector-abi
@@ -109,8 +109,8 @@ stage crates    mav-connector-runtime -> interpreter + crypto + CBOR
               mav-ffi       mav-replay
 ```
 
-`mav-connector-abi` depends on no Maverick crate except frozen primitive ids/errors if an ADR proves
-that edge necessary. Runtime cannot depend on a device, frontend, analytics, or native BLE API.
+`mav-connector-abi` depends on no Maverick crate. Runtime cannot depend on a device, frontend,
+analytics, or native BLE API.
 Engine depends on runtime; runtime never calls engine. FFI/replay do not link connector crates.
 Connector source lives only in `sennnen/maverick-connectors` and compiles against the public SDK.
 

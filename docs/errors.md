@@ -76,6 +76,11 @@ Library code does not panic. `unwrap`, `expect`, and `panic!` are denied by the 
 configuration for library code and allowed in tests. An impossible state is an `Internal` error
 with a code, not a crash, because a crash in an FFI'd library takes the host app down with it.
 
+`mav-connector-abi` is an isolated wire-schema leaf and deliberately does not depend on frozen
+`mav-model`. It returns a closed `WireError` while decoding untrusted CBOR. WC-P2 owns the runtime
+boundary that maps each artifact/schema/trust failure into new append-only `MavError` codes before
+any ABI rejection can enter the journal or cross FFI.
+
 ## No silent drops
 
 Stated in [pipeline.md](pipeline.md) and enforced here: nothing is discarded without a record. Every
