@@ -9,6 +9,7 @@ struct MavSnapshot: Equatable, Sendable {
   let deviceName: String?
   let batteryPercent: Int?
   let charging: Bool?
+  let onWrist: Bool?
   let lastSampleUnixMs: Int64?
   let currentBpm: Int?
   let meanMilliBpm: Int?
@@ -51,6 +52,7 @@ enum MavSnapshotDecoder {
       deviceName: root.connection.displayName,
       batteryPercent: root.connection.batteryPercent,
       charging: root.connection.charging,
+      onWrist: root.connection.onWrist,
       lastSampleUnixMs: root.connection.lastSampleUnixMs,
       currentBpm: root.session?.currentBpm,
       meanMilliBpm: root.session?.meanMilliBpm,
@@ -131,6 +133,7 @@ private struct HostSnapshot: Decodable {
     let displayName: String?
     let batteryPercent: Int?
     let charging: Bool?
+    let onWrist: Bool?
     let lastSampleUnixMs: Int64?
 
     enum CodingKeys: String, CodingKey {
@@ -138,6 +141,7 @@ private struct HostSnapshot: Decodable {
       case displayName = "display_name"
       case batteryPercent = "battery_percent"
       case charging
+      case onWrist = "on_wrist"
       case lastSampleUnixMs = "last_sample_unix_ms"
     }
   }

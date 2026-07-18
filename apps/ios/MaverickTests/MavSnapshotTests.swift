@@ -24,6 +24,7 @@ final class MavSnapshotTests: XCTestCase {
     XCTAssertEqual(snapshot.deviceName, "MG")
     XCTAssertNil(snapshot.batteryPercent)
     XCTAssertNil(snapshot.charging)
+    XCTAssertNil(snapshot.onWrist)
     XCTAssertEqual(snapshot.lastSampleUnixMs, 1_752_600_500_000)
     XCTAssertEqual(snapshot.currentBpm, 72)
     XCTAssertEqual(snapshot.meanMilliBpm, 72_000)
@@ -67,6 +68,25 @@ final class MavSnapshotTests: XCTestCase {
     XCTAssertEqual(snapshot.deviceName, "Test strap")
     XCTAssertEqual(snapshot.recoveryUnavailableReason, "Needs rr_interval")
     XCTAssertEqual(snapshot.hash, "fixture-hash")
+  }
+
+  func testDecodesBatteryAndWristStateWhenPresent() throws {
+    let snapshot = try MavSnapshotDecoder.decode(json: """
+    {
+      "schema":"host-snapshot/v1",
+      "core_version":"0.1.0",
+      "storage_schema":1,
+      "revision":3,
+      "as_of_unix_ms":7,
+      "connection":{"state":"streaming","display_name":"MG","battery_percent":81,"charging":null,"on_wrist":true},
+      "session":null,
+      "analytics":null
+    }
+    """, hash: "batt")
+
+    XCTAssertEqual(snapshot.batteryPercent, 81)
+    XCTAssertNil(snapshot.charging)
+    XCTAssertEqual(snapshot.onWrist, true)
   }
 
   func testMissingRrStreamsMakePrvUnavailableWithTheExactReason() throws {

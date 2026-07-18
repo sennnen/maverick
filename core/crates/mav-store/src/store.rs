@@ -5,7 +5,7 @@ use mav_model::raw::RawValue;
 use mav_model::stream::{Quality, RejectReason, Sample, StreamKind};
 use mav_model::time::{DeviceTime, WallTime};
 use mav_model::version::Version;
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -213,6 +213,60 @@ impl Store {
             });
         }
         Ok(out)
+    }
+
+    /// The single most recent stored sample of `kind` for `device`, ordered by `(device_time,
+    /// seq)`, or `None` when the stream is empty. The host read models use this to surface a
+    /// device's latest battery and wrist state without loading the whole stream.
+    pub fn latest_sample(
+        &self,
+        device: DeviceId,
+        kind: StreamKind,
+    ) -> Result<Option<Sample<RawValue>>> {
+        let stream = to_json(&kind)?;
+        let row = self
+            .conn
+            .query_row(
+                "SELECT device_time_ns, seq, value_json, wall_time_ns, quality_score, \
+                        quality_reason, provenance_id \
+                 FROM sample WHERE device_id = ?1 AND stream = ?2 \
+                 ORDER BY device_time_ns DESC, seq DESC LIMIT 1",
+                params![device.get() as i64, stream],
+                |row| {
+                    Ok((
+                        row.get::<_, i64>(0)?,
+                        row.get::<_, u16>(1)?,
+                        row.get::<_, String>(2)?,
+                        row.get::<_, Option<i64>>(3)?,
+                        row.get::<_, f64>(4)?,
+                        row.get::<_, Option<String>>(5)?,
+                        row.get::<_, i64>(6)?,
+                    ))
+                },
+            )
+            .optional()
+            .map_err(|e| query_err("reading the latest sample", &e))?;
+        let Some((device_time_ns, seq, value_json, wall_ns, score, reason_json, provenance)) = row
+        else {
+            return Ok(None);
+        };
+        let value: RawValue = from_json(&value_json)?;
+        let reason: Option<RejectReason> = match reason_json {
+            Some(text) => Some(from_json(&text)?),
+            None => None,
+        };
+        Ok(Some(Sample {
+            kind,
+            device_time: DeviceTime::from_nanos(device_time_ns),
+            wall_time: wall_ns.map(WallTime::from_nanos),
+            seq,
+            value,
+            quality: Quality {
+                score: score as f32,
+                reason,
+            },
+            provenance: MetadataId::new(provenance as u64),
+        }))
     }
 
     pub fn count_samples(&self, device: DeviceId, kind: StreamKind) -> Result<u64> {
@@ -475,6 +529,61 @@ mod tests {
             0
         );
         assert!(store.recent_errors(1).unwrap().is_empty());
+    }
+
+    #[test]
+    fn latest_sample_returns_the_newest_by_device_time() {
+        let store = Store::open_in_memory().unwrap();
+        let device = DeviceId::new(3);
+        // An empty stream is an honest None, never an error.
+        assert!(store
+            .latest_sample(device, StreamKind::BatterySoc)
+            .unwrap()
+            .is_none());
+        // Insert out of order; the newest device_time must win regardless of insertion order.
+        for (ns, pct) in [(3_000, 79.0), (1_000, 90.0), (2_000, 84.0)] {
+            store
+                .insert_sample(
+                    device,
+                    &sample(StreamKind::BatterySoc, ns, 0, RawValue::Converted(pct)),
+                )
+                .unwrap();
+        }
+        let latest = store
+            .latest_sample(device, StreamKind::BatterySoc)
+            .unwrap()
+            .expect("a battery sample");
+        assert_eq!(latest.device_time, DeviceTime::from_nanos(3_000));
+        assert_eq!(latest.value, RawValue::Converted(79.0));
+        // A different kind on the same device is isolated.
+        assert!(store
+            .latest_sample(device, StreamKind::WristState)
+            .unwrap()
+            .is_none());
+    }
+
+    #[test]
+    fn latest_sample_breaks_device_time_ties_by_seq() {
+        let store = Store::open_in_memory().unwrap();
+        let device = DeviceId::new(4);
+        for seq in [0u16, 2, 1] {
+            store
+                .insert_sample(
+                    device,
+                    &sample(
+                        StreamKind::WristState,
+                        5_000,
+                        seq,
+                        RawValue::U8(seq as u8 % 2),
+                    ),
+                )
+                .unwrap();
+        }
+        let latest = store
+            .latest_sample(device, StreamKind::WristState)
+            .unwrap()
+            .expect("a wrist sample");
+        assert_eq!(latest.seq, 2);
     }
 
     #[test]

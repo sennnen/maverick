@@ -3,6 +3,8 @@ use crate::snapshot::{fnv1a_64, AnalyticsSnapshot, Snapshot};
 use mav_codec::manifest::Manifest;
 use mav_model::error::{codes, Category, MavError, Result, Severity};
 use mav_model::ids::DeviceId;
+use mav_model::raw::RawValue;
+use mav_model::stream::StreamKind;
 use mav_model::time::WallTime;
 use mav_model::version::Version;
 use mav_obs::stage::Stage;
@@ -88,6 +90,7 @@ pub struct HostConnection {
     pub display_name: Option<String>,
     pub battery_percent: Option<u8>,
     pub charging: Option<bool>,
+    pub on_wrist: Option<bool>,
     pub last_sample_unix_ms: Option<i64>,
 }
 
@@ -441,7 +444,7 @@ impl HostRuntime {
             .into_iter()
             .map(host_error)
             .collect();
-        let connection = self.connection_snapshot();
+        let connection = self.connection_snapshot()?;
         let body = HostSnapshotBody {
             schema: HOST_SNAPSHOT_SCHEMA.to_owned(),
             core_version: env!("CARGO_PKG_VERSION").to_owned(),
@@ -564,17 +567,52 @@ impl HostRuntime {
         Ok(())
     }
 
-    fn connection_snapshot(&self) -> HostConnection {
+    fn connection_snapshot(&self) -> Result<HostConnection> {
         let session = self.session.as_ref();
-        HostConnection {
+        // Device status is read from the stored event stream, not held in memory, so a snapshot
+        // after a restart still surfaces the last battery and wrist reading the device sent. There
+        // is no admitted charging decode yet, so `charging` stays honest at `None`.
+        let (battery_percent, on_wrist) = match session {
+            Some(active) => (
+                self.latest_battery_percent(active.device)?,
+                self.latest_wrist_state(active.device)?,
+            ),
+            None => (None, None),
+        };
+        Ok(HostConnection {
             state: self.state,
             device_id: session.map(|value| value.device.get()),
             connector_id: session.map(|value| value.connector_id.clone()),
             connector_version: session.map(|value| value.connector_version.clone()),
             display_name: session.and_then(|value| value.display_name.clone()),
-            battery_percent: None,
+            battery_percent,
             charging: None,
+            on_wrist,
             last_sample_unix_ms: session.and_then(|value| value.last_sample_unix_ms),
+        })
+    }
+
+    /// The most recent battery reading as a whole percent, clamped to `0..=100`. A `BatterySoc`
+    /// sample carries a converted percent; a non-converted value is treated as absent rather than
+    /// coerced.
+    fn latest_battery_percent(&self, device: DeviceId) -> Result<Option<u8>> {
+        let Some(sample) = self.store.latest_sample(device, StreamKind::BatterySoc)? else {
+            return Ok(None);
+        };
+        let RawValue::Converted(percent) = sample.value else {
+            return Ok(None);
+        };
+        Ok(Some(percent.round().clamp(0.0, 100.0) as u8))
+    }
+
+    /// The most recent wrist state: `true` on-wrist, `false` off-wrist, `None` if never reported.
+    fn latest_wrist_state(&self, device: DeviceId) -> Result<Option<bool>> {
+        let Some(sample) = self.store.latest_sample(device, StreamKind::WristState)? else {
+            return Ok(None);
+        };
+        match sample.value {
+            RawValue::U8(state) => Ok(Some(state != 0)),
+            _ => Ok(None),
         }
     }
 }
@@ -814,6 +852,90 @@ mod tests {
         assert_eq!(expected["json"].as_str().unwrap(), result.json);
         assert_eq!(expected["hash"].as_str().unwrap(), result.hash);
         assert_eq!(result.revision, 1);
+        let _ = std::fs::remove_file(path);
+    }
+
+    /// The manifest for a device that streams battery and wrist events (WHOOP packet 48). Same
+    /// gatt as the other fixtures so `reach_streaming` drives it unchanged.
+    const EVENT_MANIFEST: &str = r#"{
+        "schema": "connector-manifest/v1",
+        "identity": { "family": "fixture-events", "display_name": "Fixture events", "models": ["FIXTURE"] },
+        "gatt": { "service": "s", "command": "c", "notify": ["n"] },
+        "frame": { "wire_format": "gen5", "max_frame_bytes": 8192 },
+        "packets": { "48": "event" },
+        "event_vocabulary": "whoop",
+        "capabilities": ["battery_soc", "wrist_state"]
+    }"#;
+
+    fn event_frame(number: u8, unix: u32, soc_deci: Option<u16>) -> Vec<u8> {
+        // Inner event record: [0]=48, [2]=number, [4..8]=RTC unix, [13..15]=battery deci-percent.
+        let mut payload = vec![0u8; 24];
+        payload[0] = 48;
+        payload[1] = 1;
+        payload[2] = number;
+        payload[4..8].copy_from_slice(&unix.to_le_bytes());
+        if let Some(deci) = soc_deci {
+            payload[13..15].copy_from_slice(&deci.to_le_bytes());
+        }
+        mav_frame::frame::build_frame(mav_frame::frame::WireFormat::Gen5, &payload).unwrap()
+    }
+
+    #[test]
+    fn host_snapshot_surfaces_the_latest_battery_and_wrist_state() {
+        let path = db_path();
+        let mut runtime = runtime(&path);
+        runtime
+            .install_connector(ConnectorRegistration {
+                connector_id: "fixture".to_owned(),
+                connector_version: "1.0.0".to_owned(),
+                manifest_json: EVENT_MANIFEST.to_owned(),
+            })
+            .unwrap();
+        reach_streaming(&mut runtime);
+
+        // Before any event the device status is honestly unknown.
+        let before: HostSnapshot =
+            serde_json::from_str(&runtime.host_snapshot(1_752_600_500_000).unwrap().json).unwrap();
+        assert_eq!(before.connection.battery_percent, None);
+        assert_eq!(before.connection.on_wrist, None);
+
+        // A stale 90% reading, then a newer 81.2% reading: the newer one must win.
+        runtime
+            .notification(
+                "n",
+                &event_frame(3, 1_752_600_000, Some(900)),
+                1_752_600_400_000,
+            )
+            .unwrap();
+        runtime
+            .notification(
+                "n",
+                &event_frame(3, 1_752_600_100, Some(812)),
+                1_752_600_450_000,
+            )
+            .unwrap();
+        runtime
+            .notification("n", &event_frame(9, 1_752_600_120, None), 1_752_600_460_000)
+            .unwrap();
+
+        let after: HostSnapshot =
+            serde_json::from_str(&runtime.host_snapshot(1_752_600_500_000).unwrap().json).unwrap();
+        assert_eq!(after.connection.battery_percent, Some(81));
+        assert_eq!(after.connection.on_wrist, Some(true));
+        // No admitted charging decode, so it stays None even when battery is known.
+        assert_eq!(after.connection.charging, None);
+
+        // A later wrist-off flips the state.
+        runtime
+            .notification(
+                "n",
+                &event_frame(10, 1_752_600_200, None),
+                1_752_600_470_000,
+            )
+            .unwrap();
+        let off: HostSnapshot =
+            serde_json::from_str(&runtime.host_snapshot(1_752_600_500_000).unwrap().json).unwrap();
+        assert_eq!(off.connection.on_wrist, Some(false));
         let _ = std::fs::remove_file(path);
     }
 

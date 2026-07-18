@@ -153,6 +153,7 @@ The first schema is an envelope around already admitted read models:
     "display_name": "MG",
     "battery_percent": null,
     "charging": null,
+    "on_wrist": null,
     "last_sample_unix_ms": 1784199999000
   },
   "session": {
@@ -171,6 +172,12 @@ The first schema is an envelope around already admitted read models:
   "recent_errors": []
 }
 ```
+
+`battery_percent` and `on_wrist` are the device's latest reported state of charge (whole percent,
+`0..=100`) and wrist-worn flag, read from the stored WHOOP event stream (`BatterySoc` and
+`WristState`, decoded from packet 48 by the `whoop` event vocabulary). Reading them from the store
+rather than from memory means the value survives a runtime restart. Both are `null` until the device
+sends the corresponding event. `charging` has no admitted decode yet and stays `null`.
 
 The shortened analytics object above identifies nesting; the real object is the complete canonical
 `analytics-snapshot/v1` value. Later milestones add day, sleep, strain, workout, and historical

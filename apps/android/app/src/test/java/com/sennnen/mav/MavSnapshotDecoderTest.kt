@@ -23,6 +23,7 @@ class MavSnapshotDecoderTest {
         assertEquals("MG", snapshot.deviceName)
         assertNull(snapshot.batteryPercent)
         assertNull(snapshot.charging)
+        assertNull(snapshot.onWrist)
         assertEquals(1_752_600_500_000L, snapshot.lastSampleUnixMs)
         assertEquals(72, snapshot.currentBpm)
         assertEquals(72_000, snapshot.meanMilliBpm)
@@ -121,6 +122,29 @@ class MavSnapshotDecoderTest {
         assertNull(snapshot.currentBpm)
         assertEquals("Recovery model not admitted", snapshot.recoveryUnavailableReason)
         assertEquals("abc", snapshot.hash)
+    }
+
+    @Test
+    fun decodesBatteryAndWristStateWhenPresent() {
+        val snapshot = MavSnapshotDecoder.decode(
+            json = """
+                {
+                  "schema":"host-snapshot/v1",
+                  "core_version":"0.1.0",
+                  "storage_schema":1,
+                  "revision":3,
+                  "as_of_unix_ms":7,
+                  "connection":{"state":"streaming","display_name":"MG","battery_percent":81,"charging":null,"on_wrist":true},
+                  "session":null,
+                  "analytics":null
+                }
+            """.trimIndent(),
+            hash = "batt",
+        )
+
+        assertEquals(81, snapshot.batteryPercent)
+        assertNull(snapshot.charging)
+        assertEquals(true, snapshot.onWrist)
     }
 
     @Test(expected = IllegalArgumentException::class)
