@@ -728,7 +728,7 @@ fn next_action(category: Category) -> &'static str {
         Category::Frame | Category::Decode | Category::Timeline => "inspect_diagnostics",
         Category::Storage => "check_local_storage",
         Category::Feature | Category::Analytic | Category::Ml => "inspect_diagnostics",
-        Category::Ffi | Category::Internal => "restart_and_report",
+        Category::Ffi | Category::Connector | Category::Internal => "restart_and_report",
     }
 }
 

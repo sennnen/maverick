@@ -1,0 +1,19 @@
+[package]
+name = "mav-connector-runtime"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+mav-model = { workspace = true }
+mav-connector-abi = { workspace = true }
+minicbor = { workspace = true }
+wasmparser = { workspace = true }
+sha2 = { workspace = true }
+ed25519-dalek = { workspace = true }
+subtle = { workspace = true }
+
+[lints]
+workspace = true

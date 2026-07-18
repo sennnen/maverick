@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: in progress. WC-P0 and WC-P1 are complete; WC-P2 is next.
+Status: in progress. WC-P0 through WC-P2 are complete; WC-P3 is next.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -77,7 +77,7 @@ Status: complete
 
 ## Packet WC-P2: Parse, inspect, hash, sign, and enforce trust
 
-Status: pending
+Status: complete
 
 - **Repositories touched:** `maverick`.
 - **Likely files/modules:** new `mav-connector-runtime` artifact/trust modules, inspection CLI/tests,
@@ -469,3 +469,10 @@ the listed order minimizes simultaneous migration surfaces.
   action variants, artifact records, bounds, packed pointers, CDDL sources, byte vectors, and four
   schema hashes are frozen. SHA-256 exists only as a test dependency that checks schema source bytes;
   runtime hashing and trust remain WC-P2-owned.
+- 2026-07-18: WC-P2 added non-instantiating artifact inspection and trust verification with pinned
+  `wasmparser` 0.253.0, `sha2` 0.11.0, `ed25519-dalek` 3.0.0, and `subtle` 2.6.1. Validation enforces
+  the four ordered terminal sections, canonical CBOR, size/count bounds, fixture hashes, canonical
+  signature self-exclusion, publisher policy, key windows/rotation/revocation/scope, and strict
+  Ed25519 verification. ADR-018 reserves Connector error codes 11000-11999; all 18 failure classes
+  journal round-trip. Frozen digest, malicious corpus, truncation, and byte-flip tests pass without
+  module instantiation.

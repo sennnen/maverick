@@ -453,6 +453,7 @@ fn category_str(category: Category) -> &'static str {
         Category::Analytic => "analytic",
         Category::Ml => "ml",
         Category::Ffi => "ffi",
+        Category::Connector => "connector",
         Category::Internal => "internal",
     }
 }
@@ -476,6 +477,7 @@ fn parse_category(value: &str) -> std::result::Result<Category, String> {
         "analytic" => Ok(Category::Analytic),
         "ml" => Ok(Category::Ml),
         "ffi" => Ok(Category::Ffi),
+        "connector" => Ok(Category::Connector),
         "internal" => Ok(Category::Internal),
         other => Err(format!("unknown stored error category {other:?}")),
     }
@@ -729,5 +731,20 @@ mod tests {
         assert_eq!(recent[0].code, codes::TIMELINE_IMPLAUSIBLE_TIMESTAMP);
         assert_eq!(recent[0].category, Category::Timeline);
         assert_eq!(recent[0].severity, Severity::Error);
+    }
+
+    #[test]
+    fn connector_error_category_round_trips_through_the_journal() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .record_error(
+                &MavError::new(codes::CONNECTOR_TRUST_SIGNATURE_INVALID, "bad signature"),
+                100,
+            )
+            .unwrap();
+        let recent = store.recent_errors(1).unwrap();
+        assert_eq!(recent.len(), 1);
+        assert_eq!(recent[0].category, Category::Connector);
+        assert_eq!(recent[0].code, codes::CONNECTOR_TRUST_SIGNATURE_INVALID);
     }
 }

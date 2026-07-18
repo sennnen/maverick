@@ -17,7 +17,7 @@ Every fallible operation in the core returns `Result<T, MavError>`. The error ty
 
 - **Code** — a stable numeric code, unique to one failure condition.
 - **Category** — one of `Transport`, `Frame`, `Decode`, `Timeline`, `Storage`, `Feature`,
-  `Analytic`, `Ml`, `Ffi`, `Internal`.
+  `Analytic`, `Ml`, `Ffi`, `Connector`, `Internal`.
 - **Message** — human-readable, specific, and stating what was expected against what was found.
 - **Context chain** — the trail of what was being done when the failure happened, accumulated as
   the error propagates up: which device, which frame, which stage.
@@ -32,7 +32,8 @@ they are assigned, next to the condition they name.
 Each category owns a thousand-wide range, and the category is derived from the code in
 `mav-model`, so the two can never disagree: Transport 1000–1999, Frame 2000–2999, Decode
 3000–3999, Timeline 4000–4999, Storage 5000–5999, Feature 6000–6999, Analytic 7000–7999,
-Ml 8000–8999, Ffi 9000–9999, Internal 10000 and above.
+Ml 8000–8999, Ffi 9000–9999, Connector 11000–11999, and Internal for 10000 or otherwise
+unassigned values.
 
 ## The code catalogue
 
@@ -71,15 +72,33 @@ fails the build.
 | 9003 | FFI_CONNECTOR_NOT_FOUND | a host-runtime operation named a connector that is not registered |
 | 9004 | FFI_CONNECTOR_DOWNGRADE | connector registration attempted to replace an installed version with an older one |
 | 10000 | INTERNAL_INVARIANT | a state the code treats as impossible was reached |
+| 11001 | CONNECTOR_ARTIFACT_OVERSIZED | a connector artifact exceeds the pre-parse byte limit |
+| 11002 | CONNECTOR_ARTIFACT_MALFORMED_WASM | artifact bytes are not one structurally valid WebAssembly module |
+| 11003 | CONNECTOR_ARTIFACT_SECTION_MISSING | a required mav metadata section is absent |
+| 11004 | CONNECTOR_ARTIFACT_SECTION_DUPLICATE | a mav metadata section name appears more than once |
+| 11005 | CONNECTOR_ARTIFACT_SECTION_ORDER | required mav metadata sections are not the final ordered section sequence |
+| 11006 | CONNECTOR_ARTIFACT_UNKNOWN_CRITICAL_SECTION | an unknown mav:critical custom section requires unsupported behaviour |
+| 11007 | CONNECTOR_ARTIFACT_SECTION_OVERSIZED | a custom section payload exceeds its pre-decode byte limit |
+| 11008 | CONNECTOR_ARTIFACT_NONCANONICAL_CBOR | a required metadata payload is malformed, out of bounds, or not its canonical CBOR encoding |
+| 11009 | CONNECTOR_ARTIFACT_DIGEST_MISMATCH | the signed digest differs from the canonical unsigned module digest |
+| 11010 | CONNECTOR_TRUST_UNKNOWN_PUBLISHER | no trust-policy key matches the signature publisher id |
+| 11011 | CONNECTOR_TRUST_KEY_NOT_YET_VALID | the publisher key validity interval has not started |
+| 11012 | CONNECTOR_TRUST_KEY_EXPIRED | the publisher key validity interval has ended |
+| 11013 | CONNECTOR_TRUST_KEY_REVOKED | key status or the active revocation set revokes the publisher key |
+| 11014 | CONNECTOR_TRUST_KEY_ROTATED | the artifact uses a retired publisher key with a named replacement |
+| 11015 | CONNECTOR_TRUST_SCOPE_REJECTED | platform policy does not allow this publisher scope |
+| 11016 | CONNECTOR_TRUST_SIGNATURE_INVALID | Ed25519 verification failed for the signed digest |
+| 11017 | CONNECTOR_TRUST_POLICY_INVALID | publisher ids or validity intervals make the trust policy ambiguous or unusable |
+| 11018 | CONNECTOR_TRUST_REVOCATION_STALE | the revocation set is not yet valid, expired, or internally inverted |
 
 Library code does not panic. `unwrap`, `expect`, and `panic!` are denied by the clippy
 configuration for library code and allowed in tests. An impossible state is an `Internal` error
 with a code, not a crash, because a crash in an FFI'd library takes the host app down with it.
 
 `mav-connector-abi` is an isolated wire-schema leaf and deliberately does not depend on frozen
-`mav-model`. It returns a closed `WireError` while decoding untrusted CBOR. WC-P2 owns the runtime
-boundary that maps each artifact/schema/trust failure into new append-only `MavError` codes before
-any ABI rejection can enter the journal or cross FFI.
+`mav-model`. It returns a closed `WireError` while decoding untrusted CBOR. `mav-connector-runtime`
+maps every artifact/schema/trust failure into append-only Connector `MavError` codes before any ABI
+rejection can enter the journal or cross FFI.
 
 ## No silent drops
 

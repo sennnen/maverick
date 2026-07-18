@@ -64,6 +64,14 @@ duplicate fields. The frozen CDDL SHA-256 hashes are
 `be8508dcc5fb1089828ddb7beb9fdcd5303dfaa8a95bf5c4c52f21cd5751587e` for signatures. Hash bytes are
 public constants in `mav-connector-abi` and mechanically checked against the schema sources.
 
+WC-P2 inspection is parse-only: pinned `wasmparser` 0.253.0 validates one core module and exposes
+bounded custom sections without instantiation. SHA-256 0.11.0 hashes the full artifact, fixture set,
+and domain-separated canonical unsigned bytes. Pinned `ed25519-dalek` 3.0.0 performs strict Ed25519
+verification; `subtle` 2.6.1 compares signed digests in constant time. Artifact, section-count,
+section-size, key-validity, publisher-scope, rotation, revocation, and stale-policy failures close
+with Connector-category error codes. Signing keys exist only in test/tool code; runtime stores public
+verification keys only.
+
 ### `mav:manifest`
 
 Required fields:

@@ -23,6 +23,7 @@ pub enum Category {
     Analytic,
     Ml,
     Ffi,
+    Connector,
     Internal,
 }
 
@@ -38,6 +39,7 @@ impl Category {
             7000..=7999 => Category::Analytic,
             8000..=8999 => Category::Ml,
             9000..=9999 => Category::Ffi,
+            11_000..=11_999 => Category::Connector,
             _ => Category::Internal,
         }
     }
@@ -92,6 +94,25 @@ pub mod codes {
     pub const FFI_CONNECTOR_NOT_FOUND: u16 = 9003;
     pub const FFI_CONNECTOR_DOWNGRADE: u16 = 9004;
 
+    pub const CONNECTOR_ARTIFACT_OVERSIZED: u16 = 11_001;
+    pub const CONNECTOR_ARTIFACT_MALFORMED_WASM: u16 = 11_002;
+    pub const CONNECTOR_ARTIFACT_SECTION_MISSING: u16 = 11_003;
+    pub const CONNECTOR_ARTIFACT_SECTION_DUPLICATE: u16 = 11_004;
+    pub const CONNECTOR_ARTIFACT_SECTION_ORDER: u16 = 11_005;
+    pub const CONNECTOR_ARTIFACT_UNKNOWN_CRITICAL_SECTION: u16 = 11_006;
+    pub const CONNECTOR_ARTIFACT_SECTION_OVERSIZED: u16 = 11_007;
+    pub const CONNECTOR_ARTIFACT_NONCANONICAL_CBOR: u16 = 11_008;
+    pub const CONNECTOR_ARTIFACT_DIGEST_MISMATCH: u16 = 11_009;
+    pub const CONNECTOR_TRUST_UNKNOWN_PUBLISHER: u16 = 11_010;
+    pub const CONNECTOR_TRUST_KEY_NOT_YET_VALID: u16 = 11_011;
+    pub const CONNECTOR_TRUST_KEY_EXPIRED: u16 = 11_012;
+    pub const CONNECTOR_TRUST_KEY_REVOKED: u16 = 11_013;
+    pub const CONNECTOR_TRUST_KEY_ROTATED: u16 = 11_014;
+    pub const CONNECTOR_TRUST_SCOPE_REJECTED: u16 = 11_015;
+    pub const CONNECTOR_TRUST_SIGNATURE_INVALID: u16 = 11_016;
+    pub const CONNECTOR_TRUST_POLICY_INVALID: u16 = 11_017;
+    pub const CONNECTOR_TRUST_REVOCATION_STALE: u16 = 11_018;
+
     pub const INTERNAL_INVARIANT: u16 = 10_000;
 
     pub const ALL: &[(u16, &str)] = &[
@@ -135,6 +156,66 @@ pub mod codes {
         (FFI_ACTION_QUEUE_FULL, "FFI_ACTION_QUEUE_FULL"),
         (FFI_CONNECTOR_NOT_FOUND, "FFI_CONNECTOR_NOT_FOUND"),
         (FFI_CONNECTOR_DOWNGRADE, "FFI_CONNECTOR_DOWNGRADE"),
+        (CONNECTOR_ARTIFACT_OVERSIZED, "CONNECTOR_ARTIFACT_OVERSIZED"),
+        (
+            CONNECTOR_ARTIFACT_MALFORMED_WASM,
+            "CONNECTOR_ARTIFACT_MALFORMED_WASM",
+        ),
+        (
+            CONNECTOR_ARTIFACT_SECTION_MISSING,
+            "CONNECTOR_ARTIFACT_SECTION_MISSING",
+        ),
+        (
+            CONNECTOR_ARTIFACT_SECTION_DUPLICATE,
+            "CONNECTOR_ARTIFACT_SECTION_DUPLICATE",
+        ),
+        (
+            CONNECTOR_ARTIFACT_SECTION_ORDER,
+            "CONNECTOR_ARTIFACT_SECTION_ORDER",
+        ),
+        (
+            CONNECTOR_ARTIFACT_UNKNOWN_CRITICAL_SECTION,
+            "CONNECTOR_ARTIFACT_UNKNOWN_CRITICAL_SECTION",
+        ),
+        (
+            CONNECTOR_ARTIFACT_SECTION_OVERSIZED,
+            "CONNECTOR_ARTIFACT_SECTION_OVERSIZED",
+        ),
+        (
+            CONNECTOR_ARTIFACT_NONCANONICAL_CBOR,
+            "CONNECTOR_ARTIFACT_NONCANONICAL_CBOR",
+        ),
+        (
+            CONNECTOR_ARTIFACT_DIGEST_MISMATCH,
+            "CONNECTOR_ARTIFACT_DIGEST_MISMATCH",
+        ),
+        (
+            CONNECTOR_TRUST_UNKNOWN_PUBLISHER,
+            "CONNECTOR_TRUST_UNKNOWN_PUBLISHER",
+        ),
+        (
+            CONNECTOR_TRUST_KEY_NOT_YET_VALID,
+            "CONNECTOR_TRUST_KEY_NOT_YET_VALID",
+        ),
+        (CONNECTOR_TRUST_KEY_EXPIRED, "CONNECTOR_TRUST_KEY_EXPIRED"),
+        (CONNECTOR_TRUST_KEY_REVOKED, "CONNECTOR_TRUST_KEY_REVOKED"),
+        (CONNECTOR_TRUST_KEY_ROTATED, "CONNECTOR_TRUST_KEY_ROTATED"),
+        (
+            CONNECTOR_TRUST_SCOPE_REJECTED,
+            "CONNECTOR_TRUST_SCOPE_REJECTED",
+        ),
+        (
+            CONNECTOR_TRUST_SIGNATURE_INVALID,
+            "CONNECTOR_TRUST_SIGNATURE_INVALID",
+        ),
+        (
+            CONNECTOR_TRUST_POLICY_INVALID,
+            "CONNECTOR_TRUST_POLICY_INVALID",
+        ),
+        (
+            CONNECTOR_TRUST_REVOCATION_STALE,
+            "CONNECTOR_TRUST_REVOCATION_STALE",
+        ),
         (INTERNAL_INVARIANT, "INTERNAL_INVARIANT"),
     ];
 }
@@ -209,6 +290,7 @@ mod tests {
         );
         assert_eq!(MavError::new(3500, "x").category, Category::Decode);
         assert_eq!(MavError::new(9999, "x").category, Category::Ffi);
+        assert_eq!(MavError::new(11_000, "x").category, Category::Connector);
         assert_eq!(
             MavError::new(codes::INTERNAL_INVARIANT, "x").category,
             Category::Internal

@@ -17,3 +17,4 @@
 - [ADR-015](ADR-015.md) — Stream kinds for the WHOOP gen5 deep buffers (v20 optical, v21 IMU)
 - [ADR-016](ADR-016.md) — Device codec crates: WHOOP moves out of the core
 - [ADR-017](ADR-017.md) — Runtime-loaded WebAssembly connectors
+- [ADR-018](ADR-018.md) — Connector runtime errors own codes 11000–11999

@@ -39,8 +39,9 @@ or random source.
 The exact artifact, ABI, install, trust, and lifecycle contracts are in
 [connectors.md](connectors.md). [ADR-017](adr/ADR-017.md) records the decision. The current bundled
 driver and its deletion inventory are in [connector-audit.md](connector-audit.md). WC-P1 implements
-the leaf ABI crate; the interpreter runtime is not implemented yet. Until the migration packets
-land, code still contains the audited ADR-016 compiled path.
+the leaf ABI crate and WC-P2 implements non-executing artifact/trust inspection. The interpreter is
+not implemented yet. Until the migration packets land, code still contains the audited ADR-016
+compiled path.
 
 ## Native/Rust line
 
@@ -109,8 +110,9 @@ stage crates    mav-connector-runtime -> interpreter + crypto + CBOR
               mav-ffi       mav-replay
 ```
 
-`mav-connector-abi` depends on no Maverick crate. Runtime cannot depend on a device, frontend,
-analytics, or native BLE API.
+`mav-connector-abi` depends on no Maverick crate. `mav-connector-runtime` depends only on the ABI and
+`mav-model` error vocabulary inside Maverick. Runtime cannot depend on a device, frontend, analytics,
+or native BLE API.
 Engine depends on runtime; runtime never calls engine. FFI/replay do not link connector crates.
 Connector source lives only in `sennnen/maverick-connectors` and compiles against the public SDK.
 
