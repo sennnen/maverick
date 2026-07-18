@@ -240,6 +240,26 @@ up to the write head, irreversibly. The safe-trim invariant below is not optiona
 fourth source lost five hours of recording to a daemon that trimmed on an error path before
 `HISTORY_COMPLETE` had arrived.
 
+### Outbound alarm and haptic commands
+
+`mav-codec::commands` builds two families of outbound command frame, ported byte-for-byte from the
+sixth source. Each is a pure function returning the complete `[COMMAND, seq, opcode] + body` frame
+for one generation; nothing sends yet, because the runtime has no outbound-command send lane (the
+handshake/historical machines produce commands, but the host runtime does not yet turn them into a
+`Write`).
+
+- **Haptic buzz.** gen5/MG is `RUN_HAPTIC_PATTERN_MAVERICK` (19) with the notification preset body
+  `[01 2F 98 00…]` (the 47/152 waveform-effect pair); gen4 is the generic `RUN_HAPTICS_PATTERN`
+  (79) with `[pattern_id, loops, 0, 0, 0]`, pattern 2 being the graduated alarm buzz. The
+  Haptic-Clock schedule (long pulse = a ten, short = a unit) is a pure `Pulse` list a caller
+  sequences. [WRS]
+- **Wake alarm.** gen5/MG is `SET_ALARM_TIME` (66) REVISION_4: a 20-byte body carrying an epoch
+  (seconds + `ms·32768/1000` subseconds), the alarm id, the waveform effects, and a 30 s / 7-loop
+  envelope; `DISABLE_ALARM` (69) REVISION_2 is `[02 FF]`. gen4 is a 9-byte minute-precision body
+  `[01][u32 epoch s][0000][0000]`. **EXPERIMENTAL/UNCONFIRMED [WRS]:** the upstream flags that these
+  alarm bodies are not confirmed to actually wake a strap, so a surface must present the alarm as
+  experimental, never as a guaranteed wake. Neither opcode is in the forbidden or destructive set.
+
 ### No transport encryption
 
 The handshake carries no cryptography. On gen5 it is a write of the fixed 16-byte hello, which is

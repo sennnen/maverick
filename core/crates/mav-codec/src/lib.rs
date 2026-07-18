@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 
 pub mod codec;
+pub mod commands;
 pub mod control;
 pub mod events;
 pub mod kv;
