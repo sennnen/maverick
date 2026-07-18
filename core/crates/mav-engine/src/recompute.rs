@@ -507,11 +507,11 @@ mod tests {
     #[test]
     fn a_recompute_after_invalidation_reproduces_identical_analytics() {
         let manifest = Manifest::from_json(
-            &std::fs::read_to_string(fixture("realtime_rr_prv_v1.manifest.json")).unwrap(),
+            &std::fs::read_to_string(fixture("realtime_rr_prv_v2.manifest.json")).unwrap(),
         )
         .unwrap();
         let capture = crate::Capture::from_json(
-            &std::fs::read_to_string(fixture("realtime_rr_prv_v1.capture.json")).unwrap(),
+            &std::fs::read_to_string(fixture("realtime_rr_prv_v2.capture.json")).unwrap(),
         )
         .unwrap();
         let run = |store: &Store| {

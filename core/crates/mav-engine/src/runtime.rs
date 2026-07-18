@@ -695,7 +695,7 @@ mod tests {
             .install_connector(ConnectorRegistration {
                 connector_id: "fixture".to_owned(),
                 connector_version: "1.0.0".to_owned(),
-                manifest_json: fixture("realtime_hr_v1.manifest.json"),
+                manifest_json: fixture("realtime_hr_v2.manifest.json"),
             })
             .unwrap();
     }
@@ -736,7 +736,7 @@ mod tests {
         let mut runtime = runtime(&path);
         install(&mut runtime);
         reach_streaming(&mut runtime);
-        let capture = Capture::from_json(&fixture("realtime_hr_v1.capture.json")).unwrap();
+        let capture = Capture::from_json(&fixture("realtime_hr_v2.capture.json")).unwrap();
         for chunk in capture.chunks {
             runtime
                 .notification("n", &chunk, 1_752_600_500_000)
@@ -758,7 +758,7 @@ mod tests {
     /// Pins the exact canonical `host-snapshot/v1` bytes the platform decoders consume. The Swift
     /// and Kotlin decode tests read the same fixture file, so a change here is a change on both
     /// platforms through one seam. Regenerate with MAV_BLESS=1 (never edit by hand), then re-run
-    /// plain to confirm, and eyeball the values against fixtures/replay/realtime_rr_prv_v1.
+    /// plain to confirm, and eyeball the values against fixtures/replay/realtime_rr_prv_v2.
     #[test]
     fn host_snapshot_reproduces_the_platform_fixture() {
         let path = db_path();
@@ -774,11 +774,11 @@ mod tests {
             .install_connector(ConnectorRegistration {
                 connector_id: "fixture".to_owned(),
                 connector_version: "1.0.0".to_owned(),
-                manifest_json: fixture("realtime_rr_prv_v1.manifest.json"),
+                manifest_json: fixture("realtime_rr_prv_v2.manifest.json"),
             })
             .unwrap();
         reach_streaming(&mut runtime);
-        let capture = Capture::from_json(&fixture("realtime_rr_prv_v1.capture.json")).unwrap();
+        let capture = Capture::from_json(&fixture("realtime_rr_prv_v2.capture.json")).unwrap();
         for chunk in capture.chunks {
             runtime
                 .notification("n", &chunk, 1_752_600_500_000)
@@ -791,7 +791,7 @@ mod tests {
         if std::env::var_os("MAV_BLESS").is_some() {
             let body = serde_json::json!({
                 "schema": "host-snapshot-fixture/v1",
-                "source_capture": "fixtures/replay/realtime_rr_prv_v1.capture.json",
+                "source_capture": "fixtures/replay/realtime_rr_prv_v2.capture.json",
                 "generator": "MAV_BLESS=1 cargo test -p mav-engine host_snapshot_reproduces_the_platform_fixture",
                 "algorithm_versions": {
                     "hr_feature": mav_feature::hr::HR_FEATURE_VERSION.to_string(),
@@ -849,7 +849,7 @@ mod tests {
             let mut first = runtime(&path);
             install(&mut first);
             reach_streaming(&mut first);
-            let capture = Capture::from_json(&fixture("realtime_hr_v1.capture.json")).unwrap();
+            let capture = Capture::from_json(&fixture("realtime_hr_v2.capture.json")).unwrap();
             for chunk in capture.chunks {
                 first.notification("n", &chunk, 1_752_600_500_000).unwrap();
             }
@@ -911,7 +911,7 @@ mod tests {
         let mut runtime = runtime(&path);
         install(&mut runtime);
         reach_streaming(&mut runtime);
-        let capture = Capture::from_json(&fixture("realtime_hr_v1.capture.json")).unwrap();
+        let capture = Capture::from_json(&fixture("realtime_hr_v2.capture.json")).unwrap();
         let mut corrupt = capture.chunks[0].clone();
         let last = corrupt.len() - 1;
         corrupt[last] ^= 0xff;
@@ -951,7 +951,7 @@ mod tests {
             .install_connector(ConnectorRegistration {
                 connector_id: "fixture".to_owned(),
                 connector_version: "0.9.0".to_owned(),
-                manifest_json: fixture("realtime_hr_v1.manifest.json"),
+                manifest_json: fixture("realtime_hr_v2.manifest.json"),
             })
             .unwrap_err();
         assert_eq!(error.code, codes::FFI_CONNECTOR_DOWNGRADE);

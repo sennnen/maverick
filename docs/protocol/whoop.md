@@ -255,18 +255,33 @@ decrypt, and access control lives in the radio, not the bytes.
 
 ## Realtime and event decode
 
-REALTIME_DATA (packet 40): timestamp `u32` at offset 6, sub-second `u16` at 10, HR `u8` at 12,
-`rr_count` `u8` at 13, and then `rr[i]` as `u16` LE at `14 + 2i` in milliseconds, dropping any
-zero-millisecond placeholder. On gen5 the same fields sit at the same offsets plus 4. The HR value
-was cross-checked against the standard `2A37` characteristic to within half a beat per minute.
-[XVAL]
+REALTIME_DATA (packet 40), inner-relative (the base every offset in this section now uses — the
+inner record whose byte `[0]` is the packet type, which is exactly what a `mav-codec` layout
+indexes as `payload`): timestamp `u32` at inner 2, sub-second `u16` at 6, HR `u8` at 8, `rr_count`
+`u8` at 9, and then `rr[i]` as `u16` LE at `10 + 2i` in milliseconds, dropping any zero-millisecond
+placeholder. These positions are identical on both generations; the survey numbers (gen4 6/10/12,
+"gen5 plus 4") counted from the full frame, whose header is 4 bytes on gen4 and 8 on gen5, and the
+manifests carried those frame-relative numbers until the `[WRS]` real captures pinned the
+inner-relative ones (its realtime decoder reads ts@2/HR@8/count@9/rr@10 against live frames, and
+one decoder serves both generations). The HR value was cross-checked against the standard `2A37`
+characteristic to within half a beat per minute. [XVAL fields, WRS byte positions]
+
+The on-wrist live r22 biometric rides packet 47 (not 40) and is forked on the inner command byte
+`[2]` being `0x80`/`0x82` — see the historical-records section; the version-keyed decode and this
+live fork share the packet type.
 
 R22_REALTIME (packet `0x10`): battery percentage is a direct `u8` in `0..=100`, and HR is a `u16`
 of milli-bpm divided by 10. [ONE, Rust repo]
 
-EVENT (packet 48): event byte `u8` at offset 6, timestamp `u32` at 8 (a real RTC value). The battery
-event on gen4 carries state of charge as `u16` at offset 17 in deci-percent (divide by 10),
-millivolts at 21, and a charging flag in bit 0 at offset 26; on gen5 add 4 to each offset. [XVAL]
+EVENT (packet 48), inner-relative like everything above: the event number is the inner command
+byte `[2]`, the timestamp `u32` sits at inner 4 (a real RTC value, unlike the realtime device
+epoch). The battery event (number 3) carries state of charge as `u16` at inner 13 in deci-percent
+(divide by 10), millivolts at inner 17, and a charging flag in bit 0 at inner 22 — again identical
+across generations once counted from the inner record (the old gen4 6/8/17/21/26 and "gen5 add 4"
+numbers were frame-relative). Known event numbers `[WRS]`: 3 battery level, 7/8 charging on/off,
+9/10 wrist on/off, 14 double tap, 17 temperature level, 23 BLE bonded, 33/34 realtime HR on/off,
+57/58 strap/app alarm executed, 60 haptics fired. Gen5 events carry an opaque residual past inner
+8 that the sixth source surfaces as hex; gen4 events have none. [XVAL fields, WRS byte positions]
 
 The standard `2A37` RR conversion is `raw * 1000 / 1024` milliseconds. [XVAL]
 

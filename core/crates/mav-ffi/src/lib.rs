@@ -379,8 +379,8 @@ mod tests {
     fn run_capture_reproduces_the_golden_hash() {
         // The FFI must return exactly what mav-replay froze for the same fixture.
         let result = run_capture(
-            fixture("realtime_hr_v1.manifest.json"),
-            fixture("realtime_hr_v1.capture.json"),
+            fixture("realtime_hr_v2.manifest.json"),
+            fixture("realtime_hr_v2.capture.json"),
         )
         .unwrap();
         assert_eq!(result.hash, "33143ef069a85a38");
@@ -391,8 +391,8 @@ mod tests {
     #[test]
     fn run_capture_exposes_the_frozen_prv_analytics() {
         let result = run_capture(
-            fixture("realtime_rr_prv_v1.manifest.json"),
-            fixture("realtime_rr_prv_v1.capture.json"),
+            fixture("realtime_rr_prv_v2.manifest.json"),
+            fixture("realtime_rr_prv_v2.capture.json"),
         )
         .unwrap();
         assert_eq!(result.analytics_hash, "e77c7b04c7fceb2c");
@@ -465,7 +465,7 @@ mod tests {
             .install_connector(ConnectorRegistration {
                 connector_id: "fixture".to_owned(),
                 connector_version: "1.0.0".to_owned(),
-                manifest_json: fixture("realtime_hr_v1.manifest.json"),
+                manifest_json: fixture("realtime_hr_v2.manifest.json"),
             })
             .unwrap();
         runtime.start_scan("fixture".to_owned(), 1).unwrap();
@@ -492,7 +492,7 @@ mod tests {
         runtime.subscribed("n".to_owned()).unwrap();
 
         let capture =
-            mav_engine::Capture::from_json(&fixture("realtime_hr_v1.capture.json")).unwrap();
+            mav_engine::Capture::from_json(&fixture("realtime_hr_v2.capture.json")).unwrap();
         for chunk in capture.chunks {
             runtime
                 .notification("n".to_owned(), chunk, 1_752_600_500_000)

@@ -1,0 +1,50 @@
+{
+  "schema": "connector-manifest/v1",
+  "identity": {
+    "family": "fixture-gen5-mixed",
+    "display_name": "Fixture gen5 mixed realtime + history",
+    "models": [
+      "FIXTURE"
+    ]
+  },
+  "gatt": {
+    "service": "s",
+    "command": "c",
+    "notify": [
+      "n"
+    ]
+  },
+  "frame": {
+    "wire_format": "gen5",
+    "max_frame_bytes": 8192
+  },
+  "packets": {
+    "40": "realtime_data",
+    "47": "historical_data"
+  },
+  "layouts": {
+    "realtime_data": {
+      "time": {
+        "seconds_offset": 2,
+        "subseconds_offset": 6
+      },
+      "fields": [
+        {
+          "name": "heart_rate",
+          "stream": "heart_rate",
+          "type": "u8",
+          "offset": 8
+        }
+      ]
+    }
+  },
+  "record_versions": {
+    "18": "r20_k18"
+  },
+  "capabilities": [
+    "heart_rate",
+    "skin_temp",
+    "sleep_state_raw"
+  ],
+  "confidence_note": "Source-derived mixed fixture manifest for the M5-P5 canonical-merge tests, v2: the realtime packet-40 layout uses the payload-relative offsets the [WRS] real captures pin (timestamp 2, sub-second 6, HR 8), and packet-47 K=18 routes through the admitted r20_k18 decoder. Synthetic [PROV] frames built with an independent Python implementation. The v1 fixture carried the realtime fields at frame-relative offsets (+8), which no real frame agrees with."
+}

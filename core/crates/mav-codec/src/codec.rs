@@ -184,8 +184,10 @@ mod tests {
     use crate::manifest::Manifest;
     use mav_model::stream::StreamKind;
 
-    /// A realtime-shaped manifest matching the gen5 REALTIME_DATA layout from the ledger:
-    /// ts u32 @ 10, subsec u16 @ 14, HR u8 @ 16, rr_count u8 @ 17, rr u16 LE from 18 stride 2.
+    /// A realtime-shaped manifest matching the gen5 REALTIME_DATA layout from the ledger, offsets
+    /// payload-relative (payload = the inner record, payload[0] = packet type) as the [WRS] real
+    /// captures pin them: ts u32 @ 2, subsec u16 @ 6, HR u8 @ 8, rr_count u8 @ 9, rr u16 LE from
+    /// 10 stride 2.
     fn realtime_manifest() -> Manifest {
         Manifest::from_json(
             r#"{
@@ -201,17 +203,17 @@ mod tests {
                 "layouts": {
                     "realtime_data": {
                         "time": {
-                            "seconds_offset": 10,
-                            "subseconds_offset": 14,
+                            "seconds_offset": 2,
+                            "subseconds_offset": 6,
                             "subseconds_unit": "milliseconds"
                         },
                         "fields": [
-                            { "name": "heart_rate", "stream": "heart_rate", "type": "u8", "offset": 16 }
+                            { "name": "heart_rate", "stream": "heart_rate", "type": "u8", "offset": 8 }
                         ],
                         "repeats": [
                             {
                                 "name": "rr_interval", "stream": "rr_interval", "type": "u16_le",
-                                "count_offset": 17, "start_offset": 18, "stride": 2,
+                                "count_offset": 9, "start_offset": 10, "stride": 2,
                                 "max_count": 16, "drop_zero": true
                             }
                         ]
@@ -225,15 +227,15 @@ mod tests {
 
     /// payload[0]=type 40, [1]=seq, then the fields at their documented offsets.
     fn realtime_payload(hr: u8, rrs: &[u16]) -> Vec<u8> {
-        let mut p = vec![0u8; 18 + rrs.len() * 2];
+        let mut p = vec![0u8; 10 + rrs.len() * 2];
         p[0] = 40;
         p[1] = 1;
-        p[10..14].copy_from_slice(&1_752_600_000u32.to_le_bytes());
-        p[14..16].copy_from_slice(&250u16.to_le_bytes());
-        p[16] = hr;
-        p[17] = rrs.len() as u8;
+        p[2..6].copy_from_slice(&1_752_600_000u32.to_le_bytes());
+        p[6..8].copy_from_slice(&250u16.to_le_bytes());
+        p[8] = hr;
+        p[9] = rrs.len() as u8;
         for (i, rr) in rrs.iter().enumerate() {
-            p[18 + i * 2..20 + i * 2].copy_from_slice(&rr.to_le_bytes());
+            p[10 + i * 2..12 + i * 2].copy_from_slice(&rr.to_le_bytes());
         }
         p
     }
@@ -300,7 +302,7 @@ mod tests {
     #[test]
     fn runaway_repeat_count_is_bounded() {
         let mut payload = realtime_payload(60, &[812]);
-        payload[17] = 200;
+        payload[9] = 200;
         let err = decode(payload).unwrap_err();
         assert_eq!(err.code, codes::DECODE_FIELD_UNREADABLE);
         assert!(err.to_string().contains("max 16"), "{err}");

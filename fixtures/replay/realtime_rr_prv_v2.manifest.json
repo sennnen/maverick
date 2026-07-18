@@ -1,0 +1,38 @@
+{
+  "schema": "connector-manifest/v1",
+  "identity": {
+    "family": "fixture-gen5",
+    "display_name": "Fixture gen5 realtime RR",
+    "models": ["FIXTURE"]
+  },
+  "gatt": { "service": "s", "command": "c", "notify": ["n"] },
+  "frame": { "wire_format": "gen5", "max_frame_bytes": 8192 },
+  "interval_source": "ppg",
+  "packets": { "40": "realtime_data" },
+  "layouts": {
+    "realtime_data": {
+      "time": {
+        "seconds_offset": 2,
+        "subseconds_offset": 6,
+        "subseconds_unit": "milliseconds"
+      },
+      "fields": [
+        { "name": "heart_rate", "stream": "heart_rate", "type": "u8", "offset": 8 }
+      ],
+      "repeats": [
+        {
+          "name": "rr_interval",
+          "stream": "rr_interval",
+          "type": "u16_le",
+          "count_offset": 9,
+          "start_offset": 10,
+          "stride": 2,
+          "max_count": 16,
+          "drop_zero": true
+        }
+      ]
+    }
+  },
+  "capabilities": ["heart_rate", "rr_interval"],
+  "confidence_note": "Source-derived fixture manifest, v2: the gen5 packet-40 offsets are payload-relative (payload = the inner record), pinned by the [WRS] real captures — timestamp 2, sub-second 6, HR 8, RR count 9, u16-le intervals from 10. interval_source is ppg because WHOOP derives RR from optical pulse timing. The v1 fixture carried the same fields at frame-relative offsets (+8), which no real frame agrees with."
+}

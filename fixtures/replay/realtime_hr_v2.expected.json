@@ -1,0 +1,22 @@
+{
+  "produced_with": {
+    "hr_summary": "1.0.0",
+    "snapshot": "snapshot/v1",
+    "storage_schema": 1
+  },
+  "hash": "33143ef069a85a38",
+  "snapshot": {
+    "schema": "snapshot/v1",
+    "device_id": 1,
+    "current_bpm": 63,
+    "mean_milli_bpm": 60667,
+    "in_range_samples": 3,
+    "excluded_samples": 0,
+    "provenance_id": 2
+  },
+  "evidence": {
+    "source": "Produced by mav-replay (examples/replay_dump) from realtime_hr_v2.capture.json. v2 rebuilds the v1 frames with the same HR values (58/61/63 bpm at consecutive seconds) at the payload-relative offsets the [WRS] real captures pin (timestamp 2, HR 8); the snapshot and hash equal v1's exactly, which is the cross-check that only the byte positions moved.",
+    "frame_generator": "independent Python CRC-16/MODBUS and zlib CRC-32 (scratchpad regen, not the code under test)",
+    "confidence": "PROV"
+  }
+}

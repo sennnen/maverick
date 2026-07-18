@@ -1,0 +1,19 @@
+{
+  "snapshot": {
+    "schema": "snapshot/v1",
+    "device_id": 1,
+    "current_bpm": 62,
+    "mean_milli_bpm": 60500,
+    "in_range_samples": 4,
+    "excluded_samples": 0,
+    "provenance_id": 2
+  },
+  "hash": "ee4ce5f7e8a4567c",
+  "evidence": {
+    "source": "Produced by mav-replay (examples/replay_dump) from mixed_history_v2.capture.json; values checked by hand: current_bpm 62 is the newest realtime second, mean 60.5 bpm over HRs 60/61/62/59, the duplicated historical chunk stores nothing, and the stale-clock record keeps its raw device time while falling back to the capture wall. v2 rebuilds the v1 realtime frame at the payload-relative offsets the [WRS] real captures pin; the historical chunks are byte-identical to v1, and the snapshot and hash equal v1's exactly.",
+    "algorithm_versions": {
+      "hr_feature": "1.0.0"
+    },
+    "confidence": "PROV"
+  }
+}

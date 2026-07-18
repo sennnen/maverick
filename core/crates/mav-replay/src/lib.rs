@@ -73,8 +73,8 @@ mod tests {
 
     fn run() -> Replay {
         replay_files(
-            &fixture("realtime_hr_v1.manifest.json"),
-            &fixture("realtime_hr_v1.capture.json"),
+            &fixture("realtime_hr_v2.manifest.json"),
+            &fixture("realtime_hr_v2.capture.json"),
         )
         .unwrap()
     }
@@ -91,7 +91,7 @@ mod tests {
     fn replay_matches_the_frozen_expected_fixture() {
         let replay = run();
         let expected: serde_json::Value = serde_json::from_str(
-            &std::fs::read_to_string(fixture("realtime_hr_v1.expected.json")).unwrap(),
+            &std::fs::read_to_string(fixture("realtime_hr_v2.expected.json")).unwrap(),
         )
         .unwrap();
         assert_eq!(replay.hash, expected["hash"].as_str().unwrap());
@@ -126,22 +126,22 @@ mod tests {
 
     fn mixed_manifest_and_capture() -> (Manifest, Capture) {
         let manifest = Manifest::from_json(
-            &std::fs::read_to_string(fixture("mixed_history_v1.manifest.json")).unwrap(),
+            &std::fs::read_to_string(fixture("mixed_history_v2.manifest.json")).unwrap(),
         )
         .unwrap();
-        let capture = load_capture(&fixture("mixed_history_v1.capture.json")).unwrap();
+        let capture = load_capture(&fixture("mixed_history_v2.capture.json")).unwrap();
         (manifest, capture)
     }
 
     #[test]
     fn mixed_capture_reproduces_the_frozen_expected_snapshot() {
         let replay = replay_files(
-            &fixture("mixed_history_v1.manifest.json"),
-            &fixture("mixed_history_v1.capture.json"),
+            &fixture("mixed_history_v2.manifest.json"),
+            &fixture("mixed_history_v2.capture.json"),
         )
         .unwrap();
         let expected: serde_json::Value = serde_json::from_str(
-            &std::fs::read_to_string(fixture("mixed_history_v1.expected.json")).unwrap(),
+            &std::fs::read_to_string(fixture("mixed_history_v2.expected.json")).unwrap(),
         )
         .unwrap();
         assert_eq!(
@@ -244,12 +244,12 @@ mod tests {
     #[test]
     fn rr_fixture_reproduces_the_frozen_prv_snapshot() {
         let replay = replay_files(
-            &fixture("realtime_rr_prv_v1.manifest.json"),
-            &fixture("realtime_rr_prv_v1.capture.json"),
+            &fixture("realtime_rr_prv_v2.manifest.json"),
+            &fixture("realtime_rr_prv_v2.capture.json"),
         )
         .unwrap();
         let expected: serde_json::Value = serde_json::from_str(
-            &std::fs::read_to_string(fixture("realtime_rr_prv_v1.expected.json")).unwrap(),
+            &std::fs::read_to_string(fixture("realtime_rr_prv_v2.expected.json")).unwrap(),
         )
         .unwrap();
 
