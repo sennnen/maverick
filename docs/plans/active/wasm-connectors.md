@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: in progress. WC-P0 through WC-P8 are complete; WC-P9 and WC-P10 are next.
+Status: in progress. WC-P0 through WC-P9 are complete; WC-P10 is next.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -247,7 +247,7 @@ Status: complete
 
 ## Packet WC-P9: Package WHOOP 4.0 as public connector
 
-Status: pending
+Status: complete
 
 - **Repositories touched:** `maverick-connectors`.
 - **Likely files/modules:** `connectors/whoop4/` Rust project, manifest metadata, state fixtures,
@@ -536,3 +536,11 @@ the listed order minimizes simultaneous migration surfaces.
   generation-specific offload commands, real `whoop-rs` record routing, explicit unmapped records,
   malformed inputs, and rejection of destructive opcode 25. Its evidence matrix preserves every
   existing confidence tag; no Maverick protocol-ledger fact changed.
+- 2026-07-18: WC-P9 added `dev.maverick.whoop4` in
+  `maverick-connectors@4c2c51d`. Its gen4-only public-SDK state machine proves unbonded identity,
+  subscription and hello ordering, safe historical retry/ACK, cancellation, disconnect/restore,
+  standard/custom realtime, events, and every admitted v5/v7/v9/v12/v24/v25 record. Eleven
+  embedded fixtures pass natively and in the signed Wasm artifact; deterministic rebuild,
+  signature reconstruction, validation, and the existing public installer all activated the exact
+  artifact successfully. Only the public test key and detached signature remain; the temporary
+  private signer was deleted. The legacy path remains authoritative until WC-P12 parity proof.
