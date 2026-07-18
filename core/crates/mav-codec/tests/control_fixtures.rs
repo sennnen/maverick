@@ -95,8 +95,8 @@ fn history_start_decodes_exactly() {
 }
 
 #[test]
-fn history_end_preserves_every_acknowledgement_byte() {
-    let control = decode_fixture("gen5_history_end_v1.json");
+fn history_end_extracts_the_eight_end_data_bytes() {
+    let control = decode_fixture("gen5_history_end_v2.json");
     let HistoricalControl::MetadataEnd {
         ack_payload,
         record_count,
@@ -105,12 +105,23 @@ fn history_end_preserves_every_acknowledgement_byte() {
     else {
         panic!("END must decode as MetadataEnd");
     };
-    // Eight cursor bytes plus the gen5 pad byte, byte for byte, never parsed or trimmed.
+    // Exactly the 8-byte end_data at inner 13..21 (trim cursor 113405, next 16) from the real
+    // 5.0/MG capture — never the whole body, whose leading bytes are the record unix.
     assert_eq!(
         ack_payload,
-        vec![0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03, 0x04, 0x00]
+        vec![0xFD, 0xBA, 0x01, 0x00, 0x10, 0x00, 0x00, 0x00]
     );
     assert_eq!(record_count, None);
+}
+
+#[test]
+fn history_end_shorter_than_its_end_data_is_a_typed_error() {
+    // A METADATA END whose body stops before inner 21 cannot yield a cursor to echo.
+    let mut payload = vec![0x31, 0x09, 0x02];
+    payload.extend_from_slice(&[0u8; 17]);
+    let error = decode_control(&payload).unwrap_err();
+    assert_eq!(error.code, codes::DECODE_FIELD_UNREADABLE);
+    assert!(error.to_string().contains("end_data"), "{error}");
 }
 
 #[test]

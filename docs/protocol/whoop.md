@@ -588,6 +588,11 @@ short `0x02` ack, `HISTORICAL_DATA_RESULT` (23, `[0x01, LE32 seq, page_count]`),
 and a `HISTORY_END`, then increment the sequence and repeat until `HISTORY_COMPLETE`.
 
 Metadata kinds are 1 START, 2 END (which carries the cursor data to acknowledge), and 3 COMPLETE.
+On a real 5.0/MG END frame (`[WRS]`, fixtures/control/gen5_history_end_v2.json) the body is: the
+record unix `u32` at inner 3, and the 8-byte end_data — trim cursor `u32` + next `u32` — at inner
+13..21. The acknowledgement echoes exactly those eight bytes behind the b3 marker; echoing the
+whole body would hand the strap the record unix as a cursor. An earlier synthetic fixture put the
+cursor at body start, which made a whole-body echo look correct.
 
 ### The safe-cursor invariant
 

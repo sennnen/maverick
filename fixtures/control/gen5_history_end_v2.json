@@ -1,0 +1,25 @@
+{
+  "schema": "control/v1",
+  "wire_format": "gen5",
+  "confidence": "WRS",
+  "source": "A real WHOOP 5.0/MG METADATA HISTORY_END frame captured from hardware (imported from tanarchytan/whoop-rs, where it pins the same decode): kind 2, seq 145, record unix 1784236473 at inner 3, and the 8-byte end_data (trim cursor 113405, next 16) at inner 13..21. The acknowledgement must echo exactly those eight bytes — the strap re-serves the same chunk forever otherwise — so ack_payload is the end_data slice, not the whole body: the body's leading bytes are the record unix and counters, and echoing them would hand the strap a garbage cursor.",
+  "produced_with": {
+    "generator": "real hardware capture (whoop-rs), CRCs verified on import"
+  },
+  "input_hex": "aa011c00010023d1319102b949596a705d3b000000fdba010010000000000000f269faec",
+  "expected": {
+    "control": "metadata_end",
+    "seq": 145,
+    "ack_payload": [
+      253,
+      186,
+      1,
+      0,
+      16,
+      0,
+      0,
+      0
+    ],
+    "record_count": null
+  }
+}

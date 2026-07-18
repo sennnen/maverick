@@ -38,17 +38,29 @@ fn decode_response(payload: &[u8]) -> Result<HistoricalControl> {
     })
 }
 
+/// Where HISTORY_END's 8-byte end_data (trim cursor `u32` + next `u32`) sits in the metadata
+/// body: inner 13..21, i.e. body 10..18. The acknowledgement must echo exactly these eight bytes
+/// — the strap re-serves the same chunk forever otherwise — and never the whole body, whose
+/// leading bytes are the record unix and counters, not cursor material. Pinned by a real 5.0/MG
+/// capture (fixtures/control/gen5_history_end_v2.json, [WRS]).
+const END_DATA_RANGE: std::ops::Range<usize> = 10..18;
+
 fn decode_metadata(payload: &[u8]) -> Result<HistoricalControl> {
     let [_, seq, kind, body @ ..] = payload else {
         return Err(unreadable("metadata header", payload.len()));
     };
     Ok(match *kind {
         METADATA_START => HistoricalControl::MetadataStart { seq: *seq },
-        METADATA_END => HistoricalControl::MetadataEnd {
-            seq: *seq,
-            ack_payload: body.to_vec(),
-            record_count: None,
-        },
+        METADATA_END => {
+            let Some(end_data) = body.get(END_DATA_RANGE) else {
+                return Err(unreadable("history-end end_data", payload.len()));
+            };
+            HistoricalControl::MetadataEnd {
+                seq: *seq,
+                ack_payload: end_data.to_vec(),
+                record_count: None,
+            }
+        }
         METADATA_COMPLETE => HistoricalControl::MetadataComplete { seq: *seq },
         other => HistoricalControl::MetadataUnknown {
             kind: other,
