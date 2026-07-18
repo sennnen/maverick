@@ -223,6 +223,13 @@ pub struct FrameSpecConfig {
     #[serde(default)]
     pub header_crc: Option<HeaderCrcConfig>,
     pub trailer: TrailerConfig,
+    /// Zero-pad the payload to a multiple of this before framing; absent means no padding.
+    #[serde(default)]
+    pub pad_payload_to: Option<usize>,
+    /// Fixed header bytes the outbound builder starts from (SOF, length, and header CRC are
+    /// written over them); absent means zeros.
+    #[serde(default)]
+    pub header_template: Option<Vec<u8>>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -251,6 +258,21 @@ pub struct TrailerConfig {
 
 impl FrameSpecConfig {
     fn to_frame_spec(&self) -> Result<FrameSpec> {
+        let mut header_template = [0u8; mav_frame::spec::HEADER_TEMPLATE_MAX];
+        if let Some(bytes) = &self.header_template {
+            if bytes.len() > header_template.len() {
+                return Err(MavError::new(
+                    codes::DECODE_LAYOUT_INVALID,
+                    "header_template longer than the builder supports",
+                )
+                .context(format!(
+                    "{} bytes > {}",
+                    bytes.len(),
+                    header_template.len()
+                )));
+            }
+            header_template[..bytes.len()].copy_from_slice(bytes);
+        }
         Ok(FrameSpec {
             sof: self.sof,
             header_len: self.header_len,
@@ -273,6 +295,8 @@ impl FrameSpecConfig {
                 kind: parse_crc(&self.trailer.crc)?,
                 endian: parse_endian(&self.trailer.endian)?,
             },
+            pad_payload_to: self.pad_payload_to.unwrap_or(1),
+            header_template,
         })
     }
 }
@@ -590,7 +614,9 @@ mod tests {
                  "sof": 90, "header_len": 3,
                  "length": { "offset": 1, "width": 2, "endian": "be" },
                  "length_includes_trailer": false,
-                 "trailer": { "crc": "crc8", "endian": "le" }
+                 "trailer": { "crc": "crc8", "endian": "le" },
+                 "pad_payload_to": 2,
+                 "header_template": [0, 0, 7]
                }"#,
         );
         let manifest = Manifest::from_json(&json).unwrap();
@@ -611,8 +637,34 @@ mod tests {
                     kind: CrcKind::Crc8,
                     endian: Endian::Le
                 },
+                pad_payload_to: 2,
+                header_template: {
+                    let mut t = [0; mav_frame::spec::HEADER_TEMPLATE_MAX];
+                    t[2] = 7;
+                    t
+                },
             }
         );
+    }
+
+    #[test]
+    fn an_oversized_header_template_is_refused() {
+        let json = minimal_json().replace(
+            "\"wire_format\": \"gen5\", \"max_frame_bytes\": 8192",
+            &format!(
+                r#""wire_format": "custom", "max_frame_bytes": 8192,
+               "spec": {{
+                 "sof": 90, "header_len": 3,
+                 "length": {{ "offset": 1, "width": 2, "endian": "be" }},
+                 "length_includes_trailer": false,
+                 "trailer": {{ "crc": "crc8", "endian": "le" }},
+                 "header_template": [{}]
+               }}"#,
+                ["0"; mav_frame::spec::HEADER_TEMPLATE_MAX + 1].join(", ")
+            ),
+        );
+        let err = Manifest::from_json(&json).unwrap_err();
+        assert_eq!(err.code, codes::DECODE_LAYOUT_INVALID);
     }
 
     #[test]

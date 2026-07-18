@@ -304,6 +304,8 @@ mod tests {
                 kind: CrcKind::Crc8,
                 endian: Endian::Le,
             },
+            pad_payload_to: 1,
+            header_template: [0; crate::spec::HEADER_TEMPLATE_MAX],
         };
         let payload = [0x00u8, 0x01, 0x02, 0x03];
         let mut wire = vec![0x5A];

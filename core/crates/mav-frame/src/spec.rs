@@ -1,10 +1,8 @@
-//! A frame format described as data. The reassembler is driven by a `FrameSpec` rather than a
-//! hardcoded pair of formats, so a device declares its framing (start-of-frame byte, length field,
-//! header and trailer CRCs, padding) instead of the core knowing it. gen4 and gen5 are two presets
-//! expressed in exactly this form; a connector can supply a third. The rationale is ADR-012.
-//!
-//! This describes how to *validate and split* incoming frames. Building outgoing command frames is
-//! a separate, WHOOP-only concern that stays in `frame.rs`.
+//! A frame format described as data. The reassembler and the outbound builder are both driven by
+//! a `FrameSpec` rather than a hardcoded pair of formats, so a device declares its framing
+//! (start-of-frame byte, header template, length field, header and trailer CRCs, padding) instead
+//! of the core knowing it. gen4 and gen5 are two presets expressed in exactly this form; a
+//! connector can supply a third. The rationale is ADR-012.
 
 use crate::crc::{crc16_modbus, crc32, crc8};
 
@@ -15,6 +13,22 @@ pub enum Endian {
 }
 
 impl Endian {
+    pub(crate) fn write(self, value: u64, out: &mut [u8]) {
+        match self {
+            Endian::Le => {
+                for (i, b) in out.iter_mut().enumerate() {
+                    *b = (value >> (8 * i)) as u8;
+                }
+            }
+            Endian::Be => {
+                let top = out.len() - 1;
+                for (i, b) in out.iter_mut().enumerate() {
+                    *b = (value >> (8 * (top - i))) as u8;
+                }
+            }
+        }
+    }
+
     fn read(self, bytes: &[u8]) -> u64 {
         let mut value = 0u64;
         match self {
@@ -85,7 +99,12 @@ pub struct Trailer {
     pub endian: Endian,
 }
 
-/// A complete description of one frame format, enough to validate and split incoming frames.
+/// The widest header the outbound builder can template. Wide enough for every known format; a
+/// custom format past it fails to build with a typed error rather than truncating.
+pub const HEADER_TEMPLATE_MAX: usize = 16;
+
+/// A complete description of one frame format, enough to validate and split incoming frames and
+/// to build outgoing ones.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct FrameSpec {
     pub sof: u8,
@@ -96,6 +115,13 @@ pub struct FrameSpec {
     pub length_includes_trailer: bool,
     pub header_crc: Option<HeaderCrc>,
     pub trailer: Trailer,
+    /// The payload is zero-padded to a multiple of this before framing (1 = no padding). The
+    /// padding is part of what the trailer CRC covers and stays in the delivered payload.
+    pub pad_payload_to: usize,
+    /// Fixed header bytes the builder starts from (first `header_len` used); the SOF, length, and
+    /// header CRC are written over it. Carries wire constants a format demands beyond those
+    /// fields, such as the gen5 `0x01` / `0x00 0x01` markers its header CRC covers.
+    pub header_template: [u8; HEADER_TEMPLATE_MAX],
 }
 
 impl FrameSpec {
@@ -121,6 +147,8 @@ impl FrameSpec {
                 kind: CrcKind::Crc32,
                 endian: Endian::Le,
             },
+            pad_payload_to: 1,
+            header_template: [0; HEADER_TEMPLATE_MAX],
         }
     }
 
@@ -145,6 +173,13 @@ impl FrameSpec {
             trailer: Trailer {
                 kind: CrcKind::Crc32,
                 endian: Endian::Le,
+            },
+            pad_payload_to: 4,
+            header_template: {
+                let mut t = [0; HEADER_TEMPLATE_MAX];
+                t[1] = 0x01;
+                t[5] = 0x01;
+                t
             },
         }
     }

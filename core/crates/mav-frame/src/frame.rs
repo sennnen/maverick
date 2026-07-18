@@ -1,17 +1,17 @@
-//! Frame layouts and builders for the two WHOOP wire formats. The layouts come from two
-//! independent reverse-engineered codebases that agree exactly; docs/protocol/whoop.md is the
-//! narrative reference. The gen5 builder is pinned against a real captured hello frame below,
-//! which is the strongest evidence we can hold without hardware.
+//! Outbound frame building, driven by a `FrameSpec` exactly as inbound validation is: the spec
+//! carries the header template, length field, CRCs, and padding rule, and one builder serves
+//! every format. gen4 and gen5 are named presets over that data; the gen5 preset is pinned
+//! against a real captured hello frame below, which is the strongest evidence we can hold
+//! without hardware.
 
-use crate::crc::{crc16_modbus, crc32, crc8};
-use crate::spec::FrameSpec;
+use crate::spec::{FrameSpec, HEADER_TEMPLATE_MAX};
 use mav_model::error::{codes, MavError, Result};
 
 pub const START_OF_FRAME: u8 = 0xAA;
 
-/// gen4 is the WHOOP 4.0 wire (4-byte header, CRC-8 header check); gen5 is the WHOOP 5.0 and MG
-/// wire (8-byte header, CRC-16 header check, payload padded to a 4-byte boundary). The pair are
-/// named presets over the general [`FrameSpec`]; a connector can supply a third format as data.
+/// gen4 is a 4-byte-header wire with a CRC-8 header check; gen5 is an 8-byte-header wire with a
+/// CRC-16 header check and a payload padded to a 4-byte boundary. The pair are named presets over
+/// the general [`FrameSpec`]; a connector can supply a third format as data.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum WireFormat {
     Gen4,
@@ -43,57 +43,88 @@ pub struct RawFrame {
     pub payload: Vec<u8>,
 }
 
-/// Build a complete frame around `payload`. Used to encode commands and to construct test
-/// fixtures; the reassembler is its inverse.
+/// Build a complete frame around `payload` for a named preset. Used to encode commands and to
+/// construct test fixtures; the reassembler is its inverse.
 pub fn build_frame(format: WireFormat, payload: &[u8]) -> Result<Vec<u8>> {
-    match format {
-        WireFormat::Gen4 => {
-            let declared = payload
-                .len()
-                .checked_add(4)
-                .filter(|&n| n <= usize::from(u16::MAX))
-                .ok_or_else(|| {
-                    MavError::new(codes::FRAME_OVERSIZED, "gen4 payload too large to frame")
-                })?;
-            let declared = declared as u16;
-            let len_bytes = declared.to_le_bytes();
-            let mut frame = Vec::with_capacity(4 + payload.len() + 4);
-            frame.push(START_OF_FRAME);
-            frame.extend_from_slice(&len_bytes);
-            frame.push(crc8(&len_bytes));
-            frame.extend_from_slice(payload);
-            frame.extend_from_slice(&crc32(payload).to_le_bytes());
-            Ok(frame)
-        }
-        WireFormat::Gen5 => {
-            let padding = (4 - payload.len() % 4) % 4;
-            let padded_len = payload.len() + padding;
-            let declared = padded_len
-                .checked_add(4)
-                .filter(|&n| n <= usize::from(u16::MAX))
-                .ok_or_else(|| {
-                    MavError::new(codes::FRAME_OVERSIZED, "gen5 payload too large to frame")
-                })?;
-            let declared = declared as u16;
-            let mut frame = Vec::with_capacity(8 + padded_len + 4);
-            frame.push(START_OF_FRAME);
-            frame.push(0x01);
-            frame.extend_from_slice(&declared.to_le_bytes());
-            frame.extend_from_slice(&[0x00, 0x01]);
-            let header_crc = crc16_modbus(&frame[0..6]);
-            frame.extend_from_slice(&header_crc.to_le_bytes());
-            frame.extend_from_slice(payload);
-            frame.resize(8 + padded_len, 0);
-            let payload_crc = crc32(&frame[8..8 + padded_len]);
-            frame.extend_from_slice(&payload_crc.to_le_bytes());
-            Ok(frame)
-        }
+    build_with_spec(&format.spec(), payload)
+}
+
+/// Build a complete frame around `payload` from any frame description: header template, then SOF,
+/// declared length, and header CRC written over it, then the padded payload, then the trailer CRC.
+/// The reassembler validating with the same spec is its inverse (the delivered payload keeps the
+/// declared padding, which the trailer CRC covers).
+pub fn build_with_spec(spec: &FrameSpec, payload: &[u8]) -> Result<Vec<u8>> {
+    if spec.header_len > HEADER_TEMPLATE_MAX {
+        return Err(MavError::new(
+            codes::FRAME_OVERSIZED,
+            "header longer than the builder's template",
+        )
+        .context(format!(
+            "header_len {} > {HEADER_TEMPLATE_MAX}",
+            spec.header_len
+        )));
     }
+    let fields_fit = spec.length.offset + spec.length.width <= spec.header_len
+        && spec.header_crc.is_none_or(|c| {
+            c.over.0 <= c.over.1
+                && c.over.1 <= spec.header_len
+                && c.at + c.kind.width() <= spec.header_len
+        });
+    if !fields_fit {
+        return Err(MavError::new(
+            codes::FRAME_OVERSIZED,
+            "header fields fall outside the declared header",
+        ));
+    }
+    let pad = spec.pad_payload_to.max(1);
+    let padded_len = payload.len().div_ceil(pad) * pad;
+    let declared = if spec.length_includes_trailer {
+        padded_len + spec.trailer.kind.width()
+    } else {
+        padded_len
+    };
+    let width = spec.length.width.min(8);
+    let max_declared = if width >= 8 {
+        u64::MAX
+    } else {
+        (1u64 << (8 * width)) - 1
+    };
+    if declared as u64 > max_declared {
+        return Err(
+            MavError::new(codes::FRAME_OVERSIZED, "payload too large to frame")
+                .context(format!("declared {declared} > max {max_declared}")),
+        );
+    }
+
+    let mut frame = spec.header_template[..spec.header_len].to_vec();
+    frame[0] = spec.sof;
+    let at = spec.length.offset;
+    spec.length
+        .endian
+        .write(declared as u64, &mut frame[at..at + spec.length.width]);
+    if let Some(crc) = spec.header_crc {
+        let computed = crc.kind.compute(&frame[crc.over.0..crc.over.1]);
+        crc.endian
+            .write(computed, &mut frame[crc.at..crc.at + crc.kind.width()]);
+    }
+
+    frame.extend_from_slice(payload);
+    frame.resize(spec.header_len + padded_len, 0);
+    let trailer = spec
+        .trailer
+        .kind
+        .compute(&frame[spec.header_len..spec.header_len + padded_len]);
+    let mut trailer_bytes = vec![0u8; spec.trailer.kind.width()];
+    spec.trailer.endian.write(trailer, &mut trailer_bytes);
+    frame.extend_from_slice(&trailer_bytes);
+    Ok(frame)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::crc::{crc32, crc8};
+    use crate::reassembler::Reassembler;
 
     /// The static gen5 client hello, byte for byte as captured from real straps by both source
     /// codebases: GET_HELLO (cmd 0x91 = 145), seq 1, data [0x01].
@@ -138,6 +169,76 @@ mod tests {
         let err = build_frame(WireFormat::Gen4, &big).unwrap_err();
         assert_eq!(err.code, codes::FRAME_OVERSIZED);
         let err = build_frame(WireFormat::Gen5, &big).unwrap_err();
+        assert_eq!(err.code, codes::FRAME_OVERSIZED);
+    }
+
+    /// A frame format unlike either preset (BE length that excludes the trailer, no header CRC,
+    /// filler byte the template must carry): the builder and the reassembler are inverses.
+    fn custom_spec() -> FrameSpec {
+        use crate::spec::{CrcKind, Endian, LengthField, Trailer, HEADER_TEMPLATE_MAX};
+        FrameSpec {
+            sof: 0x7E,
+            header_len: 4,
+            length: LengthField {
+                offset: 1,
+                width: 2,
+                endian: Endian::Be,
+            },
+            length_includes_trailer: false,
+            header_crc: None,
+            trailer: Trailer {
+                kind: CrcKind::Crc8,
+                endian: Endian::Le,
+            },
+            pad_payload_to: 1,
+            header_template: {
+                let mut t = [0; HEADER_TEMPLATE_MAX];
+                t[3] = 0x5A;
+                t
+            },
+        }
+    }
+
+    #[test]
+    fn spec_built_frames_round_trip_through_the_reassembler() {
+        for (spec, payload) in [
+            (FrameSpec::gen4(), vec![0x28u8, 0x01, 0x00, 0x42]),
+            (FrameSpec::gen5(), vec![0x23u8, 0x01, 0x91]),
+            (custom_spec(), vec![0x11u8, 0x22, 0x33, 0x44, 0x55]),
+        ] {
+            let wire = build_with_spec(&spec, &payload).unwrap();
+            let mut r = Reassembler::with_spec(spec);
+            let frames: Vec<RawFrame> = r
+                .push(&wire)
+                .into_iter()
+                .filter_map(|e| match e {
+                    crate::reassembler::ReassemblyEvent::Frame(f) => Some(f),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(frames.len(), 1);
+            // The delivered payload is the padded payload; padding is zeros past the input.
+            assert_eq!(&frames[0].payload[..payload.len()], &payload[..]);
+            assert!(frames[0].payload[payload.len()..].iter().all(|&b| b == 0));
+            assert_eq!(frames[0].payload.len() % spec.pad_payload_to.max(1), 0);
+        }
+    }
+
+    #[test]
+    fn custom_template_filler_bytes_reach_the_wire() {
+        let wire = build_with_spec(&custom_spec(), &[0xAB]).unwrap();
+        assert_eq!(wire[0], 0x7E);
+        assert_eq!(&wire[1..3], &[0x00, 0x01], "BE length excludes trailer");
+        assert_eq!(wire[3], 0x5A, "template filler survives");
+        assert_eq!(wire[4], 0xAB);
+        assert_eq!(wire[5], crc8(&[0xAB]));
+    }
+
+    #[test]
+    fn a_header_field_outside_the_header_is_refused() {
+        let mut spec = custom_spec();
+        spec.length.offset = 3;
+        let err = build_with_spec(&spec, &[0x01]).unwrap_err();
         assert_eq!(err.code, codes::FRAME_OVERSIZED);
     }
 }
