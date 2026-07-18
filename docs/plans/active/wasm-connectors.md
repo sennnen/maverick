@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: in progress. WC-P0 through WC-P9 are complete; WC-P10 is next.
+Status: in progress. WC-P0 through WC-P10 are complete; WC-P11 is next.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -270,7 +270,7 @@ Status: complete
 
 ## Packet WC-P10: Package WHOOP 5.0/MG as public connector
 
-Status: pending
+Status: complete
 
 - **Repositories touched:** `maverick-connectors`.
 - **Likely files/modules:** `connectors/whoop5/` Rust project, manifest metadata, state fixtures.
@@ -544,3 +544,13 @@ the listed order minimizes simultaneous migration surfaces.
   signature reconstruction, validation, and the existing public installer all activated the exact
   artifact successfully. Only the public test key and detached signature remain; the temporary
   private signer was deleted. The legacy path remains authoritative until WC-P12 parity proof.
+- 2026-07-18: WC-P10 added paired `dev.maverick.whoop5` for WHOOP 5.0/MG in
+  `maverick-connectors@a5e5be6`. Its generation-local state machine proves both service identities,
+  pairing before discovery, the confirmed gen5 hello and R22 configuration sequence, safe history
+  cursor ACK/retry, cancellation, reconnect/restore, standard/custom realtime, events, real v18 and
+  v26 records, and bounded synthetic v20/v21 deep buffers. Nine embedded fixtures pass natively and
+  in the signed Wasm artifact; deterministic rebuild, signature reconstruction, validation, and the
+  public installer activated the exact artifact. Deep-stream unlock and MG calibration remain
+  explicitly unverified rather than inferred. Only the public test key and detached signature
+  remain; the temporary private signer was deleted. The legacy path remains authoritative until
+  WC-P12 parity proof.
