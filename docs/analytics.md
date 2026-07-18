@@ -67,17 +67,21 @@ an availability result; it does not hardcode device-family checks.
 
 This is a deliberate refusal to fill missing science with product theatre.
 
-## The ported algorithm library (WHOOP-P6)
+## The ported algorithm library (WHOOP-P6/P8)
 
 `mav-analytic` also carries a library of brand-neutral physiological algorithms imported from
 `tanarchytan/whoop-rs` (`[WRS]` in the protocol ledger): readiness (log-domain rolling-baseline
 RMSSD), resting HR (sustained-floor), recovery (z-score + logistic composite), strain (Karvonen
 %HRR TRIMP), stress (Baevsky index), HR zones (Tanaka + time-in-zone), VO2max / fitness age (Nes
 HUNT), respiratory rate (RSA), PPG-derived HR (autocorrelation), SpO2 (ratio-of-ratios), IMU
-activity features, an at-rest HR watch, and the shared `stats` and `calibration` primitives. Each
-is a pure function — plain values in, a wellness estimate or `None` out, no wire types and no IO —
-and each is pinned by the upstream's property and recovered-value tests, so it clears the ADR-009
-bar of a genuinely-failable test even before a real capture exists.
+activity features, an at-rest HR watch, and the shared `stats` and `calibration` primitives. The
+`sleep` module (WHOOP-P8) adds the two per-30 s-epoch hypnogram stagers — V2 (cardiorespiratory:
+z-scored HR/HRV/motion emissions, an HR-flatness deep gate, an R-R RSA respiration term, and
+Viterbi smoothing) and V1 (Cole-Kripke actigraphy) — over the same protocol-free inputs. Each is a
+pure function — plain values in, a wellness estimate or `None` out, no wire types and no IO — and
+each is pinned by the upstream's property and recovered-value tests (the sleep stagers by a
+frozen-golden hypnogram that reproduces the whole V2 recipe stage-for-stage), so it clears the
+ADR-009 bar of a genuinely-failable test even before a real capture exists.
 
 These modules are a **reviewed library, not yet admitted analytics**. None is wired into the live
 snapshot or the capability graph. Promoting one to an emitted, capability-gated analytic is a

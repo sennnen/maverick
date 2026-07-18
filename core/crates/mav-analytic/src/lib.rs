@@ -4,7 +4,7 @@
 //! missing evidence. See docs/analytics.md and ADR-005.
 //!
 //! The `time_domain` calculation in `hrv` is the one admitted, snapshot-emitting analytic. The
-//! WHOOP-P6 modules below (imported from tanarchytan/whoop-rs, `[WRS]`) are brand-neutral,
+//! WHOOP-P6/P8 modules below (imported from tanarchytan/whoop-rs, `[WRS]`) are brand-neutral,
 //! pure-function ports: plain values in, wellness estimates out, no wire types, no IO, absent
 //! signal returns `None`. Each is pinned by the upstream's own property/recovered-value tests, so
 //! it satisfies the ADR-009 admission bar (a genuinely-failable test) even without a real capture
@@ -26,6 +26,7 @@ pub mod readiness;
 pub mod recovery;
 pub mod respiratory_rate;
 pub mod resting_hr;
+pub mod sleep;
 pub mod spo2;
 pub mod stats;
 pub mod strain;
