@@ -16,6 +16,7 @@ const REQUIRED: [&str; 4] = ["mav:manifest", "mav:abi", "mav:fixtures", "mav:sig
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InspectionReport {
     pub artifact_digest: [u8; 32],
+    pub manifest_digest: [u8; 32],
     pub signed_digest: [u8; 32],
     pub manifest: Manifest,
     pub abi: AbiDescriptor,
@@ -67,6 +68,7 @@ impl Artifact {
                 "manifest and signature publisher ids differ",
             ));
         }
+        let manifest_digest: [u8; 32] = Sha256::digest(sections.manifest).into();
         let fixture_digest: [u8; 32] = Sha256::digest(sections.fixtures).into();
         if !bool::from(fixture_digest.ct_eq(&manifest.fixture_set_hash)) {
             return Err(error(
@@ -93,6 +95,7 @@ impl Artifact {
             signature_range,
             report: InspectionReport {
                 artifact_digest,
+                manifest_digest,
                 signed_digest,
                 manifest,
                 abi,

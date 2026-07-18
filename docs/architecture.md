@@ -39,9 +39,10 @@ or random source.
 The exact artifact, ABI, install, trust, and lifecycle contracts are in
 [connectors.md](connectors.md). [ADR-017](adr/ADR-017.md) records the decision. The current bundled
 driver and its deletion inventory are in [connector-audit.md](connector-audit.md). WC-P1 through
-WC-P4 implement the leaf ABI, non-executing artifact/trust inspection, public SDK/toolchain, and
-bounded interpreter instance. Until the later migration packets land, code still contains the
-audited ADR-016 compiled path and the new runtime is not yet the product transport path.
+WC-P5 implement the leaf ABI, non-executing artifact/trust inspection, public SDK/toolchain,
+bounded interpreter instance, and normalized host event/action session. Until the later migration
+packets land, code still contains the audited ADR-016 compiled path and the new runtime is not yet
+exposed over the product FFI transport path.
 
 ## Native/Rust line
 

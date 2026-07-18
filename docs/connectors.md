@@ -1,9 +1,10 @@
 # Runtime-loaded connectors
 
 This document freezes target contracts selected by [ADR-017](adr/ADR-017.md) and records the
-implemented boundary as packets land. Artifact schemas, trust, the public SDK/toolchain, and bounded
-Wasm execution are implemented through WC-P4; install, transport, migration, and frontend contracts
-remain targets. The ordered work lives in [plans/active/wasm-connectors.md](plans/active/wasm-connectors.md).
+implemented boundary as packets land. Artifact schemas, trust, the public SDK/toolchain, bounded
+Wasm execution, and the core transport session are implemented through WC-P5; install, migration,
+FFI, and frontend contracts remain targets. The ordered work lives in
+[plans/active/wasm-connectors.md](plans/active/wasm-connectors.md).
 
 ## Product invariants
 
@@ -187,6 +188,21 @@ device acknowledgement write can execute. The host rejects undeclared characteri
 unsupported properties, forbidden operations, stale session/cancellation ids, unbounded values,
 and impossible lifecycle transitions. Native layers cannot retry on their own.
 
+WC-P5 implements this loop in `mav-engine`. The host owns event sequence, cancellation generation,
+native operation ids, deadline tokens, lifecycle state, outstanding results, and the fixed action
+queue. Guest-proposed correlation ids stay inside the ABI and are mapped to host ids before an
+action reaches native code, then mapped back on the result event. Draining is ordered and exactly
+once; a batch that cannot fit leaves the queue unchanged. Disconnect/cancel increments generation,
+clears queued work and pending timers/results, and journals late arrivals before ignoring them.
+
+An `EmitSamples` action validates the signed stream and its frozen unit, converts fixed-point
+microunits, then runs SQI, timeline placement/deduplication, provenance, and transactional storage
+before any later transport action becomes visible. V1 units are `beats-per-minute`, `milliseconds`,
+`counts`, `milli-g`, `milli-degrees-per-second`, `degrees-celsius`, `percent`, `count`, `code`, or
+`boolean` according to the closed stream mapping in the host. The exact canonical event/action trace
+has a stable hash in the lifecycle snapshot. P5 state actions use a bounded session-local staging
+map; WC-P6 replaces that temporary compatibility with namespaced durable state transactions.
+
 ## Errors, deadlines, and cancellation
 
 Artifact, trust, ABI, trap, limit, lifecycle, transport, state, sample-admission, update, and
@@ -194,7 +210,8 @@ revocation failures have stable core error codes. Connector diagnostics are untr
 rate-limits, sizes, redacts, and namespaces them, then maps only safe summaries to UI. A connector
 trap fails its current operation/session; it never panics core or poisons another instance.
 
-Host assigns operation ids and deadline tokens. Connector requests only a named host limit profile
+Host assigns operation ids and deadline tokens after validating session-unique guest correlation
+ids. Connector requests only a named host limit profile
 and opaque timers; it cannot read elapsed or wall time. Timer expiry returns `TimerFired`. User,
 platform, disconnect, suspend, update, and removal cancellation increments a session generation,
 returns `Cancel`, invalidates queued work, and rejects late native results. Cancellation is

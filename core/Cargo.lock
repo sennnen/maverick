@@ -649,6 +649,8 @@ version = "0.1.0"
 dependencies = [
  "mav-analytic",
  "mav-codec",
+ "mav-connector-abi",
+ "mav-connector-runtime",
  "mav-connector-whoop",
  "mav-feature",
  "mav-frame",

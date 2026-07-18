@@ -25,8 +25,9 @@ ALLOWED = {
     "mav-feature": {"mav-model"},
     "mav-analytic": {"mav-model", "mav-feature"},
     "mav-engine": {
-        "mav-model", "mav-frame", "mav-codec", "mav-timeline", "mav-sqi",
-        "mav-feature", "mav-analytic", "mav-store", "mav-obs",
+        "mav-model", "mav-connector-abi", "mav-connector-runtime", "mav-frame",
+        "mav-codec", "mav-timeline", "mav-sqi", "mav-feature", "mav-analytic",
+        "mav-store", "mav-obs",
     },
     "mav-ffi": {"mav-model", "mav-obs", "mav-engine", "mav-connector-whoop"},
     "mav-replay": {"mav-model", "mav-obs", "mav-engine", "mav-connector-whoop"},

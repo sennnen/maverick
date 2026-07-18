@@ -68,8 +68,8 @@ The complete future API and transaction rules are in [connectors.md](connectors.
 
 ## Native transport events
 
-The target runtime accepts closed typed UniFFI transport results. It is not an open RPC surface.
-WC-P7 freezes generated platform records for:
+The WC-P5 core host accepts closed typed transport results and produces a bounded generic action
+queue. It is not an open RPC surface. WC-P7 freezes and exposes the corresponding UniFFI records for:
 
 ```text
 advertisement(...)
@@ -89,13 +89,14 @@ the clock. The runtime validates state and rejects an impossible event with a st
 instead of attempting to repair the sequence.
 
 Core normalizes each result into the connector ABI, invokes the instance, validates returned
-actions, and admits emitted samples into the fixed pipeline. Native code cannot call stages or
-connector exports individually. Device protocol state remains inside connector; lifecycle and
-resource policy remain in core.
+actions, and admits emitted samples through SQI, timeline, provenance, and transactional storage.
+Native code cannot call stages or connector exports individually. Device protocol state remains
+inside connector; lifecycle and resource policy remain in core. The current app still calls the
+legacy compiled-codec runtime until WC-P7 and the switch packet connect this implemented host.
 
 ## Core transport actions
 
-The host drains a bounded queue of closed `TransportAction` values:
+The host drains a bounded queue of closed `ConnectorTransportAction` values:
 
 ```text
 StartScan { service_filters }
@@ -110,7 +111,8 @@ Write { characteristic, bytes, with_response, sequence }
 Disconnect { native_device_id, reason }
 ```
 
-Signed characteristic declarations constrain each action. A connector cannot write an undeclared
+Each value includes host-assigned operation id, deadline token, session id, and cancellation
+generation. Signed characteristic declarations constrain each action. A connector cannot write an undeclared
 characteristic or weaken required confirmed-write policy. A drained action leaves the queue exactly
 once. Failed native execution returns as a typed event; native code never silently retries.
 Protocol retry/sequence/order belongs to connector state, while core owns bounds, deadlines,

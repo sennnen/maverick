@@ -8,6 +8,8 @@ publish.workspace = true
 
 [dependencies]
 mav-model = { workspace = true }
+mav-connector-abi = { workspace = true }
+mav-connector-runtime = { workspace = true }
 mav-frame = { workspace = true }
 mav-codec = { workspace = true }
 mav-sqi = { workspace = true }

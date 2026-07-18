@@ -109,6 +109,14 @@ fails the build.
 | 11035 | CONNECTOR_RUNTIME_INPUT_INVALID | the host supplied an event that failed canonical ABI validation before guest allocation |
 | 11036 | CONNECTOR_RUNTIME_FIXTURE_INVALID | an embedded fixture has no events, mismatched event/action counts, or an unusable fuel bound |
 | 11037 | CONNECTOR_RUNTIME_FIXTURE_MISMATCH | Wasm actions or final snapshot hash differ from the signed embedded fixture |
+| 11038 | CONNECTOR_HOST_STATE | a normalized event or connector action is invalid in the current lifecycle state |
+| 11039 | CONNECTOR_HOST_ACTION_INVALID | an action batch has invalid context, shape, or chaining behaviour |
+| 11040 | CONNECTOR_HOST_ACTION_UNDECLARED | an action exceeds signed transport, characteristic, or stream declarations |
+| 11041 | CONNECTOR_HOST_QUEUE_FULL | a connector action batch cannot enter the fixed transport queue atomically |
+| 11042 | CONNECTOR_HOST_RESULT_MISMATCH | a native result differs from its pending operation kind or characteristic |
+| 11043 | CONNECTOR_HOST_SAMPLE_INVALID | an emitted sample cannot enter the frozen pipeline vocabulary or bounds |
+| 11044 | CONNECTOR_HOST_LATE_RESULT | a cancelled, completed, or unknown result was journaled and ignored |
+| 11045 | CONNECTOR_HOST_OPERATION_DUPLICATE | operation/deadline ids repeat, are zero, or exhaust the session budget |
 
 Library code does not panic. `unwrap`, `expect`, and `panic!` are denied by the clippy
 configuration for library code and allowed in tests. An impossible state is an `Internal` error

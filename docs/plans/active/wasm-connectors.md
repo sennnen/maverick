@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: in progress. WC-P0 through WC-P4 are complete; WC-P5 is next.
+Status: in progress. WC-P0 through WC-P5 are complete; WC-P6 is next.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -148,7 +148,7 @@ Status: complete
 
 ## Packet WC-P5: Drive normalized event/action transport lifecycle
 
-Status: pending
+Status: complete
 
 - **Repositories touched:** `maverick`.
 - **Likely files/modules:** `mav-engine` connector host/session/action executor; runtime integration;
@@ -498,3 +498,13 @@ the listed order minimizes simultaneous migration surfaces.
   Release runtime crates compiled for both Apple and both Android targets. Their rlibs measured
   1,858,360, 1,858,856, 1,653,732, and 1,675,360 bytes respectively; these are not a replacement for
   P0's full static-archive delta, which remains the linked-size gate until product integration.
+- 2026-07-18: WC-P5 added the device-neutral `ConnectorHost` session beside the temporary compiled
+  `HostRuntime`. It owns lifecycle, canonical event sequencing and trace hash, cancellation
+  generations, guest-to-host operation/deadline id mapping, result correlation, manifest capability
+  and characteristic enforcement, bounded atomic action queuing, timers, and session-local state
+  staging. Tests drive scan→advertise→connect→pair→discover→subscribe→stream→disconnect entirely as
+  data, reject wrong order and undeclared actions, prove queue atomicity, journal and ignore late
+  cancelled results, and freeze trace hash `09b6ce81d8da683f`. Emitted fixed-point samples validate a
+  closed stream/unit mapping and traverse SQI, timeline, provenance, and transactional storage before
+  a later write enters the native queue. Durable namespaced connector state remains WC-P6-owned; the
+  old compiled host remains only as the named WC-P12 compatibility path.

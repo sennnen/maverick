@@ -8,6 +8,7 @@
 
 pub mod acquisition;
 pub mod burst;
+pub mod connector_host;
 pub mod historical;
 pub mod pipeline;
 pub mod recompute;
@@ -15,6 +16,10 @@ pub mod runtime;
 pub mod snapshot;
 
 pub use acquisition::{Acquisition, Command, Event, HandshakeConfig, State, StepOutcome};
+pub use connector_host::{
+    ApplyOutcome, ConnectorHost, ConnectorHostConfig, ConnectorLifecycleSnapshot,
+    ConnectorTransportAction, ConnectorTransportRequest,
+};
 pub use historical::{
     CommandTemplate, HistoricalConfig, HistoricalController, HistoricalEvent, HistoricalOutcome,
     HistoricalReport, HistoricalState, ResponseResult, SyncTotals, HISTORICAL_STATUS_SCHEMA,
