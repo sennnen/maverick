@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: in progress. WC-P0 through WC-P7 are complete; WC-P8 is next.
+Status: in progress. WC-P0 through WC-P8 are complete; WC-P9 and WC-P10 are next.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -222,7 +222,7 @@ Status: complete
 
 ## Packet WC-P8: Build shared WHOOP reference library and adjudicated fixtures
 
-Status: pending
+Status: complete
 
 - **Repositories touched:** `maverick-connectors`; protocol ledger updates in `maverick` only when
   evidence changes a tag.
@@ -530,3 +530,9 @@ the listed order minimizes simultaneous migration surfaces.
   those symbols. Generated Swift parsed with the installed compiler; full iOS compilation was
   unavailable because `xcode-select` points at Command Line Tools, while Android static compilation
   was unavailable because no SDK is configured (the installed JDK is 25, not the required 17).
+- 2026-07-18: WC-P8 added the dependency-free, no-std `whoop-protocol` reference crate in
+  `maverick-connectors@4651c52`. Native and wasm32-compiled tests pin both frame generations, all
+  three CRCs, command responses, metadata boundaries, the real eight-byte history cursor, safe
+  generation-specific offload commands, real `whoop-rs` record routing, explicit unmapped records,
+  malformed inputs, and rejection of destructive opcode 25. Its evidence matrix preserves every
+  existing confidence tag; no Maverick protocol-ledger fact changed.
