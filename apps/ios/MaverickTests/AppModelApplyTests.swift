@@ -7,7 +7,8 @@ final class AppModelApplyTests: XCTestCase {
     connectionState: String,
     currentBpm: Int? = 72,
     batteryPercent: Int? = nil,
-    charging: Bool? = nil
+    charging: Bool? = nil,
+    onWrist: Bool? = nil
   ) -> MavSnapshot {
     MavSnapshot(
       coreVersion: "0.1.0",
@@ -18,6 +19,7 @@ final class AppModelApplyTests: XCTestCase {
       deviceName: "MG",
       batteryPercent: batteryPercent,
       charging: charging,
+      onWrist: onWrist,
       lastSampleUnixMs: 1_752_600_500_000,
       currentBpm: currentBpm,
       meanMilliBpm: 72_000,
@@ -41,8 +43,21 @@ final class AppModelApplyTests: XCTestCase {
     XCTAssertEqual(live.batteryPct, 81)
     XCTAssertEqual(live.charging, false)
     XCTAssertEqual(live.advertisingName, "MG")
+    XCTAssertTrue(live.worn)
     XCTAssertEqual(model.bpm, 72)
     XCTAssertEqual(model.recoveryUnavailableReason, "Recovery model not admitted")
+  }
+
+  func testWristStateMapsToWorn() {
+    let model = AppModel()
+    let live = LiveState()
+    model.apply(snapshot: snapshot(connectionState: "streaming", onWrist: false), to: live)
+    XCTAssertFalse(live.worn)
+    model.apply(snapshot: snapshot(connectionState: "streaming", onWrist: true), to: live)
+    XCTAssertTrue(live.worn)
+    // Off the link, worn resets to the assume-worn default.
+    model.apply(snapshot: snapshot(connectionState: "disconnected", onWrist: false), to: live)
+    XCTAssertTrue(live.worn)
   }
 
   func testSubscribingCountsAsConnected() {

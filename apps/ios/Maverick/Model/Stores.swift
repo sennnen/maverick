@@ -13,6 +13,9 @@ final class LiveState: ObservableObject {
   @Published var heartRate: Int?
   @Published var batteryPct: Double?
   @Published var charging: Bool?
+  /// Wrist-wear from WRIST_ON/WRIST_OFF events. Defaults true — assume worn until the strap says
+  /// otherwise (macOS/Android LiveState parity).
+  @Published var worn = true
   @Published var advertisingName: String?
 }
 
@@ -64,6 +67,7 @@ final class AppModel: ObservableObject {
     live.heartRate = connected ? snapshot.currentBpm : nil
     live.batteryPct = connected ? snapshot.batteryPercent.map(Double.init) : nil
     live.charging = connected ? snapshot.charging : nil
+    live.worn = connected ? (snapshot.onWrist ?? true) : true
     live.advertisingName = snapshot.deviceName
   }
 }

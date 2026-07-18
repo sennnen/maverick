@@ -168,6 +168,8 @@ internal fun liveStateOf(snapshot: MavSnapshot): LiveState {
         heartRate = if (connected) snapshot.currentBpm else null,
         batteryPct = if (connected) snapshot.batteryPercent?.toDouble() else null,
         charging = if (connected) snapshot.charging else null,
+        // Assume worn until the strap says otherwise (macOS/Android LiveState parity).
+        worn = if (connected) snapshot.onWrist ?: true else true,
         advertisingName = snapshot.deviceName,
         scanning = snapshot.connectionState == "scanning",
         statusNote = snapshot.recoveryUnavailableReason,

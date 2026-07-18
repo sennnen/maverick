@@ -13,6 +13,7 @@ class LiveStateMappingTest {
         currentBpm: Int? = 72,
         batteryPercent: Int? = null,
         charging: Boolean? = null,
+        onWrist: Boolean? = null,
     ) = MavSnapshot(
         coreVersion = "0.1.0",
         storageSchema = 1,
@@ -22,6 +23,7 @@ class LiveStateMappingTest {
         deviceName = "MG",
         batteryPercent = batteryPercent,
         charging = charging,
+        onWrist = onWrist,
         lastSampleUnixMs = 1_752_600_500_000L,
         currentBpm = currentBpm,
         meanMilliBpm = 72_000,
@@ -44,6 +46,16 @@ class LiveStateMappingTest {
         assertEquals("MG", live.advertisingName)
         assertFalse(live.scanning)
         assertEquals("Recovery model not admitted", live.statusNote)
+        // No wrist event yet: assume worn (parity default).
+        assertTrue(live.worn)
+    }
+
+    @Test
+    fun wristStateMapsToWorn() {
+        assertFalse(liveStateOf(snapshot("streaming", onWrist = false)).worn)
+        assertTrue(liveStateOf(snapshot("streaming", onWrist = true)).worn)
+        // Off the link, worn resets to the assume-worn default rather than a stale off-wrist.
+        assertTrue(liveStateOf(snapshot("disconnected", onWrist = false)).worn)
     }
 
     @Test
