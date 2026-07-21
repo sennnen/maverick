@@ -30,9 +30,9 @@ types, connector verification/execution, the timeline, signal quality, features,
 storage, observability, orchestration, the FFI facade, and replay without a radio. Device support
 uses signed, runtime-loaded WebAssembly connectors: one `.mavconn` file runs through the same Rust
 interpreter on iOS, Android, replay, and tests without rebuilding Maverick. The compiled WHOOP path
-has been deleted; [the migration record](docs/plans/active/wasm-connectors.md) preserves its proof. Everything an
-agent or contributor needs is under `docs/`, the system of record. `CLAUDE.md` (and identical
-`AGENTS.md`) is the short map.
+has been deleted; [the migration record](docs/plans/completed/wasm-connectors.md) preserves its
+proof. Everything an agent or contributor needs is under `docs/`, the system of record. `CLAUDE.md`
+(and identical `AGENTS.md`) is the short map.
 
 ## Building the core
 

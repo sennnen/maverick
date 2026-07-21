@@ -29,6 +29,8 @@ TOKENS = (
     "SNAPSHOT_SCHEMA",
     "connector-manifest/v1",
     "SampleAdmission",
+    "6108000",
+    "fd4b000",
 )
 
 

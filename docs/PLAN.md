@@ -196,11 +196,12 @@ Milestones are gated by exit criteria, not dates. A milestone is done when its e
 Two standing lanes sit beside the numbered milestones because neither belongs at one point in the
 data sequence. The [platform lane](plans/active/platform.md) packages the core, migrates the existing
 Aura product shell without its old internals, plumbs admitted values into it, and produces signed
-release candidates. The [WebAssembly connector lane](plans/active/wasm-connectors.md) owns runtime,
-SDK, migration, import, management, and deletion of the bundled path. It starts with evidence probes;
-later milestones turn unavailable cards into real ones through the same contract. The hardware epoch
-starts when the straps arrive. Every fact currently marked as code-inferred then gets verified or
-corrected against live captures, its ledger tag flips to hardware-verified, and fixtures are
+release candidates. The
+[completed WebAssembly connector lane](plans/completed/wasm-connectors.md) records runtime, SDK,
+migration, import, management, and deletion of the bundled path. It starts with evidence probes;
+later milestones turn unavailable cards into real ones through the same contract. The hardware
+epoch starts when the straps arrive. Every fact currently marked as code-inferred then gets verified
+or corrected against live captures, its ledger tag flips to hardware-verified, and fixtures are
 regenerated from our own captures. The hardware checklist lives in `docs/protocol/whoop.md`.
 
 ## What we are explicitly not building

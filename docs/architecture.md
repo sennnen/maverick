@@ -42,7 +42,9 @@ driver and its deletion inventory are in [connector-audit.md](connector-audit.md
 WC-P12 implemented the leaf ABI, artifact/trust inspection, public SDK/toolchain, bounded
 interpreter, normalized host session, platform-neutral FFI, install store, parity proof, and
 deletion of the compiled path. WC-P13 through WC-P15 added both native acquisition surfaces and
-signed registry distribution.
+signed registry distribution. WC-P16 removed the remaining unreachable compiled-era pipeline,
+native debris, dependency edges, and stale protocol identifiers, then froze an executable
+repository-wide architecture check.
 
 ## Native/Rust line
 

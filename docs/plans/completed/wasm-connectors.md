@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: in progress. WC-P0 through WC-P15 are complete; WC-P16 is next.
+Status: complete. WC-P0 through WC-P16 are complete.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -445,7 +445,7 @@ remains environment-blocked by the installed Command Line Tools SDK/compiler ver
 
 ## Packet WC-P16: Whole-application cleanup, bug fix, and final proof
 
-Status: pending
+Status: complete.
 
 - **Repositories touched:** both; signing directory and `tanarchytan/whoop-rs` remain unchanged.
 - **Likely files/modules:** any Rust/FFI/Swift/Kotlin/build/test/doc file with evidence-backed defect or
@@ -471,6 +471,30 @@ Status: pending
 - **Risks:** false-positive dead code through FFI/reflection/build tooling; verify reachability first.
 - **Frontend:** full audit includes both.
 - **Temporary compatibility:** none without new ADR and named removal packet.
+
+Implemented 2026-07-21. A seeded architecture test now scans Rust, both native source trees, and
+build manifests for deleted factories, manifest APIs, native service/client names, and WHOOP UUID
+prefixes. It exposed and drove deletion of an unreachable 4,479-line compiled capture, handshake,
+history, and snapshot surface plus the old `connector-manifest/v1` parser, its exports, and six
+engine dependency edges. `mav-codec` now contains only the reviewed Bluetooth SIG decoder. Stale
+native preferences and comments were removed; pre-Wasm captures remain explicitly retired evidence.
+
+The cross-repository audit also found that the two packaged connectors reused one publisher key id
+with different public keys. A failing validator reproduced the ambiguity. Both artifacts were
+regenerated with one temporary external signer, a cross-FFI test proves that one trust policy can
+install and activate both, parity reports and the signed registry were regenerated, and all private
+keys were deleted. The final artifact SHA-256 values are
+`3158072c210ff18a510e044192a28b781669a276cab6279ed0ae58dfef23c72d` for WHOOP 4 and
+`3c4c013f6c593c411fb822e65b8c363a6524dbf759390c10781a8bae695cfd47` for WHOOP 5.
+
+All Rust workspace tests, formatting, warning-denied Clippy, docs/dependency checks, seeded
+architecture tests, connector static/deep validators, exact package vectors, Android unit/lint and
+debug/release builds, generated-binding parity, and Swift parsing pass. Full iOS build execution is
+environment-blocked because full Xcode is not selected; physical-device energy, thermal,
+restoration, and Apple review evidence remain release gates. Intentional exceptions are frozen
+protocol captures and model provenance, user-facing WHOOP identity, generic native read-model
+stand-ins owned by the platform lane, and snapshot compatibility decoders owned by
+`docs/platform.md`; none is an alternate connector implementation.
 
 ## Execution order
 
@@ -609,3 +633,28 @@ the listed order minimizes simultaneous migration surfaces.
   connector is linked. Decode codes 3004–3006 remain numerically reserved under the ADR-017
   amendment but their obsolete names are retired. The sibling deletion is
   `maverick-connectors@a510c91`; both full Rust/doc/dependency and SDK/Wasm/package gates passed.
+- 2026-07-21: WC-P16 unified both official packages under one publisher key
+  (`maverick-connectors@7f25836`, `maverick@8e83ae6`), removed the obsolete compiled-era pipeline
+  (`maverick@32d4618`) and stale native debris (`maverick@87226bc`), and documented intentional
+  Android stubs (`maverick@b342546`). All feasible local gates pass. The signing directory and
+  read-only `whoop-rs` evidence repository remain unchanged.
+
+## Retro
+
+The migration succeeded because every boundary became executable evidence before the compiled path
+was removed: canonical ABI bytes, hostile artifact tests, public-SDK fixtures, native/Wasm parity,
+transactional lifecycle state, platform-neutral transport traces, and signed registry vectors.
+Keeping deletion as its own packet exposed more unreachable compiled-era orchestration than the
+initial crate inventory predicted.
+
+The final audit found one cross-package trust defect that isolated package tests could not reveal:
+one publisher id named two different public keys. Future publisher fixtures must validate the
+global `key_id -> public_key` relation and install every package from that publisher under one
+policy. Repository-wide negative architecture tests must continue to scan source and build
+manifests, including device UUID prefixes, so deleted designs cannot return through a frontend or
+dependency edge.
+
+Remaining work is release evidence, not migration architecture: full-Xcode simulator/device builds,
+physical-device energy and restoration measurements, Apple review policy evidence, production keys,
+and hardware verification of confidence-tagged protocol facts. Those gates remain with their named
+platform, release, and hardware owners.

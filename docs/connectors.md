@@ -3,8 +3,9 @@
 This document freezes target contracts selected by [ADR-017](adr/ADR-017.md) and records the
 implemented boundary as packets land. Artifact schemas, trust, the public SDK/toolchain, bounded
 Wasm execution, the core transport session, durable lifecycle storage, platform-neutral UniFFI,
-mobile management, and signed registry ingestion are implemented through WC-P15. The ordered work lives in
-[plans/active/wasm-connectors.md](plans/active/wasm-connectors.md).
+mobile management, signed registry ingestion, and the final architecture audit are implemented
+through WC-P16. The completed migration record lives in
+[plans/completed/wasm-connectors.md](plans/completed/wasm-connectors.md).
 
 ## Product invariants
 
@@ -467,8 +468,8 @@ be regenerated.
 ## Migration
 
 WHOOP 4 and WHOOP 5 become separate public-SDK projects in `sennnen/maverick-connectors`. Pure
-protocol logic may be shared as source libraries there. Native compiled code remains only behind a
-fixture parity adapter, with owner and deletion packet. The switch requires frozen native-vs-Wasm
+protocol logic may be shared as source libraries there. Native compiled code remained only behind a
+fixture parity adapter until its deletion packet. The switch required frozen native-vs-Wasm
 outputs, connection-state traces, history persist-before-ack tests, and both platform paths. WC-P12
-deletes the compiled crate and all registration hooks. WC-P16 performs whole-application cleanup and
-proves no permanent dual architecture remains.
+deleted the compiled crate and all registration hooks. WC-P16 removed the unreachable legacy
+pipeline and proved no permanent dual architecture remains.
