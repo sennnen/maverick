@@ -89,23 +89,6 @@ struct AuraAlarmView: View {
   }
 }
 
-/// Pairing. Mav pairs through device connectors — signed packages carrying each strap's
-/// protocol. None are bundled (ADR-011), so scanning stays disabled.
-struct AuraPairingView: View {
-  @EnvironmentObject private var live: LiveState
-
-  var body: some View {
-    MavPendingSheet(
-      title: "Pair a strap", icon: "sensor.tag.radiowaves.forward", family: .heart,
-      body_: live.bonded
-        ? "Connected to \(live.advertisingName ?? "your strap")."
-        : "Mav pairs through device connectors — signed packages that carry each strap's "
-        + "protocol. None are bundled yet, so scanning is disabled.",
-      footer: "Connectors install separately and run entirely on-device."
-    )
-  }
-}
-
 /// Historical import. Runs through the core's ingest lane so every row keeps its provenance.
 struct AuraMigrateView: View {
   var body: some View {
@@ -151,11 +134,8 @@ struct SettingsView: View {
   }
 
   private var settingsBody: String {
-    guard case let .ready(snapshot) = store.state else {
-      return "Core runtime unavailable."
-    }
-    return "Core \(snapshot.coreVersion) · storage schema \(snapshot.storageSchema) · "
-      + "revision \(snapshot.revision) · connection \(snapshot.connectionState)."
+    guard case .ready = store.state else { return "Core runtime unavailable." }
+    return "Core runtime ready. Connector code and telemetry remain on this device."
   }
 }
 

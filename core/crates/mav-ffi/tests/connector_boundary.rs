@@ -251,6 +251,8 @@ fn exact_bytes_inspect_install_list_and_stale_token_errors_round_trip() {
             1_000,
         )
         .expect("inspect");
+    assert_eq!(inspection.permissions, ["Bluetooth device access"]);
+    assert!(!inspection.capabilities.is_empty());
     assert_eq!(inspection.connector_id, CONNECTOR);
     assert_eq!(inspection.artifact_digest, Sha256::digest(&bytes).to_vec());
     assert_eq!(inspection.approval_token.len(), 40);

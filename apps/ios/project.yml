@@ -35,6 +35,24 @@ targets:
         CFBundleDisplayName: Mav
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Maverick Connector
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Owner
+            LSItemContentTypes: [dev.maverick.connector]
+        UTImportedTypeDeclarations:
+          - UTTypeConformsTo: [public.data]
+            UTTypeDescription: Signed Maverick Connector
+            UTTypeIdentifier: dev.maverick.connector
+            UTTypeTagSpecification:
+              public.filename-extension: [mavconn]
+              public.mime-type: application/vnd.maverick.connector
+        LSSupportsOpeningDocumentsInPlace: true
+        NSBluetoothAlwaysUsageDescription: Mav connects to wearables through the signed connector you approve.
+        UIBackgroundModes: [bluetooth-central]
+        MAVConnectorManagerEnabled: true
+        MAVAllowRemoteConnectorImport: true
+        MAVOfficialPublisherKeys: []
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

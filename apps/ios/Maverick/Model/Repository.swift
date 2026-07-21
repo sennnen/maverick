@@ -80,7 +80,7 @@ final class Repository: ObservableObject {
 
   // MARK: Canonical source ids
 
-  static let whoopSource = "my-whoop"
+  static let activeDeviceSource = "active-device"
   static let appleHealthSource = "apple-health"
   static let healthConnectSource = "health-connect"
 

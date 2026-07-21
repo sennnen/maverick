@@ -21,7 +21,7 @@ struct AuraTodayModel: Equatable {
   var bpm: Int?
   var battery: Int?
   var bonded = false
-  var deviceName = "WHOOP"
+  var deviceName = "Wearable"
 
   static let placeholder = AuraTodayModel()
 
@@ -33,7 +33,7 @@ struct AuraTodayModel: Equatable {
 
     var rest: Double?
     if let day {
-      let series = await repo.exploreSeries(key: "sleep_performance", source: "my-whoop")
+      let series = await repo.exploreSeries(key: "sleep_performance", source: Repository.activeDeviceSource)
       let byDay = Dictionary(series.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
       let isToday = day.day == Repository.localDayKey(Date())
       rest = byDay[day.day] ?? (isToday ? series.last?.value : nil)
@@ -53,7 +53,7 @@ struct AuraTodayModel: Equatable {
       chargeDelta: chargeBaseline.flatMap { b in day?.recovery.map { $0 - b } },
       bpm: bpm ?? live.heartRate,
       battery: live.batteryPct.map { Int($0.rounded()) },
-      bonded: live.bonded, deviceName: live.advertisingName ?? "WHOOP"
+      bonded: live.bonded, deviceName: live.advertisingName ?? "Wearable"
     )
   }
 }

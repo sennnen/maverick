@@ -64,9 +64,11 @@ enforce_connector_trust(policy, revocations, now_ms)
 
 `ConnectorSourceMetadata` contains only kind, a safe display label, and a 32-byte locator digest;
 apps never pass a path or URL. Trust inputs contain public keys, scope, validity/status, and signed
-revocation data. `ConnectorInspection` returns safe manifest fields, both digests, fixture count,
-and a 40-byte opaque one-time approval token. `ConnectorInstallRequest` groups bytes, source, token,
-activation choice, and injected time so the large byte buffer crosses once per call.
+revocation data. `ConnectorInspection` returns safe manifest fields, declared stream capabilities
+and permissions, both digests, fixture count, and a 40-byte opaque one-time approval token. Native
+approval UI shows those fields before it can submit the token. `ConnectorInstallRequest` groups
+bytes, source, token, activation choice, and injected time so the large byte buffer crosses once per
+call.
 
 Every result is a value record: native code never receives a SQLite, artifact, Wasm, policy, or Rust
 handle. The complete transaction rules are in [connectors.md](connectors.md).
@@ -105,8 +107,33 @@ instead of attempting to repair the sequence.
 Core normalizes each result into the connector ABI, invokes the instance, validates returned
 actions, and admits emitted samples through SQI, timeline, provenance, and transactional storage.
 Native code cannot call stages or connector exports individually. Device protocol state remains
-inside connector; lifecycle and resource policy remain in core. The current app still calls the
-legacy compiled-codec runtime until WC-P13/P14 connect native BLE callers to this implemented host.
+inside connector; lifecycle and resource policy remain in core. The iOS app drives this host through
+its generic CoreBluetooth executor; Android parity is owned by WC-P14.
+
+Characteristic actions carry both the connector's logical id and the signed native service/
+characteristic UUID pair resolved by the host. Native executors use UUIDs for CoreBluetooth or
+BluetoothGatt and echo only the logical id in results. They therefore contain no device-family
+tables, protocol UUID constants, opcodes, or parsers.
+
+## iOS connector acquisition policy
+
+WC-P13 routes document-picker files, share/open-in documents, and bounded HTTPS downloads through
+one exact-byte acquisition type. Files larger than 4 MB are rejected before inspection; remote
+responses are streamed into the same bound. Security-scoped URLs are held only for the read, and
+the core receives a basename plus SHA-256 locator digest, never a path or URL.
+
+The shipping Info.plist makes policy reviewable rather than implicit:
+
+- `MAVConnectorManagerEnabled` gates the complete UI without changing connector storage.
+- `MAVAllowRemoteConnectorImport` independently gates HTTPS acquisition if App Review requires it.
+- `MAVOfficialPublisherKeys` is the release-owned public-key list; iOS sets `allow_third_party` and
+  `allow_development` false regardless of import source. Import is never a signature bypass.
+
+The document type is `dev.maverick.connector` / `.mavconn`. Background mode is only
+`bluetooth-central`; `MavBluetoothExecutor` uses CoreBluetooth restoration with an opaque connector/
+session/generation checkpoint and stores no artifact bytes, paths, URLs, protocol state, or private
+key material. App Review acceptance evidence is the removal condition for retaining remote import;
+until then the independent flag is the rollback point.
 
 ## Core transport actions
 
@@ -118,10 +145,10 @@ StopScan
 Connect { address }
 EnsurePaired
 DiscoverServices
-Subscribe { characteristic_id }
-Unsubscribe { characteristic_id }
-Read { characteristic_id }
-Write { characteristic_id, bytes, confirmed }
+Subscribe { characteristic_id, service_uuid, characteristic_uuid }
+Unsubscribe { characteristic_id, service_uuid, characteristic_uuid }
+Read { characteristic_id, service_uuid, characteristic_uuid }
+Write { characteristic_id, service_uuid, characteristic_uuid, bytes, confirmed }
 Disconnect
 SetTimer { token, delay_ms }
 CancelTimer { token }

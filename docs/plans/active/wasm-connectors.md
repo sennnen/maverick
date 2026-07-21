@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: in progress. WC-P0 through WC-P12 are complete; WC-P13 and WC-P14 are next.
+Status: in progress. WC-P0 through WC-P13 are complete; WC-P14 is next.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -343,7 +343,7 @@ Status: complete
 
 ## Packet WC-P13: Implement iOS acquisition and connector management UI
 
-Status: pending; future frontend work.
+Status: complete.
 
 - **Repositories touched:** `maverick`.
 - **Likely files/modules:** iOS document picker/share/open URL handling, connector store/view models,
@@ -364,6 +364,17 @@ Status: pending; future frontend work.
 - **Frontend:** this is owning iOS packet.
 - **Temporary compatibility:** release flag only; removal condition is accepted App Review evidence,
   otherwise retained as documented platform policy rather than alternate connector architecture.
+
+Implemented 2026-07-21. File picker, open-in/share, and bounded HTTPS acquisition converge on one
+exact-byte path with sanitized provenance. Inspection exposes publisher, capabilities, permissions,
+and fixture proof before approval; install, list, rollback, quarantine removal, and revocation have
+explicit UI states. Core-resolved native UUIDs close the generic transport boundary, and the
+CoreBluetooth executor maps every action/event plus timers and opaque restoration checkpoints.
+Release configuration accepts only configured official publishers and independently gates manager
+and remote acquisition. Swift and generated bindings parse together; full Rust tests, fmt, clippy,
+docs, dependency, plist, XcodeGen, and stale-reference checks pass. Simulator build/test remains
+environment-blocked because only Command Line Tools is selected; `build_ios_app.sh` exits with the
+explicit full-Xcode prerequisite before compilation.
 
 ## Packet WC-P14: Implement Android acquisition and connector management UI
 

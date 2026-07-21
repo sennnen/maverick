@@ -37,7 +37,7 @@ struct AuraReportsView: View {
   }
 
   private func load() async {
-    restSeries = await repo.exploreSeries(key: "sleep_performance", source: "my-whoop")
+    restSeries = await repo.exploreSeries(key: "sleep_performance", source: Repository.activeDeviceSource)
     let cutoff = Int(Date().timeIntervalSince1970) - span.days * 86400
     let rows = await repo.workoutRows(days: span.days).filter { $0.startTs >= cutoff }
     workoutCount = rows.count

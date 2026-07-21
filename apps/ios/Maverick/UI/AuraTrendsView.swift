@@ -51,7 +51,7 @@ struct AuraTrendsView: View {
     .auraScreen(.charge)
     .safeAreaInset(edge: .top) { bar }
     .task(id: repo.refreshSeq) {
-      restSeries = await repo.exploreSeries(key: "sleep_performance", source: "my-whoop")
+      restSeries = await repo.exploreSeries(key: "sleep_performance", source: Repository.activeDeviceSource)
     }
   }
 

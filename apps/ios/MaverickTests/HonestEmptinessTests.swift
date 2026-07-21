@@ -14,7 +14,7 @@ final class HonestEmptinessTests: XCTestCase {
 
     let workouts = await repo.workoutRows()
     XCTAssertTrue(workouts.isEmpty)
-    let strainSeries = await repo.exploreSeries(key: "strain", source: Repository.whoopSource)
+    let strainSeries = await repo.exploreSeries(key: "strain", source: Repository.activeDeviceSource)
     XCTAssertTrue(strainSeries.isEmpty)
   }
 }

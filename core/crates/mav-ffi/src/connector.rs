@@ -83,6 +83,8 @@ pub struct ConnectorInspection {
     pub display_name: String,
     pub description: String,
     pub publisher_key_id: String,
+    pub capabilities: Vec<String>,
+    pub permissions: Vec<String>,
     pub state_schema: u32,
     pub fixture_count: u32,
     pub source: ConnectorSourceMetadata,
@@ -249,15 +251,23 @@ pub enum ConnectorTransportRequest {
     DiscoverServices,
     Subscribe {
         characteristic_id: String,
+        service_uuid: String,
+        characteristic_uuid: String,
     },
     Unsubscribe {
         characteristic_id: String,
+        service_uuid: String,
+        characteristic_uuid: String,
     },
     Read {
         characteristic_id: String,
+        service_uuid: String,
+        characteristic_uuid: String,
     },
     Write {
         characteristic_id: String,
+        service_uuid: String,
+        characteristic_uuid: String,
         bytes: Vec<u8>,
         confirmed: bool,
     },
@@ -512,58 +522,90 @@ impl From<EngineLifecycleSnapshot> for ConnectorLifecycleReport {
     }
 }
 
-impl From<EngineTransportAction> for ConnectorTransportAction {
-    fn from(value: EngineTransportAction) -> Self {
-        Self {
-            connector_id: value.connector_id.as_str().to_owned(),
-            session_id: value.session_id,
-            cancellation_generation: value.cancellation_generation,
-            operation_id: value.operation_id,
-            deadline_token: value.deadline_token,
-            request: match value.body {
-                EngineTransportRequest::StartScan {
-                    service_uuids,
-                    manufacturer_ids,
-                } => ConnectorTransportRequest::StartScan {
-                    service_uuids,
-                    manufacturer_ids,
-                },
-                EngineTransportRequest::StopScan => ConnectorTransportRequest::StopScan,
-                EngineTransportRequest::Connect { address } => {
-                    ConnectorTransportRequest::Connect { address }
-                }
-                EngineTransportRequest::EnsurePaired => ConnectorTransportRequest::EnsurePaired,
-                EngineTransportRequest::DiscoverServices => {
-                    ConnectorTransportRequest::DiscoverServices
-                }
-                EngineTransportRequest::Subscribe { characteristic_id } => {
-                    ConnectorTransportRequest::Subscribe { characteristic_id }
-                }
-                EngineTransportRequest::Unsubscribe { characteristic_id } => {
-                    ConnectorTransportRequest::Unsubscribe { characteristic_id }
-                }
-                EngineTransportRequest::Read { characteristic_id } => {
-                    ConnectorTransportRequest::Read { characteristic_id }
-                }
-                EngineTransportRequest::Write {
-                    characteristic_id,
-                    bytes,
-                    confirmed,
-                } => ConnectorTransportRequest::Write {
-                    characteristic_id,
-                    bytes,
-                    confirmed,
-                },
-                EngineTransportRequest::Disconnect => ConnectorTransportRequest::Disconnect,
-                EngineTransportRequest::SetTimer { token, delay_ms } => {
-                    ConnectorTransportRequest::SetTimer { token, delay_ms }
-                }
-                EngineTransportRequest::CancelTimer { token } => {
-                    ConnectorTransportRequest::CancelTimer { token }
-                }
-            },
+pub(crate) fn transport_action_to_ffi(
+    value: EngineTransportAction,
+    characteristic_address: Option<(String, String)>,
+) -> Result<ConnectorTransportAction, FfiError> {
+    let request = match value.body {
+        EngineTransportRequest::StartScan {
+            service_uuids,
+            manufacturer_ids,
+        } => ConnectorTransportRequest::StartScan {
+            service_uuids,
+            manufacturer_ids,
+        },
+        EngineTransportRequest::StopScan => ConnectorTransportRequest::StopScan,
+        EngineTransportRequest::Connect { address } => {
+            ConnectorTransportRequest::Connect { address }
         }
-    }
+        EngineTransportRequest::EnsurePaired => ConnectorTransportRequest::EnsurePaired,
+        EngineTransportRequest::DiscoverServices => ConnectorTransportRequest::DiscoverServices,
+        EngineTransportRequest::Subscribe { characteristic_id } => {
+            let (service_uuid, characteristic_uuid) = characteristic_address
+                .ok_or_else(|| invalid_transport_mapping(&characteristic_id))?;
+            ConnectorTransportRequest::Subscribe {
+                characteristic_id,
+                service_uuid,
+                characteristic_uuid,
+            }
+        }
+        EngineTransportRequest::Unsubscribe { characteristic_id } => {
+            let (service_uuid, characteristic_uuid) = characteristic_address
+                .ok_or_else(|| invalid_transport_mapping(&characteristic_id))?;
+            ConnectorTransportRequest::Unsubscribe {
+                characteristic_id,
+                service_uuid,
+                characteristic_uuid,
+            }
+        }
+        EngineTransportRequest::Read { characteristic_id } => {
+            let (service_uuid, characteristic_uuid) = characteristic_address
+                .ok_or_else(|| invalid_transport_mapping(&characteristic_id))?;
+            ConnectorTransportRequest::Read {
+                characteristic_id,
+                service_uuid,
+                characteristic_uuid,
+            }
+        }
+        EngineTransportRequest::Write {
+            characteristic_id,
+            bytes,
+            confirmed,
+        } => {
+            let (service_uuid, characteristic_uuid) = characteristic_address
+                .ok_or_else(|| invalid_transport_mapping(&characteristic_id))?;
+            ConnectorTransportRequest::Write {
+                characteristic_id,
+                service_uuid,
+                characteristic_uuid,
+                bytes,
+                confirmed,
+            }
+        }
+        EngineTransportRequest::Disconnect => ConnectorTransportRequest::Disconnect,
+        EngineTransportRequest::SetTimer { token, delay_ms } => {
+            ConnectorTransportRequest::SetTimer { token, delay_ms }
+        }
+        EngineTransportRequest::CancelTimer { token } => {
+            ConnectorTransportRequest::CancelTimer { token }
+        }
+    };
+    Ok(ConnectorTransportAction {
+        connector_id: value.connector_id.as_str().to_owned(),
+        session_id: value.session_id,
+        cancellation_generation: value.cancellation_generation,
+        operation_id: value.operation_id,
+        deadline_token: value.deadline_token,
+        request,
+    })
+}
+
+fn invalid_transport_mapping(characteristic_id: &str) -> FfiError {
+    MavError::new(
+        codes::CONNECTOR_HOST_ACTION_INVALID,
+        format!("connector characteristic {characteristic_id} has no native address"),
+    )
+    .into()
 }
 
 fn digest(bytes: &[u8], field: &str) -> Result<[u8; 32], FfiError> {
@@ -586,7 +628,7 @@ fn invalid_trust() -> FfiError {
 #[cfg(test)]
 #[allow(clippy::expect_used)]
 mod tests {
-    use super::{event_from_ffi, ConnectorTransportAction, ConnectorTransportEvent};
+    use super::{event_from_ffi, transport_action_to_ffi, ConnectorTransportEvent};
     use mav_connector_abi::{ConnectorId, EventBody};
     use mav_engine::{
         ConnectorTransportAction as EngineAction, ConnectorTransportRequest as EngineRequest,
@@ -609,18 +651,22 @@ mod tests {
 
     #[test]
     fn action_conversion_preserves_ids_flags_and_raw_bytes() {
-        let action = ConnectorTransportAction::from(EngineAction {
-            connector_id: ConnectorId::new("org.example.ffi").expect("connector id"),
-            session_id: 4,
-            cancellation_generation: 5,
-            operation_id: 6,
-            deadline_token: 7,
-            body: EngineRequest::Write {
-                characteristic_id: "control".to_owned(),
-                bytes: vec![0, 1, 254, 255],
-                confirmed: true,
+        let action = transport_action_to_ffi(
+            EngineAction {
+                connector_id: ConnectorId::new("org.example.ffi").expect("connector id"),
+                session_id: 4,
+                cancellation_generation: 5,
+                operation_id: 6,
+                deadline_token: 7,
+                body: EngineRequest::Write {
+                    characteristic_id: "control".to_owned(),
+                    bytes: vec![0, 1, 254, 255],
+                    confirmed: true,
+                },
             },
-        });
+            Some(("180d".to_owned(), "2a39".to_owned())),
+        )
+        .expect("mapped action");
         assert_eq!(action.connector_id, "org.example.ffi");
         assert_eq!(action.session_id, 4);
         assert_eq!(action.cancellation_generation, 5);
@@ -630,6 +676,8 @@ mod tests {
             action.request,
             super::ConnectorTransportRequest::Write {
                 characteristic_id: "control".to_owned(),
+                service_uuid: "180d".to_owned(),
+                characteristic_uuid: "2a39".to_owned(),
                 bytes: vec![0, 1, 254, 255],
                 confirmed: true,
             }

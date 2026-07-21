@@ -10,9 +10,9 @@ The exact runtime, event, action, snapshot, threading, and compatibility rules a
 The app preserves the Aura UI in `Maverick/UI/`: the four hubs—Today, Recovery, Strain, and Sleep—behind the floating glass
 tab bar, one app-wide settings sheet, and the live/trends/reports/journal/diagnostics/timer
 surfaces. `Maverick/Model/` supplies Mav-owned adapter stores with the presentation member surface
-(`AppModel`, `Repository`, `LiveState`, …) backed by `MavStore`'s immutable `host-snapshot/v1`
-values; day history, sleeps, and workouts stay empty until the core serves them, and the
-coach/workouts/strength/alarm/pairing/import destinations are same-name Aura stand-ins. The legacy
+(`AppModel`, `Repository`, `LiveState`, …); day history, sleeps, and workouts stay empty until the
+core serves them. Connector import, approval, lifecycle management, and generic BLE execution are
+live; coach/workouts/strength/alarm/history-import destinations remain Aura stand-ins. The legacy
 actual data engine—its GRDB store, WHOOP packages, Swift analytics, onboarding, widgets, HealthKit,
 and background machinery—is still not a dependency.
 
@@ -34,10 +34,9 @@ the package as one directory so stale slices cannot survive a rebuild. Generated
 by Git and must never be edited.
 
 The app target links `MavCore.xcframework` and compiles `mav_ffi.swift`. Product code constructs
-`MavRuntime`; `runCapture` remains the debug parity surface. `historicalProgress()` is the
-read-only `historical-status/v1` model for sync progress and failure: honest counts, affected
-days, a stable failure code, and the durable cursor as a hash only — the surface has no call
-that acknowledges or trims device history.
+`MavRuntime`, inspects exact `.mavconn` bytes before approval, and feeds the closed generic transport
+event/action API from CoreBluetooth. No device protocol or connector implementation is linked into
+the application.
 
 ## Building the app
 

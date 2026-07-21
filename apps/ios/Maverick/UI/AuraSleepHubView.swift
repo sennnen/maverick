@@ -74,7 +74,7 @@ struct AuraSleepHubView: View {
   private func load() async {
     let anchor = Repository.widgetAnchor(days: repo.days)
     day = anchor
-    let series = await repo.exploreSeries(key: "sleep_performance", source: "my-whoop")
+    let series = await repo.exploreSeries(key: "sleep_performance", source: Repository.activeDeviceSource)
     restTrend = series.suffix(21).map(\.value)
     if let d = anchor {
       let byDay = Dictionary(series.map { ($0.day, $0.value) }, uniquingKeysWith: { _, l in l })

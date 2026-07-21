@@ -60,9 +60,9 @@ Device protocol logic that must move into the two connector source projects:
 - manifest schema names that exist only to dispatch compiled modules (`codec`, named WHOOP event
   vocabulary, and named compiled record decoders).
 
-Product-shell references such as `"my-whoop"`, `Repository.whoopSource`, `EffortScale.whoop`, and
-hard-coded WHOOP series queries are frontend leaks. They are recorded for future platform packets;
-this planning task does not edit Swift or Kotlin.
+WC-P13 removed iOS `"my-whoop"`, `Repository.whoopSource`, hard-coded device series queries, and
+default device identity copy. WC-P14 owns the equivalent Android removal. `EffortScale.whoop`
+remains a user-selectable cosmetic scale and contains no device or transport behavior.
 
 Protocol examples and confidence-tagged source notes are not automatically leaks. A generic type or
 test may cite WHOOP evidence without branching on WHOOP. Final cleanup distinguishes provenance from

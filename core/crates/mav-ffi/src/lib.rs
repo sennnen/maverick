@@ -90,6 +90,22 @@ impl MavRuntime {
             now_ms,
             approval_ttl_ms,
         )?;
+        let capabilities = approval
+            .report
+            .manifest
+            .capabilities
+            .iter()
+            .map(|capability| capability.stream.clone())
+            .collect();
+        let permissions = approval
+            .report
+            .manifest
+            .permissions
+            .iter()
+            .map(|permission| match permission {
+                mav_connector_abi::Permission::Ble => "Bluetooth device access".to_owned(),
+            })
+            .collect();
         Ok(ConnectorInspection {
             artifact_digest: approval.report.artifact_digest.to_vec(),
             manifest_digest: approval.report.manifest_digest.to_vec(),
@@ -98,6 +114,8 @@ impl MavRuntime {
             display_name: approval.report.manifest.display_name,
             description: approval.report.manifest.description,
             publisher_key_id: approval.report.manifest.publisher_key_id,
+            capabilities,
+            permissions,
             state_schema: approval.report.manifest.state_schema,
             fixture_count: approval.fixture_count,
             source: connector::source_to_ffi(approval.source),
@@ -285,11 +303,22 @@ impl MavRuntime {
     ) -> Result<Vec<ConnectorTransportAction>, FfiError> {
         let mut session = self.connector_session_lock()?;
         let host = session.as_mut().ok_or_else(no_connector_session)?;
-        Ok(host
-            .drain_actions(limit)
+        let actions = host.drain_actions(limit);
+        actions
             .into_iter()
-            .map(ConnectorTransportAction::from)
-            .collect())
+            .map(|action| {
+                let address = match &action.body {
+                    mav_engine::ConnectorTransportRequest::Subscribe { characteristic_id }
+                    | mav_engine::ConnectorTransportRequest::Unsubscribe { characteristic_id }
+                    | mav_engine::ConnectorTransportRequest::Read { characteristic_id }
+                    | mav_engine::ConnectorTransportRequest::Write {
+                        characteristic_id, ..
+                    } => host.characteristic_address(characteristic_id),
+                    _ => None,
+                };
+                connector::transport_action_to_ffi(action, address)
+            })
+            .collect()
     }
 
     pub fn connector_lifecycle(&self) -> Result<ConnectorLifecycleReport, FfiError> {

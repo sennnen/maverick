@@ -39,21 +39,11 @@ private func screenTitle(_ t: String) -> some View {
 struct AuraLiveView: View {
   @EnvironmentObject private var live: LiveState
   @EnvironmentObject private var model: AppModel
-  @EnvironmentObject private var store: MavStore
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var pulse = false
   @State private var showPrvDetail = false
 
   private var bpm: Int? { model.bpm ?? live.heartRate }
-
-  private var staleLabel: String? {
-    guard case let .ready(snapshot) = store.state else { return nil }
-    return MavPresent.sampleAgeLabel(
-      asOfUnixMs: snapshot.asOfUnixMs,
-      lastSampleUnixMs: snapshot.lastSampleUnixMs,
-      connected: live.connected
-    )
-  }
 
   var body: some View {
     ScrollView {
@@ -74,15 +64,12 @@ struct AuraLiveView: View {
             Text(bpm.map { "\($0)" } ?? "--").font(AuraDesign.mega(96)).foregroundStyle(AuraDesign.ink)
             Text("bpm").font(AuraDesign.number(26)).foregroundStyle(AuraDesign.ink.opacity(0.5))
           }
-          if let staleLabel {
-            Text(staleLabel).font(AuraDesign.sub).foregroundStyle(AuraDesign.ink.opacity(0.55))
-          }
         }
         .frame(maxWidth: .infinity, minHeight: 300)
         .auraGlowTile(.heart, padding: 22, radius: 34)
 
         VStack(spacing: 0) {
-          AuraInfoRow(label: "Strap", value: live.advertisingName ?? "WHOOP")
+          AuraInfoRow(label: "Wearable", value: live.advertisingName ?? "Not connected")
           RowDivider()
           AuraInfoRow(label: "Battery", value: live.batteryPct.map { "\(Int($0.rounded()))%" } ?? "--")
           RowDivider()

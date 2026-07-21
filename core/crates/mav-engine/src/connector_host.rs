@@ -1050,6 +1050,16 @@ impl ConnectorHost {
             .ok_or_else(|| undeclared("action names an undeclared characteristic"))
     }
 
+    pub fn characteristic_address(&self, id: &str) -> Option<(String, String)> {
+        self.manifest.services.iter().find_map(|service| {
+            service
+                .characteristics
+                .iter()
+                .find(|characteristic| characteristic.id == id)
+                .map(|characteristic| (service.uuid.clone(), characteristic.uuid.clone()))
+        })
+    }
+
     fn require_property(&self, id: &str, property: CharacteristicProperty) -> Result<()> {
         if self.characteristic(id)?.properties.contains(&property) {
             Ok(())

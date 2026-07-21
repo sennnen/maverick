@@ -196,7 +196,7 @@ struct AuraSettingsSheet: View {
 
   private var deviceSection: some View {
     group("Device") {
-      AuraInfoRow(label: "Strap", value: live.advertisingName ?? "WHOOP")
+      AuraInfoRow(label: "Wearable", value: live.advertisingName ?? "Not connected")
       divider
       AuraInfoRow(label: "Status", value: live.bonded ? "Paired · encrypted" : "Not paired")
       divider
@@ -230,7 +230,7 @@ struct AuraSettingsSheet: View {
 
   private var healthStatusDetail: String {
     switch health.auth {
-    case .authorized: "Apple Health fills gaps when the strap is off-wrist. WHOOP telemetry always wins and is never overwritten."
+    case .authorized: "Apple Health fills gaps when the wearable is off-wrist. Direct telemetry always wins and is never overwritten."
     case .denied: "Access denied. Grant it under Settings › Health › Data Access, or tap to review."
     case .unavailable: "Apple Health isn't available on this device."
     case .entitlementMissing: "This build can't talk to Apple Health (missing entitlement)."
@@ -548,7 +548,7 @@ struct AuraSettingsSheet: View {
         .buttonStyle(.plain)
       } else {
         AuraNavRow(icon: "square.and.arrow.up", title: "Export CSV",
-                   detail: exporting ? "Exporting…" : (exportError ?? "WHOOP-format zip"),
+                   detail: exporting ? "Exporting…" : (exportError ?? "Portable archive"),
                    tint: AuraDesign.ink.opacity(0.85)) {
           guard !exporting else { return }
           exporting = true; exportError = nil
@@ -615,7 +615,7 @@ struct AuraSettingsSheet: View {
   private var about: some View {
     VStack(alignment: .leading, spacing: 10) {
       Text("Maverick").font(AuraDesign.heading(17)).foregroundStyle(AuraDesign.ink)
-      Text("Connects directly to your WHOOP strap over Bluetooth. No account, no cloud, nothing ever leaves this device.")
+      Text("Connects directly to approved wearables over Bluetooth. No account, no cloud, nothing ever leaves this device.")
         .font(AuraDesign.sub).foregroundStyle(AuraDesign.ink.opacity(0.55))
         .fixedSize(horizontal: false, vertical: true)
     }
