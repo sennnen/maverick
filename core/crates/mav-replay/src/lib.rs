@@ -94,12 +94,12 @@ mod tests {
         for (name, key, connector_id) in [
             (
                 "whoop4_v1.mavconn",
-                "7867eb5467961494f9f433a6e4928d10b03a70cd2d6ba5695d8acecc01983cfb",
+                "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd",
                 "dev.maverick.whoop4",
             ),
             (
                 "whoop5_v1.mavconn",
-                "6aa31efccd2e36f3021f8e691dd839f57032875bdeaba0a2908b2942b92a5d4f",
+                "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd",
                 "dev.maverick.whoop5",
             ),
         ] {

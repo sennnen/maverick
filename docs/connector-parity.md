@@ -16,8 +16,8 @@ stream fixtures.
 
 | artifact | fixtures | SHA-256 | max fuel/call | peak linear memory |
 |---|---:|---|---:|---:|
-| WHOOP 4.0 | 14 | `ea7e360add1365a2ca8e1f06bb5631cda25fda93c601bd90b6b6f000a22e4df0` | 89,074 | 1,179,648 B |
-| WHOOP 5.0/MG | 12 | `7829241ae70b256eb84ab70a9b8a5eac44512009fcf15aba5967cb35df94221d` | 3,631,187 | 1,245,184 B |
+| WHOOP 4.0 | 14 | `3158072c210ff18a510e044192a28b781669a276cab6279ed0ae58dfef23c72d` | 89,074 | 1,179,648 B |
+| WHOOP 5.0/MG | 12 | `3c4c013f6c593c411fb822e65b8c363a6524dbf759390c10781a8bae695cfd47` | 3,631,187 | 1,245,184 B |
 
 The runtime test regenerates each report from the committed artifact and demands byte equality. The
 Swift and Kotlin tests independently read the same report schema, ids, hashes, required flow names,

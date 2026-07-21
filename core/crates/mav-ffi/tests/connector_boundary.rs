@@ -242,12 +242,12 @@ fn runtime_starts_empty_and_each_packaged_connector_enables_only_after_install()
         (
             "whoop4_v1.mavconn",
             "dev.maverick.whoop4",
-            "7867eb5467961494f9f433a6e4928d10b03a70cd2d6ba5695d8acecc01983cfb",
+            "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd",
         ),
         (
             "whoop5_v1.mavconn",
             "dev.maverick.whoop5",
-            "6aa31efccd2e36f3021f8e691dd839f57032875bdeaba0a2908b2942b92a5d4f",
+            "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd",
         ),
     ] {
         let (runtime, path) = runtime();
@@ -309,6 +309,44 @@ fn runtime_starts_empty_and_each_packaged_connector_enables_only_after_install()
         assert!(!runtime.drain_connector_actions(16).unwrap().is_empty());
         let _ = std::fs::remove_file(path);
     }
+}
+
+#[test]
+fn packaged_connectors_share_one_publisher_identity_and_trust_policy() {
+    let (runtime, path) = runtime();
+    let (policy, revocations) = packaged_trust(
+        "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd",
+    );
+
+    for artifact_name in ["whoop4_v1.mavconn", "whoop5_v1.mavconn"] {
+        let bytes = packaged_artifact(artifact_name);
+        let inspection = runtime
+            .inspect_connector_bytes(
+                bytes.clone(),
+                source(),
+                policy.clone(),
+                revocations.clone(),
+                2,
+                1_000,
+            )
+            .expect("shared publisher trust accepts packaged connector");
+        runtime
+            .install_connector_bytes(
+                ConnectorInstallRequest {
+                    bytes,
+                    source: source(),
+                    approval_token: inspection.approval_token,
+                    activate: true,
+                    now_ms: 3,
+                },
+                policy.clone(),
+                revocations.clone(),
+            )
+            .expect("packaged connector installs under shared policy");
+    }
+
+    assert_eq!(runtime.list_installed_connectors().unwrap().len(), 2);
+    let _ = std::fs::remove_file(path);
 }
 
 #[test]

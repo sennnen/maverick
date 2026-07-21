@@ -4,9 +4,9 @@ final class ConnectorParityTests: XCTestCase {
   func testFrozenConnectorParityReportsMeetMobileBudgets() throws {
     let expected = [
       ("whoop4", "dev.maverick.whoop4", 14,
-       "ea7e360add1365a2ca8e1f06bb5631cda25fda93c601bd90b6b6f000a22e4df0"),
+       "3158072c210ff18a510e044192a28b781669a276cab6279ed0ae58dfef23c72d"),
       ("whoop5", "dev.maverick.whoop5", 12,
-       "7829241ae70b256eb84ab70a9b8a5eac44512009fcf15aba5967cb35df94221d"),
+       "3c4c013f6c593c411fb822e65b8c363a6524dbf759390c10781a8bae695cfd47"),
     ]
     for (family, connectorID, fixtureCount, artifactHash) in expected {
       let url = try XCTUnwrap(
