@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: in progress. WC-P0 through WC-P10 are complete; WC-P11 is next.
+Status: in progress. WC-P0 through WC-P11 are complete; WC-P12 is next.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -293,7 +293,7 @@ Status: complete
 
 ## Packet WC-P11: Prove native-versus-Wasm parity and cross-platform operation
 
-Status: pending
+Status: complete
 
 - **Repositories touched:** both.
 - **Likely files/modules:** replay parity harness, golden state traces, platform test harnesses,
@@ -554,3 +554,17 @@ the listed order minimizes simultaneous migration surfaces.
   explicitly unverified rather than inferred. Only the public test key and detached signature
   remain; the temporary private signer was deleted. The legacy path remains authoritative until
   WC-P12 parity proof.
+- 2026-07-18: WC-P11 expanded the signed artifacts in
+  `maverick-connectors@1158ce6` to fourteen gen4 and twelve gen5 cases. Native execution and the
+  no-JIT Wasm runtime now agree exactly on canonical input, ordered action, emitted-sample, and
+  final-state hashes across admitted records, realtime/events, history cursor retry, restart, and
+  malformed frames. Per-call maxima are 89,074 fuel/1,179,648 bytes linear memory for gen4 and
+  3,631,187 fuel/1,245,184 bytes for gen5, within `mobile-v1`. On the local M1 host, full-artifact
+  cold means were 2,756 and 2,548 microseconds and warm p95 was 27 and 29 microseconds. The full
+  200–245 KiB artifacts exceed P0's explicitly 8 KiB-only 250-microsecond cold probe number; this
+  size-dependent difference is recorded rather than normalized away. Rust regenerates both frozen
+  reports from exact signed fixture bytes; Swift and Kotlin pin their schema, ids, hashes, flow
+  coverage, and ceilings. Swift source parsing passed. Full iOS execution is unavailable without an
+  Xcode simulator SDK; Android execution is unavailable without SDK/NDK and JDK 17. Both remain CI
+  gates. Temporary signers were deleted; native and artifact paths remain dual only in tests until
+  WC-P12.

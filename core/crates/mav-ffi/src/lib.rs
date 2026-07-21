@@ -134,6 +134,7 @@ pub struct HostSnapshotResult {
 
 #[derive(uniffi::Object)]
 pub struct MavRuntime {
+    // WC-P12 removes this compiled-driver runtime after the artifact host becomes the sole path.
     inner: Mutex<mav_engine::HostRuntime>,
     connectors: Mutex<mav_connector_store::ConnectorRepository>,
     connector_session: Mutex<Option<mav_engine::ConnectorHost>>,
@@ -152,8 +153,7 @@ impl MavRuntime {
             app_version: config.app_version,
             app_build: config.app_build,
         })?;
-        // The built-in device codecs this binary links, registered by id (ADR-016). The engine
-        // resolves a manifest's `codec` field against exactly this set.
+        // WC-P12 removes this built-in registration; it exists only for migration parity.
         runtime.register_codec(mav_connector_whoop::codec::CODEC_ID, || {
             Box::new(mav_connector_whoop::WhoopCodec::new())
         });
@@ -167,6 +167,7 @@ impl MavRuntime {
     }
 
     pub fn install_connector(&self, registration: ConnectorRegistration) -> Result<(), FfiError> {
+        // WC-P12 removes the manifest-only installer once callers use signed artifact bytes.
         self.lock()?
             .install_connector(mav_engine::ConnectorRegistration {
                 connector_id: registration.connector_id,
@@ -622,8 +623,7 @@ pub fn core_version() -> String {
     env!("CARGO_PKG_VERSION").to_owned()
 }
 
-/// Resolve a manifest's `codec` id against the device-codec crates this binary links. This is the
-/// edge's half of ADR-016: the engine never names a device, so the FFI does.
+/// WC-P12 removes this compiled-codec parity adapter with the manifest-only capture surface.
 fn codec_for(
     manifest: &mav_engine::Manifest,
 ) -> Result<Box<dyn mav_engine::DeviceCodec>, FfiError> {
@@ -642,10 +642,7 @@ fn codec_for(
     }
 }
 
-/// Run one `capture/v1` capture against a device manifest and return canonical session and analytics
-/// JSON with their hashes. Both inputs are JSON strings the host already holds, so the boundary
-/// carries no pipeline types. The parity harness drives this on each platform: the same inputs must
-/// return the same hashes, and any difference is a binding bug.
+/// WC-P12 replaces this manifest/compiled-codec parity adapter with signed artifact replay.
 #[uniffi::export]
 pub fn run_capture(manifest_json: String, capture_json: String) -> Result<RunResult, FfiError> {
     let manifest = mav_engine::Manifest::from_json(&manifest_json)?;

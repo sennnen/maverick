@@ -640,6 +640,8 @@ dependencies = [
  "ed25519-dalek",
  "mav-connector-abi",
  "mav-connector-runtime",
+ "serde",
+ "serde_json",
  "sha2",
  "wasmparser 0.253.0",
  "wat",

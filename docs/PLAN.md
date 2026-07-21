@@ -75,6 +75,7 @@ maverick/
     platform.md        native runtime, transport-event, read-model, and compatibility contract
     connectors.md      .mavconn format, ABI, trust, install, lifecycle, SDK and registry
     connector-audit.md current bundled-driver audit, WHOOP comparison, deletion inventory
+    connector-parity.md frozen native/Wasm trace, resource, timing, and platform evidence
     protocol/
       whoop.md         every known WHOOP protocol fact, each with a confidence tag
     testing.md         test policy: fixture rules, property tests, parity, anti-faux rules

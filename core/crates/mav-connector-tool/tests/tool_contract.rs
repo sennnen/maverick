@@ -2,7 +2,7 @@
 
 use ed25519_dalek::{Signer, SigningKey};
 use mav_connector_abi::*;
-use mav_connector_tool::{finalize, prepare, test_fixtures, validate, ToolError};
+use mav_connector_tool::{finalize, parity_report, prepare, test_fixtures, validate, ToolError};
 use sha2::{Digest, Sha256};
 
 fn module(exports: bool) -> Vec<u8> {
@@ -171,6 +171,23 @@ fn deterministic_pack_inspect_verify_round_trip() {
             .events_run,
         1
     );
+
+    let artifact = finalize(
+        prepare(&executable_module(), &manifest, &abi, &fixtures).expect("report prepare"),
+        key.sign(
+            &prepare(&executable_module(), &manifest, &abi, &fixtures)
+                .expect("report digest")
+                .digest,
+        )
+        .to_bytes(),
+        key.verifying_key().to_bytes(),
+    )
+    .expect("report artifact");
+    let report = parity_report(artifact, key.verifying_key().to_bytes()).expect("parity report");
+    assert!(report.contains("\"schema\": \"mavconn-parity/v1\""));
+    assert!(report.contains("\"connector_id\": \"org.example.template\""));
+    assert!(report.contains("\"max_fuel_consumed\":"));
+    assert!(report.contains("\"peak_memory_bytes\": 65536"));
 }
 
 #[test]

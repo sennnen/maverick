@@ -60,6 +60,10 @@ targets:
       - path: MaverickTests
       - path: ../../fixtures/platform/host_snapshot_v1.expected.json
         buildPhase: resources
+      - path: ../../fixtures/connectors/whoop4_parity_v1.expected.json
+        buildPhase: resources
+      - path: ../../fixtures/connectors/whoop5_parity_v1.expected.json
+        buildPhase: resources
     dependencies:
       - target: Maverick
     settings:

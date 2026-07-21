@@ -71,6 +71,13 @@ decoders reject unknown schema names and missing required fields, while ignoring
 fields inside a known schema. This is compatibility testing, not permission to make fields optional
 without evidence.
 
+Runtime-loaded connectors add a target-parity layer. Native author tests execute every embedded
+event/action case, and `mavconn-test --report` executes the signed Wasm bytes to freeze canonical
+input, ordered action, emitted-sample, final-state, fuel, and linear-memory results. Maverick
+regenerates those reports from committed artifact fixtures, while Swift and Kotlin consume the same
+schema and ceilings. The exact P11 evidence and its consistency-only limitation live in
+[connector-parity.md](connector-parity.md).
+
 ## Consistent is not validated
 
 Here is the sharp lesson from the prior codebases, and it needs stating bluntly because it is the

@@ -1,5 +1,5 @@
 use crate::{Artifact, ConnectorInstance, LimitProfile};
-use mav_connector_abi::{ActionBatch, EventBody, FixtureCase};
+use mav_connector_abi::{encode_canonical, ActionBatch, ActionBody, EventBody, FixtureCase};
 use mav_model::error::{codes, MavError, Result};
 use sha2::{Digest, Sha256};
 
@@ -7,7 +7,12 @@ use sha2::{Digest, Sha256};
 pub struct FixtureResult {
     pub name: String,
     pub events_run: u32,
+    pub input_hash: [u8; 32],
+    pub action_trace_hash: [u8; 32],
+    pub sample_hash: [u8; 32],
     pub final_state_hash: [u8; 32],
+    pub max_fuel_consumed: u64,
+    pub peak_memory_bytes: u64,
 }
 
 impl Artifact {
@@ -39,14 +44,25 @@ fn run_fixture(
     }
     let fixture_profile = profile.for_fixture(fixture.max_fuel);
     let mut instance = ConnectorInstance::instantiate(artifact, fixture_profile)?;
+    let mut input_hasher = Sha256::new();
+    let mut action_hasher = Sha256::new();
+    let mut sample_hasher = Sha256::new();
+    let mut max_fuel_consumed = 0_u64;
+    let mut peak_memory_bytes = 0_u64;
     let first = &fixture.events[0];
     let mut next = 0_usize;
     if fixture.initial_state.is_empty() {
-        compare(
-            &fixture.name,
-            0,
-            &instance.init(first)?,
-            &fixture.expected[0],
+        let actual = instance.init(first)?;
+        compare(&fixture.name, 0, &actual, &fixture.expected[0])?;
+        observe(
+            &instance,
+            first,
+            &actual,
+            &mut input_hasher,
+            &mut action_hasher,
+            &mut sample_hasher,
+            &mut max_fuel_consumed,
+            &mut peak_memory_bytes,
         )?;
         next = 1;
     } else {
@@ -54,24 +70,44 @@ fn run_fixture(
         restore.body = EventBody::RestoreState {
             bytes: fixture.initial_state.clone(),
         };
+        let actual = instance.init(&restore)?;
         compare(
             &fixture.name,
             0,
-            &instance.init(&restore)?,
+            &actual,
             &ActionBatch {
                 actions: Vec::new(),
             },
         )?;
+        observe(
+            &instance,
+            &restore,
+            &actual,
+            &mut input_hasher,
+            &mut action_hasher,
+            &mut sample_hasher,
+            &mut max_fuel_consumed,
+            &mut peak_memory_bytes,
+        )?;
     }
     for index in next..fixture.events.len() {
-        compare(
-            &fixture.name,
-            index,
-            &instance.handle(&fixture.events[index])?,
-            &fixture.expected[index],
+        let actual = instance.handle(&fixture.events[index])?;
+        compare(&fixture.name, index, &actual, &fixture.expected[index])?;
+        observe(
+            &instance,
+            &fixture.events[index],
+            &actual,
+            &mut input_hasher,
+            &mut action_hasher,
+            &mut sample_hasher,
+            &mut max_fuel_consumed,
+            &mut peak_memory_bytes,
         )?;
     }
     let state = instance.snapshot()?;
+    let (fuel, memory) = instance.resource_usage()?;
+    max_fuel_consumed = max_fuel_consumed.max(fuel);
+    peak_memory_bytes = peak_memory_bytes.max(memory);
     let final_state_hash: [u8; 32] = Sha256::digest(state).into();
     if final_state_hash != fixture.expected_state_hash {
         return Err(error(
@@ -82,8 +118,54 @@ fn run_fixture(
     Ok(FixtureResult {
         name: fixture.name.clone(),
         events_run: fixture.events.len() as u32,
+        input_hash: input_hasher.finalize().into(),
+        action_trace_hash: action_hasher.finalize().into(),
+        sample_hash: sample_hasher.finalize().into(),
         final_state_hash,
+        max_fuel_consumed,
+        peak_memory_bytes,
     })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn observe(
+    instance: &ConnectorInstance,
+    event: &mav_connector_abi::ConnectorEvent,
+    actions: &ActionBatch,
+    input_hasher: &mut Sha256,
+    action_hasher: &mut Sha256,
+    sample_hasher: &mut Sha256,
+    max_fuel_consumed: &mut u64,
+    peak_memory_bytes: &mut u64,
+) -> Result<()> {
+    input_hasher.update(encode_canonical(event).map_err(|source| {
+        error(
+            codes::CONNECTOR_RUNTIME_FIXTURE_INVALID,
+            format!("fixture event encoding failed: {source}"),
+        )
+    })?);
+    action_hasher.update(encode_canonical(actions).map_err(|source| {
+        error(
+            codes::CONNECTOR_RUNTIME_FIXTURE_INVALID,
+            format!("fixture action encoding failed: {source}"),
+        )
+    })?);
+    for action in &actions.actions {
+        if let ActionBody::EmitSamples { samples, .. } = &action.body {
+            for sample in samples {
+                sample_hasher.update(encode_canonical(sample).map_err(|source| {
+                    error(
+                        codes::CONNECTOR_RUNTIME_FIXTURE_INVALID,
+                        format!("fixture sample encoding failed: {source}"),
+                    )
+                })?);
+            }
+        }
+    }
+    let (fuel, memory) = instance.resource_usage()?;
+    *max_fuel_consumed = (*max_fuel_consumed).max(fuel);
+    *peak_memory_bytes = (*peak_memory_bytes).max(memory);
+    Ok(())
 }
 
 fn compare(name: &str, index: usize, actual: &ActionBatch, expected: &ActionBatch) -> Result<()> {

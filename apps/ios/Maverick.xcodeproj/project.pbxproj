@@ -19,6 +19,7 @@
 		603A65AB3D6EF0ADA2B83EBD /* WidgetAnchorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 186BBE0388C59C875F86413D /* WidgetAnchorTests.swift */; };
 		619577474C9D1261A3C6F7BA /* MavCore.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = BC4DDC7FE63A5BD0D9B52928 /* MavCore.xcframework */; };
 		65C886E50B5952FE770E4C21 /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B2CF897638B4C75BC7C1243 /* RootTabView.swift */; };
+		66321EC3F4B7A008BEB970AC /* whoop4_parity_v1.expected.json in Resources */ = {isa = PBXBuildFile; fileRef = F0ED95858C7EE69BAE8158A0 /* whoop4_parity_v1.expected.json */; };
 		6B0CCD0F533DB8A4AD46E59E /* MaverickApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC45713B7650201F3BBA999F /* MaverickApp.swift */; };
 		77B3C1862E9BB9FB39C63751 /* AuraReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32966D295C38E3DD4B2FD078 /* AuraReportsView.swift */; };
 		80D8107662E93D88B1E0C6D9 /* AuraMLSignalsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C492F56CD3FCD0D397982F67 /* AuraMLSignalsCard.swift */; };
@@ -36,6 +37,7 @@
 		BA28C3D83D81CD014D987B45 /* HonestEmptinessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 049341216358E81CCDC3044B /* HonestEmptinessTests.swift */; };
 		C263D86C965501A11430223C /* AppModelApplyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B3A80484C0D2EBE2A641896 /* AppModelApplyTests.swift */; };
 		C32B8C52A8CC41B4EF385659 /* AuraKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9153FCF75B63AE80DEC03486 /* AuraKit.swift */; };
+		C51780D648B2E7FE10B0BE83 /* whoop5_parity_v1.expected.json in Resources */ = {isa = PBXBuildFile; fileRef = 1054DBC84705088AB71BF7F0 /* whoop5_parity_v1.expected.json */; };
 		C7C7C75EE912047AFAF132AB /* MavPresent.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0EEC1686C819DFDDDE874B /* MavPresent.swift */; };
 		C7E950C8D717EB6627408530 /* Appearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C308EF1E54DE57286D0D95 /* Appearance.swift */; };
 		CAF8E3A53AAF761504B1A1BD /* MavStandins.swift in Sources */ = {isa = PBXBuildFile; fileRef = 949AEBF0671C3B8EF4A6A1D3 /* MavStandins.swift */; };
@@ -44,6 +46,7 @@
 		D130625DDBC84502720729E5 /* MavPresentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22E83E1E5CE372E1D15D8A2F /* MavPresentTests.swift */; };
 		D801172ADD9543DED4A50BCF /* AuraDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8271E24213177A8CCA6A4B57 /* AuraDesign.swift */; };
 		D8764DE30F25A170827D584A /* NavRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EDBE2184C3A41D1A0BE599A /* NavRouter.swift */; };
+		DAF00D48AAE79971B6604B79 /* ConnectorParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 198C07539A04441F7AEB0C0F /* ConnectorParityTests.swift */; };
 		E3E51251BDEDD1881B74BC8B /* TrainingTargets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DB9A882C4DE52613D3F964C /* TrainingTargets.swift */; };
 		ED17A345F1496A20B032DA06 /* AuraTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249FF52F9180D25C0115C9F /* AuraTrendsView.swift */; };
 		EDE3AE771981914E2B636908 /* WorkoutZones.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB9B4905A2A02F23F7DD65BF /* WorkoutZones.swift */; };
@@ -72,10 +75,12 @@
 		06C308EF1E54DE57286D0D95 /* Appearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Appearance.swift; sourceTree = "<group>"; };
 		0DB9A882C4DE52613D3F964C /* TrainingTargets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingTargets.swift; sourceTree = "<group>"; };
 		0EDBE2184C3A41D1A0BE599A /* NavRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavRouter.swift; sourceTree = "<group>"; };
+		1054DBC84705088AB71BF7F0 /* whoop5_parity_v1.expected.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = whoop5_parity_v1.expected.json; sourceTree = "<group>"; };
 		1142256492D4FB00CB48A6C9 /* WorkoutPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPrefs.swift; sourceTree = "<group>"; };
 		14A49EDDB7C36481A91500DC /* MavSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavSnapshotTests.swift; sourceTree = "<group>"; };
 		186BBE0388C59C875F86413D /* WidgetAnchorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAnchorTests.swift; sourceTree = "<group>"; };
 		19281EE56AEE60E24FEE2C4E /* AuraComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraComponents.swift; sourceTree = "<group>"; };
+		198C07539A04441F7AEB0C0F /* ConnectorParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectorParityTests.swift; sourceTree = "<group>"; };
 		1C83D3F7F5C43D34D588F75C /* AuraStrainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraStrainView.swift; sourceTree = "<group>"; };
 		1C95D1D514A93EC401555036 /* AuraRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraRecoveryView.swift; sourceTree = "<group>"; };
 		20DD728BFA39E9918A058CD9 /* Repository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repository.swift; sourceTree = "<group>"; };
@@ -114,6 +119,7 @@
 		EB9B4905A2A02F23F7DD65BF /* WorkoutZones.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutZones.swift; sourceTree = "<group>"; };
 		EE416D965CBA9D93D9BE3557 /* AuraCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraCharts.swift; sourceTree = "<group>"; };
 		F0773D80E2F6F94F0D2412C4 /* Units.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Units.swift; sourceTree = "<group>"; };
+		F0ED95858C7EE69BAE8158A0 /* whoop4_parity_v1.expected.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = whoop4_parity_v1.expected.json; sourceTree = "<group>"; };
 		F5E9C32A0B6BB7C041B87B92 /* AuraTodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraTodayView.swift; sourceTree = "<group>"; };
 		F7C7D073C4D7BBF3084890F5 /* StoreDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreDiagnostics.swift; sourceTree = "<group>"; };
 		FED0CA782D13BBFDE108BC7D /* AuraSettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuraSettingsSheet.swift; sourceTree = "<group>"; };
@@ -174,6 +180,15 @@
 				8BFA15A6C6AC7747AE0384CE /* UI */,
 			);
 			path = Maverick;
+			sourceTree = "<group>";
+		};
+		53BAE78A1B564431426C6DAC /* connectors */ = {
+			isa = PBXGroup;
+			children = (
+				F0ED95858C7EE69BAE8158A0 /* whoop4_parity_v1.expected.json */,
+				1054DBC84705088AB71BF7F0 /* whoop5_parity_v1.expected.json */,
+			);
+			path = connectors;
 			sourceTree = "<group>";
 		};
 		5FE2FEB250D72961F120A53B /* platform */ = {
@@ -267,6 +282,7 @@
 		C1957C9D5FEA9E3E819D557C /* fixtures */ = {
 			isa = PBXGroup;
 			children = (
+				53BAE78A1B564431426C6DAC /* connectors */,
 				5FE2FEB250D72961F120A53B /* platform */,
 			);
 			path = fixtures;
@@ -276,6 +292,7 @@
 			isa = PBXGroup;
 			children = (
 				7B3A80484C0D2EBE2A641896 /* AppModelApplyTests.swift */,
+				198C07539A04441F7AEB0C0F /* ConnectorParityTests.swift */,
 				049341216358E81CCDC3044B /* HonestEmptinessTests.swift */,
 				22E83E1E5CE372E1D15D8A2F /* MavPresentTests.swift */,
 				14A49EDDB7C36481A91500DC /* MavSnapshotTests.swift */,
@@ -367,6 +384,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				8BB6C251B9D029A2DED3D107 /* host_snapshot_v1.expected.json in Resources */,
+				66321EC3F4B7A008BEB970AC /* whoop4_parity_v1.expected.json in Resources */,
+				C51780D648B2E7FE10B0BE83 /* whoop5_parity_v1.expected.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -378,6 +397,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C263D86C965501A11430223C /* AppModelApplyTests.swift in Sources */,
+				DAF00D48AAE79971B6604B79 /* ConnectorParityTests.swift in Sources */,
 				BA28C3D83D81CD014D987B45 /* HonestEmptinessTests.swift in Sources */,
 				D130625DDBC84502720729E5 /* MavPresentTests.swift in Sources */,
 				9344A42D3645B6F6A7CCD831 /* MavSnapshotTests.swift in Sources */,

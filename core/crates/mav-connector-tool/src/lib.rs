@@ -9,6 +9,7 @@ use mav_connector_runtime::{
     signature_digest, Artifact, FixtureResult, KeyScope, KeyStatus, LimitProfile, PublisherKey,
     RevocationSet, TrustPolicy,
 };
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 use std::fmt;
@@ -181,6 +182,67 @@ pub fn test_fixtures(
     inspect(bytes)?
         .run_fixtures(LimitProfile::mobile_v1())
         .map_err(|error| ToolError::Artifact(error.to_string()))
+}
+
+#[derive(Serialize)]
+struct ParityReport {
+    schema: &'static str,
+    connector_id: String,
+    connector_version: String,
+    artifact_sha256: String,
+    manifest_sha256: String,
+    signed_sha256: String,
+    fixture_count: usize,
+    fixtures: Vec<ParityFixture>,
+}
+
+#[derive(Serialize)]
+struct ParityFixture {
+    name: String,
+    events: u32,
+    input_sha256: String,
+    action_trace_sha256: String,
+    sample_sha256: String,
+    final_state_sha256: String,
+    max_fuel_consumed: u64,
+    peak_memory_bytes: u64,
+}
+
+pub fn parity_report(bytes: Vec<u8>, public_key: [u8; 32]) -> Result<String, ToolError> {
+    validate(&bytes, public_key)?;
+    let artifact = inspect(bytes)?;
+    let report = artifact.report();
+    let fixtures = artifact
+        .run_fixtures(LimitProfile::mobile_v1())
+        .map_err(|error| ToolError::Artifact(error.to_string()))?
+        .into_iter()
+        .map(|fixture| ParityFixture {
+            name: fixture.name,
+            events: fixture.events_run,
+            input_sha256: encode_hex(&fixture.input_hash),
+            action_trace_sha256: encode_hex(&fixture.action_trace_hash),
+            sample_sha256: encode_hex(&fixture.sample_hash),
+            final_state_sha256: encode_hex(&fixture.final_state_hash),
+            max_fuel_consumed: fixture.max_fuel_consumed,
+            peak_memory_bytes: fixture.peak_memory_bytes,
+        })
+        .collect::<Vec<_>>();
+    let parity = ParityReport {
+        schema: "mavconn-parity/v1",
+        connector_id: report.manifest.connector_id.as_str().to_owned(),
+        connector_version: report.manifest.version.clone(),
+        artifact_sha256: encode_hex(&report.artifact_digest),
+        manifest_sha256: encode_hex(&report.manifest_digest),
+        signed_sha256: encode_hex(&report.signed_digest),
+        fixture_count: fixtures.len(),
+        fixtures,
+    };
+    serde_json::to_string_pretty(&parity)
+        .map(|mut encoded| {
+            encoded.push('\n');
+            encoded
+        })
+        .map_err(|_| ToolError::InvalidMetadata("parity report"))
 }
 
 fn validate_module(

@@ -184,6 +184,7 @@ struct Session {
 /// replay binary) at startup, because the engine never links a device crate (ADR-016).
 pub type CodecFactory = Box<dyn Fn() -> Box<dyn DeviceCodec> + Send + Sync>;
 
+/// WC-P12 deletes this compiled-driver runtime after signed artifact sessions become authoritative.
 pub struct HostRuntime {
     config: RuntimeConfig,
     store: Store,

@@ -129,6 +129,23 @@ impl ConnectorInstance {
         self.usable
     }
 
+    pub(crate) fn resource_usage(&self) -> Result<(u64, u64)> {
+        let remaining = self.store.get_fuel().map_err(|source| {
+            error(
+                codes::CONNECTOR_RUNTIME_INSTANTIATION,
+                format!("fuel inspection failed: {source}"),
+            )
+        })?;
+        let consumed = self.profile.fuel_per_call.saturating_sub(remaining);
+        let memory_bytes = u64::try_from(self.memory.data_size(&self.store)).map_err(|_| {
+            error(
+                codes::CONNECTOR_RUNTIME_RESOURCE_LIMIT,
+                "linear memory size exceeds the host report range",
+            )
+        })?;
+        Ok((consumed, memory_bytes))
+    }
+
     fn invoke_event(
         &mut self,
         event: &ConnectorEvent,

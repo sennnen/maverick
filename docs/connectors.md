@@ -420,6 +420,11 @@ notification, sustained realtime throughput, history burst throughput, peak/stea
 size, binary-size delta, and battery/thermal behaviour on both platform classes. Thresholds are set
 from WC-P0 evidence and may only tighten with final-device measurements.
 
+WC-P11's exact artifact, trace, state, resource, host-timing, and platform evidence is frozen in
+[connector-parity.md](connector-parity.md). `mavconn-test --report` emits its canonical
+`mavconn-parity/v1` JSON; native author tests and the Wasm runner must agree before that report can
+be regenerated.
+
 ## Unresolved evidence gates
 
 - `wasmi` passed WC-P0 mobile-target, limit, parity, and overhead probes; interpreter replacement

@@ -31,6 +31,7 @@ pub fn replay_files(manifest_path: &Path, capture_path: &Path) -> Result<Replay>
 
 /// Resolve a manifest's `codec` id against the device-codec crates this binary links (the same
 /// set the FFI links, so a replay runs the identical decode a live device would).
+// WC-P12 replaces this compiled-codec parity adapter with signed artifact replay.
 fn codec_for(manifest: &Manifest) -> Result<Box<dyn DeviceCodec>> {
     match manifest.codec.as_deref() {
         None => Ok(Box::new(ManifestCodec::new())),

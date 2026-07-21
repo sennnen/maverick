@@ -17,3 +17,6 @@ The workflow for creating and updating fixtures lives in
 
 This directory is empty at the start of the project apart from this file. The first fixtures land
 with the Milestone 1 packets, generated from captured WHOOP traffic.
+
+`connectors/` holds signed development artifacts and generated native-versus-Wasm parity reports;
+its README records their hashes, provenance, and regeneration contract.
