@@ -48,7 +48,7 @@ class ConnectorParityTest {
     }
 
     private fun connectorFixture(family: String): JSONObject {
-        var dir: File? = File(System.getProperty("user.dir"))
+        var dir: File? = File(requireNotNull(System.getProperty("user.dir")))
         while (dir != null) {
             val candidate = File(
                 dir,

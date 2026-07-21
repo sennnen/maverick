@@ -88,6 +88,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** Zone minutes derived from raw HR over [from, to]; null until the core serves HR history. */
+    @Suppress("UNUSED_PARAMETER")
     suspend fun workoutZoneMinutes(from: Long, to: Long): List<Double>? = null
 
     fun loadWorkouts() {
@@ -95,6 +96,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** Wrist haptics — no transport wiring in the host yet, so these are inert. */
+    @Suppress("UNUSED_PARAMETER")
     fun buzz(loops: Int = 2) {}
 
     fun buzzStrapOnce() {}
@@ -144,6 +146,7 @@ internal fun liveStateOf(snapshot: MavSnapshot): LiveState {
  * Read facade returning empty results until the core exposes the matching read models. Suspend so
  * call-sites keep their coroutine shape without inventing data.
  */
+@Suppress("UNUSED_PARAMETER")
 class MavRepo {
     suspend fun metricSeries(
         deviceId: String,
