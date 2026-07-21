@@ -314,9 +314,8 @@ fn runtime_starts_empty_and_each_packaged_connector_enables_only_after_install()
 #[test]
 fn packaged_connectors_share_one_publisher_identity_and_trust_policy() {
     let (runtime, path) = runtime();
-    let (policy, revocations) = packaged_trust(
-        "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd",
-    );
+    let (policy, revocations) =
+        packaged_trust("dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd");
 
     for artifact_name in ["whoop4_v1.mavconn", "whoop5_v1.mavconn"] {
         let bytes = packaged_artifact(artifact_name);

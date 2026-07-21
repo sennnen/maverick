@@ -1,9 +1,9 @@
 # The pipeline
 
-Data moves through Maverick as a straight sequence of typed stages. Bytes arrive from the native
-BLE layer, and by the end of the sequence there is an immutable snapshot the UI can read. Between
-those points the data passes through ten stages, in order, every time. This document gives the
-contract for each stage: what it takes, what it returns, and what it is and is not allowed to do.
+Data moves through Maverick as a straight sequence of typed stages. Native transport results enter
+the connector host, and by the end of the sequence there is an immutable snapshot the UI can read.
+Between those points the data passes through ten stages, in order. This document gives the contract
+for each stage: what it takes, what it returns, and what it is and is not allowed to do.
 
 ## Why a call graph and not a bus
 
@@ -23,9 +23,9 @@ fn run(input: StageIn, ctx: &mut StageCtx) -> Result<StageOut, MavError>
 
 The stage boundaries `StageIn` and `StageOut` are frozen types in `mav-model`. Because the graph is
 synchronous and the types are fixed, the order of execution is exactly the order written in
-`mav-engine`, and feeding the same bytes in twice produces the same work in the same order. That is
-what makes `mav-replay` a real tool rather than an approximation: a capture file replayed offline
-runs the identical call graph the live device runs.
+`mav-engine`, and feeding the same normalized events in twice produces the same work in the same
+order. That is what makes `mav-replay` a real tool rather than an approximation: it executes the
+same signed artifact bytes, event/action ABI, limits, and sample-admission path as a live session.
 
 Inspectability, the one genuine thing a bus gives you, comes from the `Tap` trait instead. The
 engine invokes the tap at every stage boundary with counts, ids, and (in debug builds) a summary of
@@ -34,9 +34,9 @@ default taps are a set of metric counters and the ring-buffer log. Because the t
 boundary, you get the same visibility a bus subscriber would have given, without giving up a
 deterministic call order. Observability is described in full in [errors.md](errors.md).
 
-The single asynchronous seam in the whole system is upstream of all of this: the native radio
-writes received bytes into a bounded channel, and the first stage reads from that channel. Nothing
-past the channel is async.
+The single asynchronous seam is native transport completion. The host drains bounded declarative
+actions, native code executes them, and normalized completion events re-enter the synchronous
+connector host. Nothing downstream of that re-entry is async.
 
 ## StageCtx
 
@@ -52,60 +52,41 @@ being returned up to the engine and passed down as the next stage's input.
 
 ### 1. Acquisition
 
-**In:** `RxChunk` (a slice of bytes plus the wall-clock time the phone received it), read from the
-bounded channel.
-**Out:** `Frame` — a reassembled, CRC-validated frame with its packet type and sequence number
-known.
+**In:** a host-validated `ConnectorTransportAction`.
+**Out:** one normalized `ConnectorEvent`, including its host wall time when applicable.
 
-Acquisition is the transport layer and the connection state machine in one stage. The state machine
-moves through `Disconnected`, `Scanning`, `Connecting`, `Authenticating`, `Configuring`,
-`Streaming`, `HistoricalSync`, and `Idle`, and every transition is logged. The transport work is
-byte reassembly (buffer incoming bytes, find the `0xAA` start-of-frame, read the declared length,
-emit a frame once enough bytes are buffered, resynchronise on garbage), CRC validation against the
-frame's own checksums, an optional decrypt hook, and command/response matching.
+Swift and Kotlin execute only generic scan, connect, pair, discover, subscribe, read, write,
+disconnect, and timer requests. Core assigns operation and deadline ids, bounds queues and resource
+use, correlates each result, rejects late generations, and never exposes a native handle to guest
+code. Native acquisition **may** use platform Bluetooth and lifecycle APIs. It **may not** parse a
+device packet, choose a retry, acknowledge history, or synthesize connector event order.
 
-The decrypt hook is a pass-through for WHOOP. WHOOP frames are CRC-checked but never encrypted; the
-real access control is the OS-level BLE bond, which is enforced by the radio in the native shell and
-not by this stage. The hook exists so that a future device that does encrypt its transport has a
-place to do so, and for WHOOP it does nothing. See [protocol/whoop.md](protocol/whoop.md).
+### 2. Connector execution
 
-Command/response matching pairs a response frame to the command that asked for it using the sequence
-number, with a timeout and a bounded retry (three attempts, exponential backoff). This is the part
-of acquisition that is stateful, and it is why acquisition is a state machine rather than a pure
-function per frame.
+**In:** a normalized event for one verified connector session.
+**Out:** a bounded, ordered batch of declarative actions.
 
-Acquisition **may** buffer bytes across calls, hold the connection state, and retry commands. It
-**may not** interpret a frame's body; it knows frame framing, not field meanings. A truncated frame
-is tolerated only for realtime and historical data packet types and never for a command, and a
-frame that fails CRC or a fragment that cannot be resynchronised is logged with a reason code and
-dropped, never passed downstream.
+The no-JIT runtime invokes one signed `.mavconn` instance. Framing, CRC checks, authentication,
+commands, retries, historical cursors, and device-specific state live inside that artifact. The
+host validates every action against signed permissions and declarations before execution. Sample
+actions commit before any later acknowledgement write becomes visible; cancellation advances a
+generation and invalidates queued or late results. A rejected byte, frame, or state transition must
+produce a bounded diagnostic or typed host failure rather than disappear.
 
-### 2. Frames
+### 3. Sample admission
 
-**In:** `Frame`.
-**Out:** `Frame` (validated), or a logged rejection.
-
-The Frames boundary is where a frame is accepted into the pipeline or rejected with a reason. In
-practice acquisition produces the frame and this boundary is where every rejected fragment is
-accounted for: an unknown packet type becomes `Unknown(u8)` rather than a panic, a frame that fails
-a structural check is logged with its reason code, and only frames that pass go on to decode. The
-boundary exists as its own named step so that "the frame was valid" is a fact recorded in one place
-with one reason vocabulary, rather than scattered through the decoder.
-
-### 3. Decode
-
-**In:** validated `EmitSamples` output from a signed artifact, or a declarative/open-standard frame
-admitted by `mav-codec`.
+**In:** validated `EmitSamples` output from a signed artifact, or an explicitly admitted Bluetooth
+SIG profile value.
 **Out:** `RawSampleBatch` — a batch of raw samples, one stream kind at a time, with device
 timestamps and raw (un-normalised, un-scored) values.
 
 Device-specific reassembly, decode, protocol state, and learned state execute inside a sandboxed
 `.mavconn`. `ConnectorHost` validates bounded `EmitSamples` against signed stream and unit
 declarations, converts them into `RawSampleBatch`, then sends them through SQI, timeline,
-provenance, and storage. `mav-codec` remains only for normalized declarative layouts and explicitly
-admitted open Bluetooth profiles; it has no device registry. Contract: [connectors.md](connectors.md).
+provenance, and storage. `mav-codec` contains only reviewed open Bluetooth SIG profile decoders; it
+has no manifest parser, device registry, or device layout DSL. Contract: [connectors.md](connectors.md).
 
-Decode **may** read signed declarations and produce raw samples. It **may not**
+Admission **may** read signed declarations and produce raw samples. It **may not**
 score signal quality, correct clocks, normalise units into calibrated physical values that hide the
 raw reading, or write to storage. A raw sample carries the number the device sent and the device's
 own timestamp, nothing yet interpreted about its trustworthiness.

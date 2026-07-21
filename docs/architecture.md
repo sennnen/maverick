@@ -39,10 +39,10 @@ or random source.
 The exact artifact, ABI, install, trust, and lifecycle contracts are in
 [connectors.md](connectors.md). [ADR-017](adr/ADR-017.md) records the decision. The current bundled
 driver and its deletion inventory are in [connector-audit.md](connector-audit.md). WC-P1 through
-WC-P5 implement the leaf ABI, non-executing artifact/trust inspection, public SDK/toolchain,
-bounded interpreter instance, and normalized host event/action session. Until the later migration
-packets land, code still contains the audited ADR-016 compiled path and the new runtime is not yet
-exposed over the product FFI transport path.
+WC-P12 implemented the leaf ABI, artifact/trust inspection, public SDK/toolchain, bounded
+interpreter, normalized host session, platform-neutral FFI, install store, parity proof, and
+deletion of the compiled path. WC-P13 through WC-P15 added both native acquisition surfaces and
+signed registry distribution.
 
 ## Native/Rust line
 
@@ -84,7 +84,7 @@ remaining dependent actions. This preserves append-before-ack without encoding W
 | `mav-connector-runtime` | `.mavconn` and signed-registry parsers/verifiers, interpreter adapter, limits, instance lifecycle |
 | `mav-connector-tool` | Deterministic pack, inspect, trust/export/registry validation, and executable fixture CLIs |
 | `mav-connector-store` | Install records, trust records, connector-scoped state, activation and rollback transactions |
-| `mav-codec` | Normalized sample admission and any open-standard profiles retained by explicit ADR; no loadable-device registry |
+| `mav-codec` | Explicitly admitted open Bluetooth SIG profile decoders; no manifest parser or device registry |
 | `mav-timeline` | Ordering, deduplication, clock correction, canonical merge |
 | `mav-sqi` | Signal quality before normalization |
 | `mav-feature` | Primitive, derived, aggregate features with provenance |
@@ -123,10 +123,9 @@ The connector store depends only on runtime inspection/trust, the ABI records th
 and `mav-model` errors. It owns a separate forward schema inside the install database; it cannot
 depend on engine, native transport, analytics, a device crate, or the evidence store.
 Engine depends on runtime; runtime never calls engine. Loadable connector source lives only in
-`sennnen/maverick-connectors` and compiles against the public SDK. During migration, FFI reaches
-ABI, runtime, and connector store only to translate frozen records, open verified sessions, and
-serialize all mutation. FFI/replay's WHOOP crate edges belong solely to the named compiled-codec
-compatibility surface and are deleted with that surface in WC-P12.
+`sennnen/maverick-connectors` and compiles against the public SDK. FFI reaches ABI, runtime, and
+connector store only to translate frozen records, open verified sessions, and serialize all
+mutation. FFI and replay have no connector implementation dependency.
 
 ## Adding a device after migration
 

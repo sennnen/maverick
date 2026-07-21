@@ -269,15 +269,15 @@ framing. Frames are CRC-checked and never encrypted. [XVAL]
 The real security is OS-level BLE bonding (SMP pairing), not anything in the payload. A gen5 command
 characteristic write fails until the phone is bonded to the strap, whereas the gen4 heart-rate
 characteristic `2A37` works unbonded. One practical consequence is that macOS CoreBluetooth cannot
-complete the gen5 bond, so config and R22 writes are only possible from iOS and Android. [XVAL] This
-is why the decrypt hook in the acquisition stage is a pass-through for WHOOP: there is nothing to
-decrypt, and access control lives in the radio, not the bytes.
+complete the gen5 bond, so config and R22 writes are only possible from iOS and Android. [XVAL]
+WHOOP connectors therefore perform no payload decryption; access control lives in the radio bond,
+not the bytes.
 
 ## Realtime and event decode
 
 REALTIME_DATA (packet 40), inner-relative (the base every offset in this section now uses — the
-inner record whose byte `[0]` is the packet type, which is exactly what a `mav-codec` layout
-indexes as `payload`): timestamp `u32` at inner 2, sub-second `u16` at 6, HR `u8` at 8, `rr_count`
+inner record whose byte `[0]` is the packet type): timestamp `u32` at inner 2, sub-second `u16` at 6,
+HR `u8` at 8, `rr_count`
 `u8` at 9, and then `rr[i]` as `u16` LE at `10 + 2i` in milliseconds, dropping any zero-millisecond
 placeholder. These positions are identical on both generations; the survey numbers (gen4 6/10/12,
 "gen5 plus 4") counted from the full frame, whose header is 4 bytes on gen4 and 8 on gen5, and the

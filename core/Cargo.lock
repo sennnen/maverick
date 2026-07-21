@@ -583,7 +583,6 @@ dependencies = [
 name = "mav-codec"
 version = "0.1.0"
 dependencies = [
- "mav-frame",
  "mav-model",
  "serde",
  "serde_json",
@@ -653,19 +652,13 @@ dependencies = [
 name = "mav-engine"
 version = "0.1.0"
 dependencies = [
- "mav-analytic",
- "mav-codec",
  "mav-connector-abi",
  "mav-connector-runtime",
- "mav-feature",
- "mav-frame",
  "mav-model",
- "mav-obs",
  "mav-sqi",
  "mav-store",
  "mav-timeline",
  "serde",
- "serde_json",
 ]
 
 [[package]]

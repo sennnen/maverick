@@ -174,34 +174,6 @@ impl AffectedDays {
     }
 }
 
-/// The completion trigger: a finished sync names exactly the days it dirtied. It exists only for
-/// syncs that reached `HistoricalState::Complete`; an interrupted sync must not trigger anything.
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct RecomputeTrigger {
-    pub days: AffectedDays,
-}
-
-/// Accumulates affected days across the bursts of one historical sync. Feed it every burst
-/// receipt, then ask for the completion trigger with the controller's final state.
-#[derive(Clone, PartialEq, Eq, Debug, Default)]
-pub struct SyncDays {
-    days: AffectedDays,
-}
-
-impl SyncDays {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn absorb(&mut self, receipt: &crate::burst::BurstReceipt) {
-        self.days.union(&receipt.affected_days);
-    }
-
-    pub fn completion_trigger(self, state: crate::HistoricalState) -> Option<RecomputeTrigger> {
-        (state == crate::HistoricalState::Complete).then_some(RecomputeTrigger { days: self.days })
-    }
-}
-
 /// The identity of one cached computation: the metric, the algorithm version that produced it,
 /// and the inclusive local-day window it read. docs/architecture.md pins this key shape.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -269,30 +241,9 @@ impl<V> RecomputeCache<V> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::burst::HistoricalBurst;
-    use crate::historical::{
-        CommandTemplate, HistoricalConfig, HistoricalController, HistoricalEvent, ResponseResult,
-    };
-    use crate::{run_realtime_output, Manifest, Store};
     use mav_model::error::codes;
-    use mav_model::ids::{DeviceId, MetadataId};
-    use mav_model::raw::RawSample;
-    use mav_model::stream::StreamKind;
-    use mav_model::time::{DeviceTime, WallTime};
+    use mav_model::time::WallTime;
     use mav_model::version::Version;
-    use mav_obs::stage::Stage;
-    use mav_obs::tap::{Tap, TapEvent};
-    use std::path::PathBuf;
-
-    struct SilentTap;
-
-    impl Tap for SilentTap {
-        fn on_stage(&self, _stage: Stage, _event: TapEvent) {}
-    }
-
-    fn utc() -> Timezone {
-        Timezone::fixed("UTC", 0)
-    }
 
     fn day(index: i64) -> LocalDay {
         LocalDay::from_index(index)
@@ -364,111 +315,6 @@ mod tests {
         assert_eq!(days.days(), &[day(20_284), day(20_285), day(20_290)]);
     }
 
-    fn config() -> HistoricalConfig {
-        let template = |opcode| CommandTemplate {
-            opcode,
-            b3: None,
-            payload: vec![0x00],
-        };
-        HistoricalConfig {
-            get_data_range: template(34),
-            send_historical: template(22),
-            acknowledge: template(23),
-            max_retries: 1,
-            max_ack_payload_bytes: 64,
-        }
-    }
-
-    fn drive_through_one_burst(controller: &mut HistoricalController) {
-        let range = controller
-            .step(HistoricalEvent::Start, &SilentTap)
-            .unwrap()
-            .commands
-            .remove(0);
-        let send = controller
-            .step(
-                HistoricalEvent::Response {
-                    to_opcode: range.opcode,
-                    origin_seq: range.seq,
-                    result: ResponseResult::Ok,
-                },
-                &SilentTap,
-            )
-            .unwrap()
-            .commands
-            .remove(0);
-        controller
-            .step(
-                HistoricalEvent::Response {
-                    to_opcode: send.opcode,
-                    origin_seq: send.seq,
-                    result: ResponseResult::Ok,
-                },
-                &SilentTap,
-            )
-            .unwrap();
-        controller
-            .step(HistoricalEvent::BurstStarted, &SilentTap)
-            .unwrap();
-        controller
-            .step(
-                HistoricalEvent::BurstEnded {
-                    ack_payload: vec![0x01],
-                    record_count: 1,
-                },
-                &SilentTap,
-            )
-            .unwrap();
-        controller
-            .step(HistoricalEvent::BurstPersisted, &SilentTap)
-            .unwrap();
-    }
-
-    fn persisted_receipt(store: &Store) -> crate::burst::BurstReceipt {
-        let mut burst = HistoricalBurst::begin(DeviceId::new(1), MetadataId::new(1));
-        burst.push(vec![RawSample {
-            kind: StreamKind::HeartRate,
-            device_time: DeviceTime::from_nanos(1_752_624_001 * 1_000_000_000),
-            seq: 0,
-            value: mav_model::raw::RawValue::U16(61),
-        }]);
-        burst
-            .persist(
-                WallTime::from_unix_seconds(1_752_624_100),
-                &utc(),
-                store,
-                &SilentTap,
-            )
-            .unwrap()
-    }
-
-    #[test]
-    fn a_completed_sync_emits_the_exact_affected_days() {
-        let store = Store::open_in_memory().unwrap();
-        let mut controller = HistoricalController::new(config());
-        let mut sync = SyncDays::new();
-        drive_through_one_burst(&mut controller);
-        sync.absorb(&persisted_receipt(&store));
-        controller
-            .step(HistoricalEvent::HistoryComplete, &SilentTap)
-            .unwrap();
-        let trigger = sync.completion_trigger(controller.state()).unwrap();
-        assert_eq!(trigger.days.iso(), vec!["2025-07-16"]);
-    }
-
-    #[test]
-    fn an_interrupted_sync_emits_no_completion_trigger() {
-        let store = Store::open_in_memory().unwrap();
-        let mut controller = HistoricalController::new(config());
-        let mut sync = SyncDays::new();
-        drive_through_one_burst(&mut controller);
-        sync.absorb(&persisted_receipt(&store));
-        controller
-            .step(HistoricalEvent::Disconnect, &SilentTap)
-            .unwrap();
-        assert!(sync.completion_trigger(controller.state()).is_none());
-    }
-
     fn key(metric: &str, first: i64, last: i64) -> CacheKey {
         CacheKey {
             metric: metric.to_owned(),
@@ -498,41 +344,27 @@ mod tests {
         assert_eq!(cache.len(), 2);
     }
 
-    fn fixture(name: &str) -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../fixtures/replay")
-            .join(name)
-    }
-
     #[test]
-    fn a_recompute_after_invalidation_reproduces_identical_analytics() {
-        let manifest = Manifest::from_json(
-            &std::fs::read_to_string(fixture("realtime_rr_prv_v2.manifest.json")).unwrap(),
-        )
-        .unwrap();
-        let capture = crate::Capture::from_json(
-            &std::fs::read_to_string(fixture("realtime_rr_prv_v2.capture.json")).unwrap(),
-        )
-        .unwrap();
-        let run = |store: &Store| {
-            run_realtime_output(&manifest, &capture, store, &SilentTap)
-                .unwrap()
-                .analytics
-                .canonical_hash()
-                .unwrap()
+    fn a_recompute_after_invalidation_reproduces_identical_value() {
+        let inputs = [800_u64, 800, 850, 790, 900];
+        let run = || {
+            inputs
+                .windows(2)
+                .map(|pair| pair[0].abs_diff(pair[1]))
+                .sum::<u64>()
         };
-
         let mut cache = RecomputeCache::new();
-        let window = key(mav_analytic::HRV_ALGORITHM, 20_284, 20_284);
-        let first = run(&Store::open_in_memory().unwrap());
-        cache.put(window.clone(), first.clone());
+        let window = key("time_domain_interval_variability", 20_284, 20_284);
+        let first = run();
+        assert_eq!(first, 220);
+        cache.put(window.clone(), first);
 
         let mut dirtied = AffectedDays::default();
         dirtied.insert(day(20_284));
         let evicted = cache.invalidate(&dirtied);
         assert_eq!(evicted, vec![window.clone()]);
 
-        let recomputed = run(&Store::open_in_memory().unwrap());
+        let recomputed = run();
         assert_eq!(recomputed, first);
         cache.put(window.clone(), recomputed);
         assert_eq!(cache.get(&window), Some(&first));

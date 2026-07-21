@@ -18,9 +18,21 @@ TOKENS = (
     "DECODE_CODEC_UNAVAILABLE",
     "DECODE_NO_MANIFEST_FOR_MODEL",
     "DECODE_UNKNOWN_RECORD_VERSION",
+    "WhoopConnectionService",
+    "WhoopBleClient",
+    "WhoopRepository",
+    "WhoopStore",
+    "RealtimeProcessor",
+    "HandshakeConfig",
+    "HistoricalController",
+    "run_realtime_json",
+    "SNAPSHOT_SCHEMA",
+    "connector-manifest/v1",
+    "SampleAdmission",
 )
-def main() -> int:
-    root = Path(__file__).resolve().parent.parent
+
+
+def architecture_failures(root: Path) -> list[str]:
     failures: list[str] = []
     connector_dir = root / "core" / "connectors"
     if connector_dir.exists() and any(connector_dir.rglob("Cargo.toml")):
@@ -30,10 +42,19 @@ def main() -> int:
         root / "core" / "Cargo.toml",
         root / "core" / "crates",
         root / "tools" / "check_deps.py",
+        root / "apps" / "android" / "app" / "src" / "main",
+        root / "apps" / "android" / "app" / "build.gradle.kts",
+        root / "apps" / "android" / "build.gradle.kts",
+        root / "apps" / "android" / "settings.gradle.kts",
+        root / "apps" / "ios" / "Maverick",
+        root / "apps" / "ios" / "project.yml",
+        root / "apps" / "ios" / "Maverick.xcodeproj" / "project.pbxproj",
     ]
     for candidate in roots:
+        if not candidate.exists():
+            continue
         files = [candidate] if candidate.is_file() else candidate.rglob("*")
-        for path in files:
+        for path in sorted(files):
             if not path.is_file() or "target" in path.parts:
                 continue
             try:
@@ -43,6 +64,12 @@ def main() -> int:
             for token in TOKENS:
                 if token in text:
                     failures.append(f"{path.relative_to(root)} contains {token}")
+    return sorted(failures)
+
+
+def main() -> int:
+    root = Path(__file__).resolve().parent.parent
+    failures = architecture_failures(root)
 
     if failures:
         print("bundled connector architecture remains:")

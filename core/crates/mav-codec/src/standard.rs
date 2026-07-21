@@ -1,7 +1,6 @@
-//! Admitted decoders for Bluetooth SIG standard profiles (PL-P8). Like the historical record
-//! decoders in `records`, each profile is a reviewed module the manifest can only name — the
-//! layouts carry flag-driven offsets the manifest DSL cannot express. Every offset here comes
-//! from the published SIG specification, not a capture; fixtures/standard/README.md names it.
+//! Admitted decoders for Bluetooth SIG standard profiles (PL-P8). Each profile is a reviewed
+//! module whose flag-driven offsets come from the published SIG specification, not a capture;
+//! fixtures/standard/README.md names it.
 //!
 //! Standard characteristics carry no device clock, so samples leave here with a zero device time
 //! and a session-monotonic sequence; the pipeline stamps the capture wall on them (the honest
@@ -12,7 +11,7 @@ use mav_model::raw::{RawSample, RawValue};
 use mav_model::stream::StreamKind;
 use mav_model::time::DeviceTime;
 
-/// The standard profiles this build decodes. A manifest naming anything else fails validation.
+/// The standard profiles this build decodes. Any other selector fails validation.
 pub const ADMITTED_PROFILES: &[&str] = &["heart_rate"];
 
 /// Decode one notification value of the named standard profile. `seq` is the session-monotonic

@@ -250,7 +250,7 @@ instance after one bounded cancellation; a hostile cancellation failure is journ
 drop.
 
 Generated Swift and Kotlin checks pin the management methods plus both transport enums in CI. The
-legacy manifest/compiled-codec method remains named as migration-only until WC-P12.
+legacy manifest and compiled-codec binding surface was deleted in WC-P12.
 
 ## Errors, deadlines, and cancellation
 

@@ -16,7 +16,7 @@ The work is done by a swarm of AI coding agents steered by one human. That fact 
 
 We do not yet have any straps. A WHOOP 4.0 and a 5.0/MG are on order. Until they arrive, nobody on this project can hold a real device against real code, which means every protocol fact we work from is inferred: read out of two surveyed codebases, cross-checked against captured byte sequences, and reasoned about, but never once confirmed by watching a physical strap on a physical wrist produce the bytes we claim it produces.
 
-This shapes the whole approach. Everything on the protocol side must be buildable and testable from captured fixtures and code-inferred facts. The primary tool is `mav-replay`, which feeds a capture file through the full pipeline and dumps every stage boundary to JSON, so an agent can develop and test a decoder without a radio in the room. The BLE state machine is pure Rust driven by injected events, so it is unit-testable without CoreBluetooth. Only the thin native transport shim that actually talks to the radio stays untested until a strap is in hand.
+This shapes the whole approach. Everything on the protocol side must be buildable and testable from captured fixtures and code-inferred facts. The primary tool is `mav-replay`, which verifies a signed `.mavconn` and runs its embedded event/action fixtures through the production interpreter. Connector state machines also run natively against the same cases. Only the generic native transport shim that actually talks to the radio stays untested until a strap is in hand.
 
 Every protocol fact carries a confidence tag, and those tags are load-bearing. `docs/protocol/whoop.md` is the ledger, and it uses five tags:
 
@@ -40,7 +40,7 @@ The Rust core with UniFFI bindings, both platforms always, is kept. Vertical-sli
 
 ### What we change, and why
 
-**1. No event buses. A synchronous typed pipeline instead.** The prior plan wired the system together with six publish/subscribe buses. We reject that. Pub/sub hides call order: you cannot read the code and know what runs when, replay stops being deterministic, and debugging becomes a matter of guessing which subscriber fired. That is precisely the environment in which an agent swarm produces spaghetti, because each agent adds a publisher or a subscriber that looks locally reasonable and the global behaviour drifts. In its place every stage is an ordinary function with the shape `fn run(input: StageIn, ctx: &mut StageCtx) -> Result<StageOut, MavError>`. The types at every stage boundary are frozen in `mav-model`. You get the same inspectability a bus was supposed to give you from a `Tap` trait that is invoked at each boundary, but the call graph stays deterministic and readable. Async lives in exactly one place: a single bounded channel from the native BLE layer into the entry of the pipeline.
+**1. No event buses. A synchronous typed pipeline instead.** The prior plan wired the system together with six publish/subscribe buses. We reject that. Pub/sub hides call order: you cannot read the code and know what runs when, replay stops being deterministic, and debugging becomes a matter of guessing which subscriber fired. That is precisely the environment in which an agent swarm produces spaghetti, because each agent adds a publisher or a subscriber that looks locally reasonable and the global behaviour drifts. In its place every stage is an ordinary typed call. The connector boundary is a frozen event/action ABI and downstream health stages use frozen `mav-model` types. You get the same inspectability a bus was supposed to give you from taps and trace hashes, but the call graph stays deterministic and readable. Async lives only at native transport completion; normalized results re-enter the synchronous host.
 
 **2. No forty algorithms up front. A fixture-admission rule instead.** The earlier work accreted around forty analytic engines, many of them speculative, whose tests proved only that the Swift and Kotlin versions agreed with each other. An algorithm lands in Maverick only when it has one of two things: a golden fixture derived from a real capture or a published reference implementation, or property and invariant tests that can genuinely fail. Anything without one of those stays an explicit stub, and capability negotiation reports it as unavailable rather than pretending it works. This kills speculative code before it is written and kills the always-green test that asserts nothing, which was the most common defect in both surveyed codebases. A parity test that shows two platforms agree is necessary but not sufficient: two platforms can be consistently wrong. A number is validated only against ground truth or a published reference; otherwise it is merely consistent, and it must be labelled provisional.
 
@@ -96,7 +96,7 @@ maverick/
     crates/
       mav-model/       frozen types: ids, time, streams, samples, quality, errors, versions
       mav-frame/       CRC 8/16/32, the reassembler, the TypedReader
-      mav-codec/       current decode/manifest layer; migrated to normalized admission by WC
+      mav-codec/       explicitly admitted open Bluetooth SIG profile decoders
       mav-timeline/    ordering, dedup, clock correction, historical merge
       mav-sqi/         signal quality scoring
       mav-feature/     primitive, derived, and aggregate features
@@ -105,7 +105,7 @@ maverick/
       mav-obs/         tracing setup, the Tap trait, the report bundle
       mav-engine/      orchestration: triggers, the task graph, caching
       mav-ffi/         the UniFFI facade both apps link
-      mav-replay/      binary: run a capture file through the pipeline, for hardware-free dev
+      mav-replay/      binary: execute signed connector fixtures through production Wasm
   connectors/             development-only fixtures; connector source and releases live in the
                           separate maverick-connectors repo (ADR-017)
   fixtures/            golden fixtures, versioned; README explains naming and the rules
@@ -128,10 +128,10 @@ The dependency edges between crates are not a free-for-all. They are written dow
 Data moves through a fixed sequence of stages. Each stage is a synchronous function with frozen input and output types, and each writes to the `Tap` at its boundary so the whole run can be observed without changing behaviour. The order is the order; there is no bus deciding it at runtime.
 
 ```
-native BLE bytes
-  -> Acquisition   state machine plus transport: reassembly, CRC, decrypt, command matching
-  -> Frames        validated frames; every rejected fragment logged with a reason code
-  -> Decode        manifest field layouts plus codec: Frame -> RawSample batches
+native transport results
+  -> Acquisition   execute bounded generic actions; return correlated normalized events
+  -> Connector     signed Wasm owns framing, decode, retries, history, and private state
+  -> Admission     validate declared sample streams/units and build RawSample batches
   -> SQI           raw signals scored before normalisation: value plus quality plus reason
   -> Timeline      order, dedup, clock-correct, merge historical; never interpolate, never
                    mutate a raw timestamp (corrections are stored as mappings, not edits)
@@ -142,7 +142,7 @@ native BLE bytes
   -> Snapshots     immutable read models the UI queries over FFI
 ```
 
-Acquisition is a state machine with these states: Disconnected, Scanning, Connecting, Authenticating, Configuring, Streaming, HistoricalSync, Idle. Every transition is logged. The command layer matches requests to responses by sequence number, times out, and retries a bounded number of times (three attempts, exponential backoff). Because the machine is pure Rust fed by injected events, the whole of it is testable without a radio.
+Each connector owns its device-specific lifecycle, commands, framing, retry policy, and historical cursor. Core validates signed declarations, assigns host operation/deadline ids, bounds queues and resources, and commits emitted samples before allowing a later acknowledgement write to execute. Native shells only execute generic Bluetooth actions and return normalized results.
 
 The timeline stage has one rule that history taught us the hard way, and it is written into `pipeline.md` as an invariant test: two equal RR intervals in the same second are two distinct heartbeats, not one. If the dedup key is `(device, timestamp, rr_ms)` it silently collapses them into one beat, which removes a zero-difference interval and biases RMSSD and HRV high at rest and during sleep. The key must include a per-second sequence tiebreaker, giving `(device, timestamp, rr_ms, seq)`. This is the exact fix that landed as a patch in the surveyed lineage, and it is one line in the schema that changes a resting HRV number by a noticeable margin, so it gets its own failing test in `mav-timeline` before the dedup code is written.
 

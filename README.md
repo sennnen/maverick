@@ -1,8 +1,8 @@
 # Maverick
 
 Maverick (mav for short) is a wearable-data platform for iOS and Android that keeps your
-data on your phone. A BLE strap streams to the device, the phone decodes the raw frames and
-computes everything from them, and none of it is sent anywhere. There is no account, no
+data on your phone. A BLE strap streams to the device, a signed local connector decodes its raw
+frames, the shared core computes everything from them, and none of it is sent anywhere. There is no account, no
 server, and no cloud copy of your heart rate. The first straps it targets are the WHOOP 4.0
 and the WHOOP 5.0/MG (those last two share a wire format; the 4.0 has its own).
 
@@ -26,12 +26,11 @@ There is no app to install today.
 ## How the repository fits together
 
 The Rust workspace under `core/` is a set of small crates, each owning one job: frozen shared
-types, frame handling, device decoding, the timeline, signal quality, features, analytics,
+types, connector verification/execution, the timeline, signal quality, features, analytics,
 storage, observability, orchestration, the FFI facade, and replay without a radio. Device support
-is migrating to signed, runtime-loaded WebAssembly connectors: one `.mavconn` file runs through the
-same Rust interpreter on iOS, Android, replay, and tests without rebuilding Maverick. Current code
-still contains the audited compiled WHOOP path while
-[the migration plan](docs/plans/active/wasm-connectors.md) replaces and deletes it. Everything an
+uses signed, runtime-loaded WebAssembly connectors: one `.mavconn` file runs through the same Rust
+interpreter on iOS, Android, replay, and tests without rebuilding Maverick. The compiled WHOOP path
+has been deleted; [the migration record](docs/plans/active/wasm-connectors.md) preserves its proof. Everything an
 agent or contributor needs is under `docs/`, the system of record. `CLAUDE.md` (and identical
 `AGENTS.md`) is the short map.
 
@@ -45,8 +44,8 @@ You need a Rust toolchain; the version is pinned in `rust-toolchain.toml`. From 
 
 The same three commands, plus the documentation and dependency checks in `tools/`, are what
 CI runs on every change. The BLE transport itself needs a phone and a strap and so is not
-covered by these, but the state machine that drives it is pure Rust and is tested through
-captured events, so most of the protocol logic is reachable from `cargo test` alone.
+covered by these, but each connector state machine runs natively and under the production Wasm
+interpreter against captured fixtures, so most protocol logic is reachable from `cargo test` alone.
 
 ## Where to start reading
 

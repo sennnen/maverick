@@ -11,8 +11,7 @@ const MAX_LINEAR_MEMORY_BYTES: u64 = 4 * 1024 * 1024;
 #[test]
 fn signed_whoop_artifacts_reproduce_frozen_parity_reports_within_mobile_budgets() {
     for family in ["whoop4", "whoop5"] {
-        let public_key =
-            "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd";
+        let public_key = "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd";
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..");
         let artifact = fs::read(root.join(format!("fixtures/connectors/{family}_v1.mavconn")))
             .expect("signed connector fixture");

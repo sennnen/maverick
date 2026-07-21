@@ -108,13 +108,11 @@ Either is a real bug. The storage side of this guarantee is described in [storag
 
 ## Testing without a radio
 
-Neither prior codebase could CI-test its real BLE state machine, because the state machine was
-entangled with CoreBluetooth or the Android stack and needed hardware to drive it. Maverick's
-acquisition state machine is pure Rust, driven by injected events, and fed by capture replay
-through `mav-replay`. It is therefore unit-testable with no radio at all: a capture file exercises
-the same code the live device would, transitions and retries included. The only part that cannot be
-tested until the straps arrive is the thin native transport shim, and that is a deliberately small
-surface.
+Neither prior codebase could CI-test its real BLE state machine because it was entangled with
+CoreBluetooth or the Android stack. Maverick connector state machines consume injected normalized
+events and run both natively and through production Wasm. `mav-replay` verifies exact signed bytes
+and executes their embedded cases, including transitions, retries, history, restart, and malformed
+input. Only the generic native transport shim needs a phone and strap.
 
 ## CI gates
 

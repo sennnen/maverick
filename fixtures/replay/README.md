@@ -1,9 +1,10 @@
 # Replay fixtures
 
-A capture, a manifest, and the snapshot they produce for open-standard pipeline tests. Device
-protocol replay now consumes signed `.mavconn` artifacts from `fixtures/connectors/`.
+A capture, a retired manifest, and the snapshot the pre-Wasm pipeline produced. Device protocol
+replay now consumes signed `.mavconn` artifacts from `fixtures/connectors/`; no active test parses
+these manifests or capture envelopes.
 
-The live fixtures are the `_v2` set. The `_v1` files remain as the record of what they pinned
+The `_v2` files were the last compiled-path set. The `_v1` files remain as the record of what they pinned
 (fixtures are never edited or deleted, per skills/golden-fixtures), but they are superseded: their
 realtime layouts counted offsets from the full frame, and the `[WRS]` real captures pinned the
 inner-relative positions (timestamp at payload 2, HR at 8, RR count at 9 — identical on both
