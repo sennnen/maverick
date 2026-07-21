@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: in progress. WC-P0 through WC-P14 are complete; WC-P15 is next.
+Status: in progress. WC-P0 through WC-P15 are complete; WC-P16 is next.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -410,7 +410,7 @@ pass with JDK 17.
 
 ## Packet WC-P15: Add signed registry, publishing, rotation, and revocation flow
 
-Status: pending
+Status: complete.
 
 - **Repositories touched:** both.
 - **Likely files/modules:** registry schema/client in core, connector publish CLI/docs, signed test
@@ -431,6 +431,17 @@ Status: pending
 - **Risks:** stale revocation offline, key loss, registry rollback attacks.
 - **Frontend:** registry browsing UI separate future product packet; byte acquisition only here.
 - **Temporary compatibility:** none.
+
+Core now verifies a 1 MiB deterministic signed-index envelope with a registry root that cannot
+introduce publisher trust. Strict revision/predecessor chaining, fail-closed freshness, monotonic
+cached revocations, exact offline checkpoint restoration, old-publisher-cross-signed rotation,
+artifact manifest/digest binding, and channel/downgrade selection have typed errors and hostile
+tests. UniFFI exposes byte ingestion/restoration/artifact verification; Swift and Kotlin own bounded
+HTTPS and persist only public signed bytes/checkpoints. The companion repository freezes its schema,
+unsigned payload, public root, signature, index digest, two artifact entries, and a keyless two-phase
+publish wrapper. Both repository gates, Android unit/lint/debug/release builds, generated binding
+parse, Rust tests/fmt/clippy/docs/dependencies, and exact artifact vectors pass. Full Swift typecheck
+remains environment-blocked by the installed Command Line Tools SDK/compiler version mismatch.
 
 ## Packet WC-P16: Whole-application cleanup, bug fix, and final proof
 

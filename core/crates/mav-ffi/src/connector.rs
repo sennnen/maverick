@@ -1,7 +1,8 @@
 use crate::FfiError;
 use mav_connector_abi::{CancelReason, ConnectorLifecycle, EventBody, OperationId, TimerToken};
 use mav_connector_runtime::{
-    KeyScope, KeyStatus, PublisherKey, Revocation, RevocationSet, TrustPolicy,
+    KeyScope, KeyStatus, PublisherKey, RegistryCheckpoint, RegistryEntry, RegistryRoot,
+    RegistrySnapshot, Revocation, RevocationSet, TrustPolicy,
 };
 use mav_connector_store::{ConnectorSource, InstalledConnector, SourceKind};
 use mav_engine::{
@@ -72,6 +73,53 @@ pub struct ConnectorTrustRevocations {
     pub generated_at_ms: i64,
     pub valid_until_ms: i64,
     pub entries: Vec<ConnectorRevocationRecord>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct ConnectorRegistryRoot {
+    pub registry_id: String,
+    pub key_id: String,
+    pub public_key: Vec<u8>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct ConnectorRegistryEntry {
+    pub connector_id: String,
+    pub version: String,
+    pub artifact_sha256: Vec<u8>,
+    pub artifact_url: String,
+    pub artifact_size: u64,
+    pub publisher_key_id: String,
+    pub abi_major: u16,
+    pub abi_min_minor: u16,
+    pub abi_max_minor: u16,
+    pub core_min_version: String,
+    pub core_max_version: Option<String>,
+    pub channel: String,
+    pub supersedes: Option<String>,
+    pub revoked: bool,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct ConnectorRegistryCheckpoint {
+    pub registry_id: String,
+    pub revision: u64,
+    pub digest: Vec<u8>,
+    pub revocation_revision: u64,
+    pub revocations: Vec<ConnectorRevocationRecord>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct ConnectorRegistrySnapshot {
+    pub registry_id: String,
+    pub revision: u64,
+    pub generated_at_ms: i64,
+    pub valid_until_ms: i64,
+    pub digest: Vec<u8>,
+    pub entries: Vec<ConnectorRegistryEntry>,
+    pub trust: ConnectorTrustPolicy,
+    pub revocations: ConnectorTrustRevocations,
+    pub checkpoint: ConnectorRegistryCheckpoint,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -369,6 +417,173 @@ pub(crate) fn revocations_from_ffi(value: ConnectorTrustRevocations) -> Revocati
             .entries
             .into_iter()
             .map(|entry| Revocation {
+                publisher_key_id: entry.publisher_key_id,
+                revoked_at_ms: entry.revoked_at_ms,
+                reason: entry.reason,
+            })
+            .collect(),
+    }
+}
+
+pub(crate) fn registry_root_from_ffi(
+    value: ConnectorRegistryRoot,
+) -> Result<RegistryRoot, FfiError> {
+    Ok(RegistryRoot {
+        registry_id: value.registry_id,
+        key_id: value.key_id,
+        public_key: digest(&value.public_key, "connector registry root public key")?,
+    })
+}
+
+pub(crate) fn registry_checkpoint_from_ffi(
+    value: ConnectorRegistryCheckpoint,
+) -> Result<RegistryCheckpoint, FfiError> {
+    Ok(RegistryCheckpoint {
+        registry_id: value.registry_id,
+        revision: value.revision,
+        digest: digest(&value.digest, "connector registry checkpoint digest")?,
+        revocation_revision: value.revocation_revision,
+        revocations: value
+            .revocations
+            .into_iter()
+            .map(|entry| mav_connector_runtime::RegistryRevocation {
+                publisher_key_id: entry.publisher_key_id,
+                revoked_at_ms: entry.revoked_at_ms,
+                reason: entry.reason,
+            })
+            .collect(),
+    })
+}
+
+pub(crate) fn registry_entry_from_ffi(
+    value: ConnectorRegistryEntry,
+) -> Result<RegistryEntry, FfiError> {
+    Ok(RegistryEntry {
+        connector_id: value.connector_id,
+        version: value.version,
+        artifact_sha256: digest(&value.artifact_sha256, "registry artifact digest")?,
+        artifact_url: value.artifact_url,
+        artifact_size: value.artifact_size,
+        publisher_key_id: value.publisher_key_id,
+        abi: mav_connector_runtime::RegistryAbiRange {
+            major: value.abi_major,
+            min_minor: value.abi_min_minor,
+            max_minor: value.abi_max_minor,
+        },
+        core: mav_connector_runtime::RegistryCoreRange {
+            min_version: value.core_min_version,
+            max_version: value.core_max_version,
+        },
+        channel: value.channel,
+        supersedes: value.supersedes,
+        revoked: value.revoked,
+    })
+}
+
+pub(crate) fn registry_snapshot_to_ffi(value: RegistrySnapshot) -> ConnectorRegistrySnapshot {
+    let checkpoint = value.checkpoint();
+    ConnectorRegistrySnapshot {
+        registry_id: value.index.registry_id,
+        revision: value.index.revision,
+        generated_at_ms: value.index.generated_at_ms,
+        valid_until_ms: value.index.valid_until_ms,
+        digest: value.digest.to_vec(),
+        entries: value
+            .index
+            .entries
+            .into_iter()
+            .map(registry_entry_to_ffi)
+            .collect(),
+        trust: policy_to_ffi(value.trust),
+        revocations: revocations_to_ffi(value.revocations),
+        checkpoint: ConnectorRegistryCheckpoint {
+            registry_id: checkpoint.registry_id,
+            revision: checkpoint.revision,
+            digest: checkpoint.digest.to_vec(),
+            revocation_revision: checkpoint.revocation_revision,
+            revocations: checkpoint
+                .revocations
+                .into_iter()
+                .map(|entry| ConnectorRevocationRecord {
+                    publisher_key_id: entry.publisher_key_id,
+                    revoked_at_ms: entry.revoked_at_ms,
+                    reason: entry.reason,
+                })
+                .collect(),
+        },
+    }
+}
+
+fn registry_entry_to_ffi(value: RegistryEntry) -> ConnectorRegistryEntry {
+    ConnectorRegistryEntry {
+        connector_id: value.connector_id,
+        version: value.version,
+        artifact_sha256: value.artifact_sha256.to_vec(),
+        artifact_url: value.artifact_url,
+        artifact_size: value.artifact_size,
+        publisher_key_id: value.publisher_key_id,
+        abi_major: value.abi.major,
+        abi_min_minor: value.abi.min_minor,
+        abi_max_minor: value.abi.max_minor,
+        core_min_version: value.core.min_version,
+        core_max_version: value.core.max_version,
+        channel: value.channel,
+        supersedes: value.supersedes,
+        revoked: value.revoked,
+    }
+}
+
+fn policy_to_ffi(value: TrustPolicy) -> ConnectorTrustPolicy {
+    ConnectorTrustPolicy {
+        revision: value.revision,
+        allow_third_party: value.allow_third_party,
+        allow_development: value.allow_development,
+        keys: value
+            .keys
+            .into_iter()
+            .map(|key| {
+                let (status, status_at_ms, status_detail) = match key.status {
+                    KeyStatus::Active => (ConnectorKeyStatus::Active, None, None),
+                    KeyStatus::Revoked { at_ms, reason } => {
+                        (ConnectorKeyStatus::Revoked, Some(at_ms), Some(reason))
+                    }
+                    KeyStatus::Rotated {
+                        at_ms,
+                        replacement_id,
+                    } => (
+                        ConnectorKeyStatus::Rotated,
+                        Some(at_ms),
+                        Some(replacement_id),
+                    ),
+                };
+                ConnectorPublisherKey {
+                    id: key.id,
+                    public_key: key.public_key.to_vec(),
+                    scope: match key.scope {
+                        KeyScope::Official => ConnectorKeyScope::Official,
+                        KeyScope::ThirdParty => ConnectorKeyScope::ThirdParty,
+                        KeyScope::Development => ConnectorKeyScope::Development,
+                    },
+                    valid_from_ms: key.valid_from_ms,
+                    valid_until_ms: key.valid_until_ms,
+                    status,
+                    status_at_ms,
+                    status_detail,
+                }
+            })
+            .collect(),
+    }
+}
+
+fn revocations_to_ffi(value: RevocationSet) -> ConnectorTrustRevocations {
+    ConnectorTrustRevocations {
+        revision: value.revision,
+        generated_at_ms: value.generated_at_ms,
+        valid_until_ms: value.valid_until_ms,
+        entries: value
+            .entries
+            .into_iter()
+            .map(|entry| ConnectorRevocationRecord {
                 publisher_key_id: entry.publisher_key_id,
                 revoked_at_ms: entry.revoked_at_ms,
                 reason: entry.reason,

@@ -31,6 +31,22 @@ final class ConnectorManagementTests: XCTestCase {
     }
   }
 
+  func testRegistryCachePreservesExactSignedBytesAndRevocations() throws {
+    let checkpoint = ConnectorRegistryCheckpoint(
+      registryId: "org.example.registry",
+      revision: 3,
+      digest: Data(repeating: 7, count: 32),
+      revocationRevision: 2,
+      revocations: [ConnectorRevocationRecord(
+        publisherKeyId: "publisher-v1", revokedAtMs: 42, reason: "compromised")])
+    let cache = CachedConnectorRegistry(bytes: Data([0, 1, 255]), checkpoint: checkpoint)
+    let restored = try JSONDecoder().decode(
+      CachedConnectorRegistry.self, from: JSONEncoder().encode(cache))
+    XCTAssertEqual(restored.bytes, Data([0, 1, 255]))
+    XCTAssertEqual(restored.checkpoint.digest, checkpoint.digest)
+    XCTAssertEqual(restored.checkpoint.revocations.first?.reason, "compromised")
+  }
+
   func testApprovalCannotRunBeforeInspectionAndCancelClearsPendingBytes() {
     var machine = ConnectorApprovalMachine()
     XCTAssertThrowsError(try machine.beginApproval())

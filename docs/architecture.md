@@ -81,8 +81,8 @@ remaining dependent actions. This preserves append-before-ack without encoding W
 | `mav-frame` | Generic byte/frame primitives usable by host and SDK tests |
 | `mav-connector-abi` | Frozen no-device event, action, artifact metadata, and ABI wire types |
 | `mav-connector-sdk` | Public guest exports, allocation glue, bounded builders, metadata, and native harness |
-| `mav-connector-runtime` | `.mavconn` parser, verifier, interpreter adapter, limits, instance lifecycle |
-| `mav-connector-tool` | Deterministic pack, inspect, trust/export validation, and executable fixture CLIs |
+| `mav-connector-runtime` | `.mavconn` and signed-registry parsers/verifiers, interpreter adapter, limits, instance lifecycle |
+| `mav-connector-tool` | Deterministic pack, inspect, trust/export/registry validation, and executable fixture CLIs |
 | `mav-connector-store` | Install records, trust records, connector-scoped state, activation and rollback transactions |
 | `mav-codec` | Normalized sample admission and any open-standard profiles retained by explicit ADR; no loadable-device registry |
 | `mav-timeline` | Ordering, deduplication, clock correction, canonical merge |
@@ -117,6 +117,8 @@ stage crates    mav-connector-runtime <- mav-connector-store
 developer tool depends on ABI plus runtime so its checks cannot drift from the host. Runtime depends
 only on the ABI and `mav-model` error vocabulary inside Maverick. Runtime cannot depend on a device,
 frontend, analytics, tool, SDK, or native BLE API.
+Registry parsing adds deterministic JSON over the accepted SHA-256 and Ed25519 stack; runtime has
+no DNS, HTTP, filesystem, or platform API.
 The connector store depends only on runtime inspection/trust, the ABI records those reports expose,
 and `mav-model` errors. It owns a separate forward schema inside the install database; it cannot
 depend on engine, native transport, analytics, a device crate, or the evidence store.

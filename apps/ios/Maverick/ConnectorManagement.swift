@@ -184,6 +184,7 @@ struct ConnectorReleasePolicy {
   let remoteImportEnabled: Bool
   let trust: ConnectorTrustPolicy
   let revocations: ConnectorTrustRevocations
+  let registry: ConnectorRegistryConfiguration?
 
   static func current(bundle: Bundle = .main, nowMs: Int64) -> ConnectorReleasePolicy {
     let dictionaries = bundle.object(forInfoDictionaryKey: "MAVOfficialPublisherKeys")
@@ -206,6 +207,21 @@ struct ConnectorReleasePolicy {
         statusDetail: nil
       )
     }
+    let registry = (bundle.object(forInfoDictionaryKey: "MAVConnectorRegistry") as? [String: Any])
+      .flatMap { value -> ConnectorRegistryConfiguration? in
+        guard
+          let registryID = value["id"] as? String,
+          let keyID = value["rootKeyId"] as? String,
+          let encoded = value["rootPublicKeyBase64"] as? String,
+          let publicKey = Data(base64Encoded: encoded), publicKey.count == 32,
+          let rawURL = value["url"] as? String,
+          let url = URL(string: rawURL), url.scheme?.lowercased() == "https"
+        else { return nil }
+        return ConnectorRegistryConfiguration(
+          url: url,
+          root: ConnectorRegistryRoot(
+            registryId: registryID, keyId: keyID, publicKey: publicKey))
+      }
     return ConnectorReleasePolicy(
       managerEnabled: bundle.object(forInfoDictionaryKey: "MAVConnectorManagerEnabled") as? Bool ?? false,
       remoteImportEnabled: bundle.object(forInfoDictionaryKey: "MAVAllowRemoteConnectorImport") as? Bool ?? false,
@@ -217,11 +233,56 @@ struct ConnectorReleasePolicy {
       ),
       revocations: ConnectorTrustRevocations(
         revision: 0,
-        generatedAtMs: 0,
-        validUntilMs: nowMs + 31_536_000_000,
+        generatedAtMs: registry == nil ? 0 : 1,
+        validUntilMs: registry == nil ? nowMs + 31_536_000_000 : 0,
         entries: []
-      )
+      ),
+      registry: registry
     )
+  }
+}
+
+struct ConnectorRegistryConfiguration {
+  let url: URL
+  let root: ConnectorRegistryRoot
+}
+
+struct CachedRegistryRevocation: Codable {
+  let publisherKeyID: String
+  let revokedAtMs: Int64
+  let reason: String
+}
+
+struct CachedConnectorRegistry: Codable {
+  let bytes: Data
+  let registryID: String
+  let revision: UInt64
+  let digest: Data
+  let revocationRevision: UInt64
+  let revocations: [CachedRegistryRevocation]
+
+  init(bytes: Data, checkpoint: ConnectorRegistryCheckpoint) {
+    self.bytes = bytes
+    registryID = checkpoint.registryId
+    revision = checkpoint.revision
+    digest = checkpoint.digest
+    revocationRevision = checkpoint.revocationRevision
+    revocations = checkpoint.revocations.map {
+      CachedRegistryRevocation(
+        publisherKeyID: $0.publisherKeyId, revokedAtMs: $0.revokedAtMs, reason: $0.reason)
+    }
+  }
+
+  var checkpoint: ConnectorRegistryCheckpoint {
+    ConnectorRegistryCheckpoint(
+      registryId: registryID,
+      revision: revision,
+      digest: digest,
+      revocationRevision: revocationRevision,
+      revocations: revocations.map {
+        ConnectorRevocationRecord(
+          publisherKeyId: $0.publisherKeyID, revokedAtMs: $0.revokedAtMs, reason: $0.reason)
+      })
   }
 }
 
@@ -229,6 +290,7 @@ struct ConnectorReleasePolicy {
 final class ConnectorManager: ObservableObject {
   @Published private(set) var machine = ConnectorApprovalMachine()
   @Published private(set) var installed: [InstalledConnectorRecord] = []
+  @Published private(set) var registryEntries: [ConnectorRegistryEntry] = []
 
   private let worker: ConnectorRuntimeWorker
   private var inspection: ConnectorInspection?
@@ -236,14 +298,71 @@ final class ConnectorManager: ObservableObject {
   private lazy var bluetooth = MavBluetoothExecutor { [weak self] event in
     self?.applyTransportEvent(event)
   }
-  let releasePolicy: ConnectorReleasePolicy
+  private(set) var releasePolicy: ConnectorReleasePolicy
+  private var registryCheckpoint: ConnectorRegistryCheckpoint?
+  private let registryCacheKey = "mav.connector-registry.cache.v1"
 
   init() {
     let now = Self.nowMs
     releasePolicy = .current(nowMs: now)
     worker = ConnectorRuntimeWorker(config: MavStore.runtimeConfig())
+    if !restoreRegistryIfAvailable() { refreshRegistry() }
     refreshInstalled()
     DispatchQueue.main.async { [weak self] in self?.resumeIfNeeded() }
+  }
+
+  func refreshRegistry() {
+    guard let configuration = releasePolicy.registry else { return }
+    Task {
+      do {
+        let bytes = try await Self.download(
+          configuration.url, maximumBytes: 1_024 * 1_024)
+        worker.ingestRegistry(
+          bytes: bytes,
+          root: configuration.root,
+          previous: registryCheckpoint,
+          policy: releasePolicy.trust
+        ) { [weak self] result in
+          Task { @MainActor in
+            guard let self else { return }
+            switch result {
+            case let .success(snapshot): self.applyRegistry(snapshot, bytes: bytes)
+            case let .failure(error): self.machine.fail(Self.message(error))
+            }
+          }
+        }
+      } catch { machine.fail(Self.message(error)) }
+    }
+  }
+
+  func importRegistryEntry(_ entry: ConnectorRegistryEntry) {
+    guard releasePolicy.remoteImportEnabled, !entry.revoked,
+      let url = URL(string: entry.artifactUrl), url.scheme?.lowercased() == "https"
+    else {
+      machine.fail("This registry connector is not available for remote import.")
+      return
+    }
+    Task {
+      do {
+        let bytes = try await Self.download(url, maximumBytes: ConnectorAcquisition.maximumBytes)
+        worker.verifyRegistryArtifact(entry: entry, bytes: bytes) { [weak self] result in
+          Task { @MainActor in
+            guard let self else { return }
+            switch result {
+            case .success:
+              do {
+                self.inspect(try ConnectorAcquisition.make(
+                  bytes: bytes,
+                  origin: .remote,
+                  displayName: "\(entry.connectorId)-\(entry.version).mavconn",
+                  locator: entry.artifactUrl))
+              } catch { self.machine.fail(Self.message(error)) }
+            case let .failure(error): self.machine.fail(Self.message(error))
+            }
+          }
+        }
+      } catch { machine.fail(Self.message(error)) }
+    }
   }
 
   var phase: ConnectorApprovalMachine.Phase { machine.phase }
@@ -452,6 +571,69 @@ final class ConnectorManager: ObservableObject {
     }
   }
 
+  @discardableResult
+  private func restoreRegistryIfAvailable() -> Bool {
+    guard let configuration = releasePolicy.registry,
+      let encoded = UserDefaults.standard.data(forKey: registryCacheKey),
+      let cached = try? JSONDecoder().decode(CachedConnectorRegistry.self, from: encoded)
+    else { return false }
+    worker.restoreRegistry(
+      bytes: cached.bytes,
+      root: configuration.root,
+      checkpoint: cached.checkpoint,
+      policy: releasePolicy.trust
+    ) { [weak self] result in
+      Task { @MainActor in
+        guard let self else { return }
+        switch result {
+        case let .success(snapshot):
+          self.applyRegistry(snapshot, bytes: cached.bytes)
+          self.refreshRegistry()
+        case let .failure(error):
+          self.machine.fail(Self.message(error))
+          self.refreshRegistry()
+        }
+      }
+    }
+    return true
+  }
+
+  private func applyRegistry(_ snapshot: ConnectorRegistrySnapshot, bytes: Data) {
+    registryCheckpoint = snapshot.checkpoint
+    registryEntries = snapshot.entries
+    releasePolicy = ConnectorReleasePolicy(
+      managerEnabled: releasePolicy.managerEnabled,
+      remoteImportEnabled: releasePolicy.remoteImportEnabled,
+      trust: snapshot.trust,
+      revocations: snapshot.revocations,
+      registry: releasePolicy.registry)
+    if let encoded = try? JSONEncoder().encode(
+      CachedConnectorRegistry(bytes: bytes, checkpoint: snapshot.checkpoint))
+    {
+      UserDefaults.standard.set(encoded, forKey: registryCacheKey)
+    }
+  }
+
+  private static func download(_ url: URL, maximumBytes: Int) async throws -> Data {
+    var request = URLRequest(url: url)
+    request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+    request.timeoutInterval = 30
+    let (stream, response) = try await URLSession.shared.bytes(for: request)
+    guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+      throw ConnectorAcquisitionError.invalidResponse
+    }
+    if response.expectedContentLength > Int64(maximumBytes) {
+      throw ConnectorAcquisitionError.tooLarge
+    }
+    var bytes = Data()
+    for try await byte in stream {
+      guard bytes.count < maximumBytes else { throw ConnectorAcquisitionError.tooLarge }
+      bytes.append(byte)
+    }
+    guard !bytes.isEmpty else { throw ConnectorAcquisitionError.empty }
+    return bytes
+  }
+
   private func resumeIfNeeded() {
     guard let checkpoint = bluetooth.checkpoint else { return }
     worker.openSession(checkpoint: checkpoint, policy: releasePolicy) { [weak self] result in
@@ -518,6 +700,40 @@ private final class ConnectorRuntimeWorker: @unchecked Sendable {
         approvalTtlMs: 300_000
       )
     }
+  }
+
+  func ingestRegistry(
+    bytes: Data,
+    root: ConnectorRegistryRoot,
+    previous: ConnectorRegistryCheckpoint?,
+    policy: ConnectorTrustPolicy,
+    completion: @escaping @Sendable (Result<ConnectorRegistrySnapshot, Error>) -> Void
+  ) {
+    perform(completion) {
+      try $0.ingestConnectorRegistry(
+        bytes: bytes, root: root, previous: previous, policy: policy, nowMs: Self.nowMs)
+    }
+  }
+
+  func restoreRegistry(
+    bytes: Data,
+    root: ConnectorRegistryRoot,
+    checkpoint: ConnectorRegistryCheckpoint,
+    policy: ConnectorTrustPolicy,
+    completion: @escaping @Sendable (Result<ConnectorRegistrySnapshot, Error>) -> Void
+  ) {
+    perform(completion) {
+      try $0.restoreConnectorRegistry(
+        bytes: bytes, root: root, checkpoint: checkpoint, policy: policy, nowMs: Self.nowMs)
+    }
+  }
+
+  func verifyRegistryArtifact(
+    entry: ConnectorRegistryEntry,
+    bytes: Data,
+    completion: @escaping @Sendable (Result<Void, Error>) -> Void
+  ) {
+    perform(completion) { try $0.verifyConnectorRegistryArtifact(entry: entry, bytes: bytes) }
   }
 
   func install(

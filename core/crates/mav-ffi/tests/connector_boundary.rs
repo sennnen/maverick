@@ -1,12 +1,13 @@
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
+use ed25519_dalek::{Signer, SigningKey};
 use mav_ffi::{
     ConnectorApplyOutcome, ConnectorCancelReason, ConnectorInspection, ConnectorInstallRequest,
     ConnectorKeyScope, ConnectorKeyStatus, ConnectorLifecycleState, ConnectorPublisherKey,
-    ConnectorRemovalMode, ConnectorRevocationRecord, ConnectorSessionConfig, ConnectorSourceKind,
-    ConnectorSourceMetadata, ConnectorTransportEvent, ConnectorTransportRequest,
-    ConnectorTrustPolicy, ConnectorTrustRevocations, InstalledConnectorRecord, MavRuntime,
-    RuntimeConfig,
+    ConnectorRegistryRoot, ConnectorRemovalMode, ConnectorRevocationRecord, ConnectorSessionConfig,
+    ConnectorSourceKind, ConnectorSourceMetadata, ConnectorTransportEvent,
+    ConnectorTransportRequest, ConnectorTrustPolicy, ConnectorTrustRevocations,
+    InstalledConnectorRecord, MavRuntime, RuntimeConfig,
 };
 use sha2::{Digest, Sha256};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -159,6 +160,80 @@ fn platform_neutral_connector_boundary_types_exist() {
     let _ = std::mem::size_of::<InstalledConnectorRecord>();
     let _ = std::mem::size_of::<ConnectorTransportEvent>();
     let _ = std::mem::size_of::<ConnectorTransportRequest>();
+}
+
+#[test]
+fn signed_registry_ingestion_and_artifact_binding_cross_ffi() {
+    let (runtime, path) = runtime();
+    let root_key = SigningKey::from_bytes(&[71; 32]);
+    let artifact = common::signed_artifact("1.0.0", 1, true);
+    let index = mav_connector_runtime::RegistryIndex {
+        schema: "mavconn-registry-index/v1".to_owned(),
+        registry_id: "org.maverick.ffi".to_owned(),
+        revision: 1,
+        generated_at_ms: 9,
+        valid_until_ms: 100,
+        previous_index_sha256: None,
+        revocation_revision: 1,
+        entries: vec![mav_connector_runtime::RegistryEntry {
+            connector_id: CONNECTOR.to_owned(),
+            version: "1.0.0".to_owned(),
+            artifact_sha256: Sha256::digest(&artifact).into(),
+            artifact_url: "https://registry.example/ffi.mavconn".to_owned(),
+            artifact_size: artifact.len() as u64,
+            publisher_key_id: "store-test-key".to_owned(),
+            abi: mav_connector_runtime::RegistryAbiRange {
+                major: 1,
+                min_minor: 0,
+                max_minor: 0,
+            },
+            core: mav_connector_runtime::RegistryCoreRange {
+                min_version: "0.1.0".to_owned(),
+                max_version: None,
+            },
+            channel: "stable".to_owned(),
+            supersedes: None,
+            revoked: false,
+        }],
+        revocations: Vec::new(),
+        rotations: Vec::new(),
+    };
+    let signing_digest =
+        mav_connector_runtime::registry_signing_digest(&index).expect("registry digest");
+    let bytes = mav_connector_runtime::encode_signed_registry(
+        index,
+        "ffi-root-v1".to_owned(),
+        root_key.sign(&signing_digest).to_bytes(),
+    )
+    .expect("registry bytes");
+    let (policy, _) = trust(1);
+    let snapshot = runtime
+        .ingest_connector_registry(
+            bytes,
+            ConnectorRegistryRoot {
+                registry_id: "org.maverick.ffi".to_owned(),
+                key_id: "ffi-root-v1".to_owned(),
+                public_key: root_key.verifying_key().to_bytes().to_vec(),
+            },
+            None,
+            policy,
+            10,
+        )
+        .expect("verified registry");
+    assert_eq!(snapshot.revision, 1);
+    assert_eq!(snapshot.entries.len(), 1);
+    runtime
+        .verify_connector_registry_artifact(snapshot.entries[0].clone(), artifact)
+        .expect("registry artifact binding");
+    let error = runtime
+        .verify_connector_registry_artifact(snapshot.entries[0].clone(), b"wrong".to_vec())
+        .expect_err("wrong download rejected");
+    let mav_ffi::FfiError::Core { code, .. } = error;
+    assert_eq!(
+        code,
+        mav_model::error::codes::CONNECTOR_REGISTRY_ARTIFACT_MISMATCH
+    );
+    let _ = std::fs::remove_file(path);
 }
 
 #[test]

@@ -605,6 +605,8 @@ dependencies = [
  "mav-connector-abi",
  "mav-model",
  "minicbor",
+ "serde",
+ "serde_json",
  "sha2",
  "subtle",
  "wasmi",

@@ -123,6 +123,15 @@ fails the build.
 | 11049 | CONNECTOR_INSTALL_STATE_NAMESPACE | connector state is invalid, oversized, or outside the exact active namespace |
 | 11050 | CONNECTOR_INSTALL_MIGRATION | state migration failed or activation attempted to skip a required migration |
 | 11051 | CONNECTOR_INSTALL_STORAGE | connector lifecycle schema, query, transaction, or stored value is invalid |
+| 11052 | CONNECTOR_REGISTRY_OVERSIZED | a signed registry envelope or one of its bounded collections exceeds the accepted limit |
+| 11053 | CONNECTOR_REGISTRY_MALFORMED | registry JSON is noncanonical, structurally invalid, or contains invalid metadata |
+| 11054 | CONNECTOR_REGISTRY_SIGNATURE_INVALID | the configured registry root cannot verify the deterministic index digest |
+| 11055 | CONNECTOR_REGISTRY_STALE | a registry or revocation index is outside its signed freshness interval |
+| 11056 | CONNECTOR_REGISTRY_ROLLBACK | a registry revision or revocation revision was replayed or moved backward |
+| 11057 | CONNECTOR_REGISTRY_CHAIN_INVALID | a refreshed index does not name the exact previous signed-index digest |
+| 11058 | CONNECTOR_REGISTRY_ROTATION_INVALID | a publisher rotation is ambiguous or lacks a valid old-key cross-signature |
+| 11059 | CONNECTOR_REGISTRY_ARTIFACT_MISMATCH | downloaded connector bytes differ from the registry entry digest or size |
+| 11060 | CONNECTOR_REGISTRY_UPDATE_REJECTED | connector version, channel, supersedence, or downgrade policy rejects a registry update |
 
 Library code does not panic. `unwrap`, `expect`, and `panic!` are denied by the clippy
 configuration for library code and allowed in tests. An impossible state is an `Internal` error

@@ -2,8 +2,8 @@
 
 This document freezes target contracts selected by [ADR-017](adr/ADR-017.md) and records the
 implemented boundary as packets land. Artifact schemas, trust, the public SDK/toolchain, bounded
-Wasm execution, the core transport session, durable lifecycle storage, and the platform-neutral
-UniFFI boundary are implemented through WC-P7; frontend contracts remain targets. The ordered work lives in
+Wasm execution, the core transport session, durable lifecycle storage, platform-neutral UniFFI,
+mobile management, and signed registry ingestion are implemented through WC-P15. The ordered work lives in
 [plans/active/wasm-connectors.md](plans/active/wasm-connectors.md).
 
 ## Product invariants
@@ -294,7 +294,7 @@ signed Rust SDK template through the packaged fixture runner.
 
 ## Installation API
 
-Future shared-core API, exposed through UniFFI as byte/string records only:
+Current shared-core API, exposed through UniFFI as byte/string records only:
 
 ```text
 inspect_connector(bytes, source) -> InspectionReport
@@ -303,14 +303,16 @@ list_connectors() -> [InstalledConnector]
 activate_connector(connector_id, version) -> ActivationResult
 rollback_connector(connector_id) -> ActivationResult
 remove_connector(connector_id, remove_state) -> RemovalResult
-set_publisher_trust(key_id, decision) -> TrustResult
-refresh_revocations(bytes, source) -> RevocationResult
+enforce_connector_trust(policy, revocations) -> [disabled_connector_id]
+ingest_connector_registry(bytes, root, prior_checkpoint, policy) -> RegistrySnapshot
+restore_connector_registry(bytes, root, exact_checkpoint, policy) -> RegistrySnapshot
+verify_connector_registry_artifact(entry, bytes) -> Result
 ```
 
-`ConnectorSource` records `kind` (`url`, `local_file`, `share`, `registry`, `bundled_test`), sanitized
-locator/display label, acquired-at host time, optional expected digest, registry id, and provenance
-chain. Core never fetches the URL or opens the path. It receives bytes already acquired by native
-code. Reports include artifact hash, connector/publisher identity, capabilities, compatibility,
+`ConnectorSource` records a coarse `bundled`, `imported`, or `remote` kind plus sanitized display
+label and locator digest. Registry provenance is separately bound by its signed entry and exact
+checkpoint. Core never fetches a URL or opens a path; it receives native-acquired bytes. Reports
+include artifact hash, connector/publisher identity, capabilities, compatibility,
 signature/trust result, fixture results, requested limit profile, warnings, and an expiring approval
 token bound to exact bytes and policy revision.
 
@@ -378,7 +380,8 @@ Tooling provides:
 - `mavconn-validate`: identical host artifact, trust, import, export-name, and export-type validation;
 - `mavconn-test`: packaged fixture execution in fresh production-runtime instances with exact action
   and final-state-hash checks; the SDK `TestDriver` runs the same state scripts natively;
-- registry publish command: digest-addressed upload and signed index update.
+- `mavconn-registry`: deterministic signing-digest preparation, public-material finalization, and
+  signed-index verification; the companion keyless wrapper prepares digest-addressed releases.
 
 Automated architecture gates inspect Cargo edges, SDK dependency trees, Wasm imports/exports and
 features, custom-section determinism, repository stale names, generated FFI, and packaged artifact
@@ -398,6 +401,24 @@ version, artifact digest/URL/size, publisher key, ABI/core ranges, release chann
 and revocation status. Clients download bytes through native networking, then use normal inspect and
 install APIs. Direct URL and local imports remain first-class. Registry compromise cannot forge a
 publisher signature; publisher compromise is handled by revocation and rotation.
+
+The v1 envelope is deterministic compact JSON containing an `index` and `signature`. The index
+binds registry id, monotonic revision, freshness interval, exact prior signed-envelope SHA-256,
+monotonic revocation revision, bounded entries, revocations, and rotations. Ed25519 signs
+`SHA-256("mavconn-registry-index-v1\\0" || canonical-index-json)` with a configured registry root
+distinct from publisher and app-release keys. Limits are 1 MiB, 4,096 entries/revocations, 256
+rotations, and 4 MiB per HTTPS-addressed artifact.
+
+Core requires canonical bytes, exact root identity, a current freshness window, a strictly newer
+revision, and an exact predecessor digest. Cached revocations cannot disappear. Offline restoration
+requires exact signed bytes to match the persisted checkpoint; corruption, expiry, rollback,
+replay, or a fork fails closed. Native clients own bounded HTTPS and public-byte persistence.
+
+An entry never carries an authoritative publisher public key. A rotation may carry a new key only
+with a domain-separated cross-signature by the independently trusted old publisher key. Core then
+checks downloaded size/SHA-256 and runs ordinary publisher-signature inspection, approval, and
+installation. Channel selection and explicit downgrade policy use semantic versions. Direct URL,
+file, and share imports remain independent of registry availability.
 
 ## Platform policy
 
@@ -435,8 +456,9 @@ be regenerated.
   counsel evidence before iOS release; official-only/disabled remote activation is fallback policy.
 - CBOR/crypto/Wasm parser crates require dependency, maintenance, fuzz, and platform audits in owning
   packets before versions freeze.
-- Initial official publisher roots, offline revocation freshness, registry operator/hosting, and
-  recovery after publisher-key loss need operational evidence before WC-P15 ships.
+- Production official publisher roots and hosting remain release configuration, not source
+  defaults. WC-P15 freezes a public signed test vector, offline fail-closed freshness,
+  old-key-cross-signed rotation, and recovery mechanics without private material.
 - WHOOP manifest/reference conflicts, MG/deep-stream gating, gen4 temperature calibration, and
   hardware restoration remain confidence-tagged until traceable captures adjudicate them.
 - Component Model/WIT is not ABI v1 because current interpreter/tooling evidence is insufficient;

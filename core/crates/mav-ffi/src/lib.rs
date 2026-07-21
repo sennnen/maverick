@@ -124,6 +124,54 @@ impl MavRuntime {
         })
     }
 
+    pub fn ingest_connector_registry(
+        &self,
+        bytes: Vec<u8>,
+        root: ConnectorRegistryRoot,
+        previous: Option<ConnectorRegistryCheckpoint>,
+        policy: ConnectorTrustPolicy,
+        now_ms: i64,
+    ) -> Result<ConnectorRegistrySnapshot, FfiError> {
+        let root = connector::registry_root_from_ffi(root)?;
+        let previous = previous
+            .map(connector::registry_checkpoint_from_ffi)
+            .transpose()?;
+        let policy = connector::policy_from_ffi(policy)?;
+        let snapshot = mav_connector_runtime::ingest_registry(
+            &bytes,
+            &root,
+            previous.as_ref(),
+            &policy,
+            now_ms,
+        )?;
+        Ok(connector::registry_snapshot_to_ffi(snapshot))
+    }
+
+    pub fn restore_connector_registry(
+        &self,
+        bytes: Vec<u8>,
+        root: ConnectorRegistryRoot,
+        checkpoint: ConnectorRegistryCheckpoint,
+        policy: ConnectorTrustPolicy,
+        now_ms: i64,
+    ) -> Result<ConnectorRegistrySnapshot, FfiError> {
+        let root = connector::registry_root_from_ffi(root)?;
+        let checkpoint = connector::registry_checkpoint_from_ffi(checkpoint)?;
+        let policy = connector::policy_from_ffi(policy)?;
+        let snapshot =
+            mav_connector_runtime::restore_registry(&bytes, &root, &checkpoint, &policy, now_ms)?;
+        Ok(connector::registry_snapshot_to_ffi(snapshot))
+    }
+
+    pub fn verify_connector_registry_artifact(
+        &self,
+        entry: ConnectorRegistryEntry,
+        bytes: Vec<u8>,
+    ) -> Result<(), FfiError> {
+        connector::registry_entry_from_ffi(entry)?.verify_artifact(&bytes)?;
+        Ok(())
+    }
+
     pub fn install_connector_bytes(
         &self,
         request: ConnectorInstallRequest,

@@ -48,6 +48,10 @@ android {
         buildConfigField("boolean", "MAV_CONNECTOR_MANAGER_ENABLED", "true")
         buildConfigField("boolean", "MAV_ALLOW_REMOTE_CONNECTORS", "true")
         buildConfigField("boolean", "MAV_ALLOW_THIRD_PARTY_CONNECTORS", "false")
+        buildConfigField("String", "MAV_CONNECTOR_REGISTRY_URL", "\"\"")
+        buildConfigField("String", "MAV_CONNECTOR_REGISTRY_ID", "\"\"")
+        buildConfigField("String", "MAV_CONNECTOR_REGISTRY_ROOT_KEY_ID", "\"\"")
+        buildConfigField("String", "MAV_CONNECTOR_REGISTRY_ROOT_PUBLIC_KEY_HEX", "\"\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")

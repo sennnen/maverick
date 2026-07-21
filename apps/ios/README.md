@@ -38,6 +38,11 @@ The app target links `MavCore.xcframework` and compiles `mav_ffi.swift`. Product
 event/action API from CoreBluetooth. No device protocol or connector implementation is linked into
 the application.
 
+An optional `MAVConnectorRegistry` Info.plist dictionary supplies HTTPS URL, registry id, root key
+id, and base64 Ed25519 public key. The app streams indexes under 1 MiB, caches exact signed bytes and
+checkpoint metadata, and delegates refresh, offline restore, and artifact binding to core. An empty
+dictionary disables registry discovery without changing direct import.
+
 ## Building the app
 
 Run the complete, reproducible app build from the repository root:

@@ -71,6 +71,8 @@
 	<true/>
 	<key>MAVOfficialPublisherKeys</key>
 	<array/>
+	<key>MAVConnectorRegistry</key>
+	<dict/>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

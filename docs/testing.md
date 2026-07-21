@@ -71,6 +71,13 @@ regenerates those reports from committed artifact fixtures, while Swift and Kotl
 schema and ceilings. The exact P11 evidence and its consistency-only limitation live in
 [connector-parity.md](connector-parity.md).
 
+Registry security tests sign deterministic indexes with a root distinct from publisher fixtures.
+They reject publisher-key substitution, invalid old-key rotation evidence, rollback/replay/freeze,
+predecessor forks, removed cached revocations, artifact size/digest mismatch, and channel/downgrade
+violations. The companion repository freezes the unsigned payload, public root, signature, signed
+envelope SHA-256, and packaged artifact entries; its deep gate regenerates and verifies exact bytes
+using only public material.
+
 ## Consistent is not validated
 
 Here is the sharp lesson from the prior codebases, and it needs stating bluntly because it is the

@@ -53,6 +53,7 @@ targets:
         MAVConnectorManagerEnabled: true
         MAVAllowRemoteConnectorImport: true
         MAVOfficialPublisherKeys: []
+        MAVConnectorRegistry: {}
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

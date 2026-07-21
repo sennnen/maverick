@@ -17,6 +17,11 @@ stay empty until the core serves them, and the remaining routed destinations are
 stand-ins. The legacy data engine—its Room repositories, device-specific BLE client, importers, ML
 assets, services, widgets, and notification machinery—is not an app dependency.
 
+Optional `MAV_CONNECTOR_REGISTRY_*` build fields configure signed discovery. The app bounds index
+HTTPS to 1 MiB, caches exact signed bytes/checkpoint metadata, and asks core to verify refresh,
+offline restore, and downloaded artifact digest before approval/install. Empty fields disable only
+registry discovery; direct imports keep working.
+
 ## Build and test
 
 Use JDK 17 and set `ANDROID_HOME` or `ANDROID_SDK_ROOT`, then run:

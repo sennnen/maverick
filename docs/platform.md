@@ -156,6 +156,16 @@ only an opaque connector/session/generation checkpoint in private preferences. O
 the manager reopens the verified session and lets connector actions re-establish transport; artifact
 bytes and external locators are not persisted by the host shell.
 
+## Signed registry acquisition
+
+WC-P15 adds optional release-configured registry URL/id/root values to both shells. Each streams the
+signed index under an independent 1 MiB bound, gives exact bytes plus its last verified checkpoint
+to core, and persists only that public envelope/checkpoint. Offline restoration must match both byte
+digest and monotonic revocation evidence. Registry artifacts are separately bounded, core-verifies
+entry size/SHA-256, and then re-enter the normal publisher-signature, fixture, and explicit approval
+path. Empty registry configuration disables discovery without disabling URL, file, document, or
+share import.
+
 ## Core transport actions
 
 The host drains a bounded queue of closed `ConnectorTransportAction` values:

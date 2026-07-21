@@ -40,6 +40,19 @@ class ConnectorManagementTest {
     }
 
     @Test
+    fun `oversized registry response is stopped independently of artifact limit`() {
+        val bomb = ByteArrayInputStream(ByteArray(BoundedRegistryReader.MAXIMUM_BYTES + 1))
+        assertThrows(ConnectorAcquisitionException.TooLarge::class.java) {
+            BoundedRegistryReader.read(bomb)
+        }
+    }
+
+    @Test
+    fun `empty release registry configuration disables discovery without affecting direct import`() {
+        assertNull(AndroidRegistryConfiguration.current())
+    }
+
+    @Test
     fun `approval requires inspection and cancel erases pending bytes`() {
         val machine = ConnectorApprovalMachine()
         assertThrows(ConnectorApprovalException.InspectionRequired::class.java) { machine.beginApproval() }

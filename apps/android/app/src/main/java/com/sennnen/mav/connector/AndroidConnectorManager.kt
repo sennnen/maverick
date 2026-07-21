@@ -21,6 +21,8 @@ import kotlinx.coroutines.withContext
 import uniffi.mav_ffi.ConnectorInspection
 import uniffi.mav_ffi.ConnectorInstallRequest
 import uniffi.mav_ffi.ConnectorRemovalMode
+import uniffi.mav_ffi.ConnectorRegistryCheckpoint
+import uniffi.mav_ffi.ConnectorRegistryEntry
 import uniffi.mav_ffi.ConnectorSessionConfig
 import uniffi.mav_ffi.ConnectorTransportEvent
 import uniffi.mav_ffi.ConnectorTrustPolicy
@@ -41,6 +43,9 @@ class AndroidConnectorManager(
     private var inspection: ConnectorInspection? = null
     private var acquisition: ConnectorAcquisition? = null
     private val machine = ConnectorApprovalMachine()
+    private val registryConfiguration = AndroidRegistryConfiguration.current()
+    private val registryCache = ConnectorRegistryCache(appContext)
+    private var registryCheckpoint: ConnectorRegistryCheckpoint? = null
 
     private val mutablePhase = MutableStateFlow<ConnectorApprovalPhase>(ConnectorApprovalPhase.Idle)
     val phase: StateFlow<ConnectorApprovalPhase> = mutablePhase.asStateFlow()
@@ -48,30 +53,101 @@ class AndroidConnectorManager(
     private val mutableInstalled = MutableStateFlow<List<InstalledConnectorRecord>>(emptyList())
     val installed: StateFlow<List<InstalledConnectorRecord>> = mutableInstalled.asStateFlow()
 
+    private val mutableRegistryEntries = MutableStateFlow<List<ConnectorRegistryEntry>>(emptyList())
+    val registryEntries: StateFlow<List<ConnectorRegistryEntry>> = mutableRegistryEntries.asStateFlow()
+
     val managerEnabled: Boolean = BuildConfig.MAV_CONNECTOR_MANAGER_ENABLED
     val remoteImportEnabled: Boolean = BuildConfig.MAV_ALLOW_REMOTE_CONNECTORS
     val thirdPartyEnabled: Boolean = BuildConfig.MAV_ALLOW_THIRD_PARTY_CONNECTORS
 
-    private val policy = ConnectorTrustPolicy(
+    private var policy = ConnectorTrustPolicy(
         revision = 1uL,
         allowThirdParty = thirdPartyEnabled,
         allowDevelopment = BuildConfig.DEBUG,
         keys = emptyList(),
     )
-    private val revocations = ConnectorTrustRevocations(
+    private var revocations = ConnectorTrustRevocations(
         revision = 0uL,
-        generatedAtMs = 0,
-        validUntilMs = System.currentTimeMillis() + 31_536_000_000,
+        generatedAtMs = if (registryConfiguration == null) 0 else 1,
+        validUntilMs = if (registryConfiguration == null) {
+            System.currentTimeMillis() + 31_536_000_000
+        } else {
+            0
+        },
         entries = emptyList(),
     )
     private val bluetooth = MavBleExecutor(appContext, ::applyTransportEvent)
 
     suspend fun start() {
         gate.withLock { ensureRuntime() }
+        restoreRegistryCache()
+        refreshRegistry()
         refreshInstalledNow()
         if (!sessionRestored) {
             sessionRestored = true
             bluetooth.checkpoint?.let { resumeSession(it) }
+        }
+    }
+
+    fun refreshRegistry() {
+        val configuration = registryConfiguration ?: return
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                val connection = URL(configuration.url).openConnection() as HttpURLConnection
+                connection.connectTimeout = 15_000
+                connection.readTimeout = 30_000
+                connection.instanceFollowRedirects = false
+                connection.requestMethod = "GET"
+                try {
+                    if (connection.responseCode !in 200..299) throw ConnectorAcquisitionException.InvalidResponse()
+                    if (connection.contentLengthLong > BoundedRegistryReader.MAXIMUM_BYTES) {
+                        throw ConnectorAcquisitionException.TooLarge()
+                    }
+                    connection.inputStream.use(BoundedRegistryReader::read)
+                } finally {
+                    connection.disconnect()
+                }
+            }.mapCatching { bytes ->
+                gate.withLock {
+                    val snapshot = ensureRuntime().ingestConnectorRegistry(
+                        bytes,
+                        configuration.root,
+                        registryCheckpoint,
+                        policy,
+                        System.currentTimeMillis(),
+                    )
+                    applyRegistrySnapshot(bytes, snapshot)
+                }
+            }.onFailure(::fail)
+        }
+    }
+
+    fun importRegistryEntry(entry: ConnectorRegistryEntry) {
+        if (!remoteImportEnabled || entry.revoked || !entry.artifactUrl.startsWith("https://")) {
+            fail("This registry connector is not available for remote import.")
+            return
+        }
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                val connection = URL(entry.artifactUrl).openConnection() as HttpURLConnection
+                connection.connectTimeout = 15_000
+                connection.readTimeout = 30_000
+                connection.instanceFollowRedirects = false
+                try {
+                    if (connection.responseCode !in 200..299) throw ConnectorAcquisitionException.InvalidResponse()
+                    connection.inputStream.use(BoundedConnectorReader::read)
+                } finally {
+                    connection.disconnect()
+                }
+            }.mapCatching { bytes ->
+                gate.withLock { ensureRuntime().verifyConnectorRegistryArtifact(entry, bytes) }
+                ConnectorAcquisition.make(
+                    bytes,
+                    ConnectorImportOrigin.REMOTE,
+                    "${entry.connectorId}-${entry.version}.mavconn",
+                    entry.artifactUrl,
+                )
+            }.onSuccess { inspect(it) }.onFailure(::fail)
         }
     }
 
@@ -325,6 +401,30 @@ class AndroidConnectorManager(
         runCatching {
             gate.withLock { ensureRuntime().listInstalledConnectors() }
         }.onSuccess { mutableInstalled.value = it }.onFailure(::fail)
+    }
+
+    private suspend fun restoreRegistryCache() {
+        val configuration = registryConfiguration ?: return
+        val cached = registryCache.load() ?: return
+        runCatching {
+            gate.withLock {
+                ensureRuntime().restoreConnectorRegistry(
+                    cached.bytes,
+                    configuration.root,
+                    cached.checkpoint,
+                    policy,
+                    System.currentTimeMillis(),
+                )
+            }
+        }.onSuccess { snapshot -> applyRegistrySnapshot(cached.bytes, snapshot) }.onFailure(::fail)
+    }
+
+    private fun applyRegistrySnapshot(bytes: ByteArray, snapshot: uniffi.mav_ffi.ConnectorRegistrySnapshot) {
+        policy = snapshot.trust
+        revocations = snapshot.revocations
+        registryCheckpoint = snapshot.checkpoint
+        mutableRegistryEntries.value = snapshot.entries
+        registryCache.save(bytes, snapshot.checkpoint)
     }
 
     private suspend fun resumeSession(checkpoint: ConnectorRestorationCheckpoint) {
