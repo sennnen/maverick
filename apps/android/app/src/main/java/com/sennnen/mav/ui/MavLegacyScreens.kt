@@ -1,6 +1,5 @@
 package com.sennnen.mav.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,15 +22,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sennnen.mav.MavAppState
 import com.sennnen.mav.ui.aura.Aura
 import com.sennnen.mav.ui.aura.AuraChipKind
 import com.sennnen.mav.ui.aura.AuraDarkCard
@@ -50,14 +45,12 @@ import kotlin.math.roundToInt
 // each lands in the Rust core these destinations render an honest Aura-styled empty state —
 // same signatures as Maverick's screens, so AuraRoot.kt stays byte-identical to the source.
 
-/** Live console — real data: the snapshot's live HR, connection state and strap identity. */
+/** Live console — populated only after the connector transport publishes admitted live values. */
 @Composable
 fun LiveScreen(vm: AppViewModel, onManageDevices: () -> Unit) {
     val live by vm.live.collectAsStateWithLifecycle()
     val bpm by vm.bpm.collectAsStateWithLifecycle()
-    val appState by vm.state.collectAsStateWithLifecycle()
     val syncNote by vm.syncNote.collectAsStateWithLifecycle()
-    val snapshot = (appState as? MavAppState.Ready)?.snapshot
     val p = Aura.palette
     AuraScreen(lead = AuraFamily.HEART) {
         Column(
@@ -90,47 +83,16 @@ fun LiveScreen(vm: AppViewModel, onManageDevices: () -> Unit) {
                         Spacer(Modifier.width(6.dp))
                         Text("bpm", style = AuraType.number(24.sp), color = p.ink.copy(alpha = 0.5f))
                     }
-                    val stale = snapshot?.let {
-                        sampleAgeLabel(it.asOfUnixMs, it.lastSampleUnixMs, live.connected)
-                    }
-                    if (stale != null) {
-                        Spacer(Modifier.height(6.dp))
-                        Text(stale, style = AuraType.sub, color = p.ink.copy(alpha = 0.55f))
-                    }
                 }
                 Spacer(Modifier.height(8.dp))
             }
             AuraDarkCard(padding = 0.dp) {
                 Column(Modifier.padding(vertical = 4.dp)) {
-                    InfoRow("Strap", live.advertisingName ?: "WHOOP")
+                    InfoRow("Wearable", live.advertisingName ?: "Not connected")
                     InfoRow("Battery", live.batteryPct?.let { "${it.roundToInt()}%" } ?: "--")
                     syncNote?.let { InfoRow("History", it) }
-                    val prv = snapshot?.prv
-                    if (prv != null) {
-                        // Tap for the small PRV detail: the full admitted metric set + provenance.
-                        var showPrvDetail by remember { mutableStateOf(false) }
-                        Column(Modifier.clickable { showPrvDetail = !showPrvDetail }) {
-                            InfoRow("PRV · RMSSD", microsAsMs(prv.rmssdMicros))
-                            InfoRow("PRV intervals", "${prv.intervalCount} used · ${prv.excludedIntervalCount} excluded")
-                        }
-                        if (showPrvDetail) {
-                            InfoRow("SDNN", microsAsMs(prv.sdnnMicros))
-                            InfoRow("Mean interval", microsAsMs(prv.meanIntervalMicros))
-                            InfoRow("pNN50", "${milliPercentAsPercent(prv.pnn50MilliPercent)} · NN50 ${prv.nn50Count}")
-                            InfoRow("Algorithm", "${prv.algorithm} v${prv.algorithmVersion}")
-                            InfoRow("Provenance", "#${prv.provenanceId} · ${prv.intervalSource}")
-                        }
-                    } else {
-                        // The core's structured reason; the platform never invents availability.
-                        InfoRow("PRV", snapshot?.prvUnavailableReason ?: "--")
-                    }
+                    InfoRow("PRV", "Unavailable until live intervals arrive")
                 }
-            }
-            if (snapshot?.prv != null) {
-                Text(
-                    "PRV is optical pulse-rate variability, not ECG HRV.",
-                    style = AuraType.sub, color = p.ink.copy(alpha = 0.55f),
-                )
             }
             AuraDarkCard {
                 AuraNavRow(Icons.Filled.Sensors, "Manage devices", "Pairing & connectors", onClick = onManageDevices)
@@ -167,27 +129,6 @@ private fun MavPendingScreen(title: String, subtitle: String, body: String, extr
                 Text(body, style = AuraType.sub, color = Aura.palette.ink.copy(alpha = 0.68f))
             }
             extra()
-        }
-    }
-}
-
-@Composable
-fun DevicesScreen(vm: AppViewModel, onUseFileImport: () -> Unit) {
-    val state by vm.state.collectAsStateWithLifecycle()
-    MavPendingScreen(
-        "Devices", "Straps & connectors",
-        "Mav loads device connectors from their own signed packages; none are bundled yet. " +
-            "Pairing appears here once a connector is installed.",
-    ) {
-        val snapshot = (state as? MavAppState.Ready)?.snapshot
-        AuraDarkCard(padding = 0.dp) {
-            Column(Modifier.padding(vertical = 4.dp)) {
-                InfoRow("Connection", snapshot?.connectionState ?: "runtime unavailable")
-                InfoRow("Device", snapshot?.deviceName ?: "--")
-            }
-        }
-        AuraDarkCard {
-            AuraNavRow(Icons.Filled.Storage, "Data sources", "Imports & provenance", onClick = onUseFileImport)
         }
     }
 }
@@ -267,12 +208,9 @@ fun SettingsScreen(
     onOpenAutomations: () -> Unit,
     onOpenNotifications: () -> Unit,
 ) {
-    val state by vm.state.collectAsStateWithLifecycle()
-    val snapshot = (state as? MavAppState.Ready)?.snapshot
     MavPendingScreen(
         "All settings", "Runtime & storage",
-        "Core ${snapshot?.coreVersion ?: "--"} · storage schema ${snapshot?.storageSchema ?: "--"} · " +
-            "revision ${snapshot?.revision ?: "--"}",
+        "Core runtime ready. Connector code and telemetry remain on this device.",
     ) {
         AuraSectionHeader(title = "Advanced")
         AuraDarkCard(padding = 0.dp) {

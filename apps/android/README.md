@@ -10,14 +10,12 @@ The exact runtime, event, action, snapshot, threading, and compatibility rules a
 The UI preserves the Aura compose presentation layer in `ui/aura/`:
 Today, Recovery, Strain, and Sleep hubs, the Material bottom navigation, one app-wide settings
 sheet, and the trends/reports/metric-detail/workout-detail/timer surfaces. A Mav-owned
-`AppViewModel` adapts the core's `host-snapshot/v1` into the presentation surface, and
-`historicalProgress()` on `MavRuntime` is the read-only `historical-status/v1` model for sync
-progress and failure (cursor exposed as a hash only; no ack or trim call exists); day
-history, workouts, and ML signals stay empty until the core serves them, and the routed legacy
-destinations (live console, devices, coach, journal, …) are same-signature Mav stand-ins so
-`AuraRoot.kt` stays aligned with the preserved presentation source. The legacy data engine—its Room repositories,
-WHOOP BLE client, importers, ML assets, services, widgets, and notification machinery—is still not
-an app dependency.
+`AppViewModel` owns a byte-oriented connector manager. Android's document picker, VIEW/SEND intents,
+content URIs, and HTTPS downloads converge on core inspection before approval; a generic
+BluetoothGatt executor drives the closed event/action host. Day history, workouts, and ML signals
+stay empty until the core serves them, and the remaining routed destinations are honest Mav
+stand-ins. The legacy data engine—its Room repositories, device-specific BLE client, importers, ML
+assets, services, widgets, and notification machinery—is not an app dependency.
 
 ## Build and test
 
@@ -25,15 +23,16 @@ Use JDK 17 and set `ANDROID_HOME` or `ANDROID_SDK_ROOT`, then run:
 
     ./gradlew lintDebug testDebugUnitTest assembleDebug assembleRelease
 
-Gradle builds the Rust package first, compiles the generated Kotlin binding, runs the strict host
-snapshot decoder tests, and emits `app/build/outputs/apk/debug/app-debug.apk`. The APK contains only
+Gradle builds the Rust package first, compiles the generated Kotlin binding, runs connector
+acquisition/approval/transport and presentation tests, and emits
+`app/build/outputs/apk/debug/app-debug.apk`. The APK contains only
 the shipped arm64-v8a and x86_64 libraries. The same gate builds the minified release variant through
 R8; local release builds remain unsigned. CI pushes to `main` decode and use the Android release
 keystore, verify its signature with `apksigner`, and publish the signed APK. Required GitHub Actions
 secrets are `ANDROID_KEYSTORE_BASE64` (single-line Base64 JKS), `ANDROID_KEYSTORE_PASSWORD`,
 `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`. The launch surface is the Aura shell;
-the strict snapshot-decoder tests and the presentation helper tests (logical day, widget anchor,
-stage segments, zone parsing) run in the same gate.
+the frozen decoder tests and presentation helper tests (logical day, widget anchor, stage segments,
+zone parsing) run in the same gate.
 
 ## Building the core for Android
 

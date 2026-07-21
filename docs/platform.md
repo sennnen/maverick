@@ -107,8 +107,8 @@ instead of attempting to repair the sequence.
 Core normalizes each result into the connector ABI, invokes the instance, validates returned
 actions, and admits emitted samples through SQI, timeline, provenance, and transactional storage.
 Native code cannot call stages or connector exports individually. Device protocol state remains
-inside connector; lifecycle and resource policy remain in core. The iOS app drives this host through
-its generic CoreBluetooth executor; Android parity is owned by WC-P14.
+inside connector; lifecycle and resource policy remain in core. iOS and Android drive this host
+through generic CoreBluetooth and BluetoothGatt executors.
 
 Characteristic actions carry both the connector's logical id and the signed native service/
 characteristic UUID pair resolved by the host. Native executors use UUIDs for CoreBluetooth or
@@ -134,6 +134,27 @@ The document type is `dev.maverick.connector` / `.mavconn`. Background mode is o
 session/generation checkpoint and stores no artifact bytes, paths, URLs, protocol state, or private
 key material. App Review acceptance evidence is the removal condition for retaining remote import;
 until then the independent flag is the rollback point.
+
+## Android connector acquisition policy
+
+WC-P14 routes Storage Access Framework documents, VIEW/SEND content intents, shared HTTPS text, and
+in-app HTTPS entry through the same exact-byte acquisition type. `BoundedConnectorReader` stops at
+4 MB even when a malicious provider omits or lies about length; `HttpURLConnection` enforces HTTPS
+after redirects and streams through that same bound. Core receives a display basename and SHA-256
+locator digest, never a content URI, file path, or URL.
+
+Android release configuration sets `MAV_CONNECTOR_MANAGER_ENABLED` and
+`MAV_ALLOW_REMOTE_CONNECTORS` independently. `MAV_ALLOW_THIRD_PARTY_CONNECTORS` is false in release
+and true only in explicitly labelled developer builds; either mode still requires a configured
+publisher key plus normal core signature, fixture, compatibility, and revocation checks. Sideloading
+an artifact cannot extend trust.
+
+`MavBleExecutor` maps only host-resolved UUID actions to BluetoothGatt. It has no connector/device
+tables, parsers, opcodes, retry policy, or physiological logic. The app requests only version-correct
+BLE permissions, declares no storage permission, uses cleartext-disabled networking, and persists
+only an opaque connector/session/generation checkpoint in private preferences. On process restart,
+the manager reopens the verified session and lets connector actions re-establish transport; artifact
+bytes and external locators are not persisted by the host shell.
 
 ## Core transport actions
 
@@ -171,9 +192,10 @@ id, and deadline token. The matching `ConnectorTransportEvent` carries only gene
 transport results, notifications, timer results, and disconnect/error state. Raw handles, protocol
 opcodes, device families, retry policy, URL clients, and file openers are absent from both bindings.
 
-## Host snapshot
+## Retired host snapshot evidence
 
-`host_snapshot(at_unix_ms)` returns `HostSnapshotResult`:
+ADR-017 removed the compiled-codec FFI snapshot getter. The schema below is frozen compatibility
+evidence for test-only Swift/Kotlin decoders and has no production caller:
 
 ```text
 json: String
@@ -241,9 +263,9 @@ known schema are ignored so an older app can survive a newer compatible core. Mi
 fields fail decoding and surface a startup diagnostic. A breaking field change requires a new
 schema name and parallel fixture.
 
-## Historical status
+## Retired historical-status evidence
 
-When M5-P7 lands, `historical` is `historical-status/v1` and contains:
+The former snapshot nested `historical-status/v1` with:
 
 - controller state;
 - records seen, inserted, duplicated, and rejected;
@@ -275,24 +297,23 @@ the two platforms behaviourally aligned.
 
 ## Threading and blocking
 
-The runtime is safe to hold from Swift and Kotlin. Legacy runtime, connector repository, and active
-connector session each serialize mutation behind a poison-safe mutex; concurrent management reads
-and writes return typed results rather than racing SQLite or a Wasm instance. Hosts call
-it from one dedicated background executor. No runtime method is called from the UI thread.
+The runtime is safe to hold from Swift and Kotlin. Connector repository and active connector session
+each serialize mutation behind a poison-safe mutex; concurrent management reads and writes return
+typed results rather than racing SQLite or a Wasm instance. Hosts call it from one dedicated
+background executor. No runtime method is called from the UI thread.
 
 Event application and action draining are synchronous and bounded. Database work is synchronous
 inside that serialized call. Long recomputation and report export become explicit task operations
-with progress snapshots rather than hidden work in a getter. Snapshot queries never mutate pipeline
-state except for recording the supplied observation time.
+with explicit progress rather than hidden work in a getter.
 
-Callbacks from Rust into Swift or Kotlin are not part of v1. Hosts poll by revision after applying an
-event or on a platform-appropriate low-frequency timer. This avoids re-entrancy through UniFFI and
-makes lifecycle behaviour testable.
+Callbacks from Rust into Swift or Kotlin are not part of v1. Hosts apply an event, drain the
+resulting bounded actions, and repeat. This avoids re-entrancy through UniFFI and makes lifecycle
+behaviour testable.
 
 ## Native presentation boundary
 
-Swift and Kotlin decode `host-snapshot/v1` into platform structs. A screen sees only those structs
-and local display preferences.
+Swift and Kotlin screens see only value records returned by admitted core APIs plus local display
+preferences. Frozen snapshot decoders are unreachable compatibility tests.
 
 Native code may:
 

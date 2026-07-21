@@ -45,6 +45,9 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        buildConfigField("boolean", "MAV_CONNECTOR_MANAGER_ENABLED", "true")
+        buildConfigField("boolean", "MAV_ALLOW_REMOTE_CONNECTORS", "true")
+        buildConfigField("boolean", "MAV_ALLOW_THIRD_PARTY_CONNECTORS", "false")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
@@ -66,10 +69,12 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            buildConfigField("boolean", "MAV_ALLOW_THIRD_PARTY_CONNECTORS", "true")
         }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            buildConfigField("boolean", "MAV_ALLOW_THIRD_PARTY_CONNECTORS", "false")
             if (releaseSigningConfigured) {
                 signingConfig = signingConfigs.getByName("release")
             }

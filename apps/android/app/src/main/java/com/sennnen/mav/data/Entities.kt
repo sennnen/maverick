@@ -28,7 +28,6 @@ data class DailyMetric(
     val sourcePriority: Int? = null,
 ) {
     companion object {
-        const val SOURCE_PRIORITY_WHOOP = 0
         const val SOURCE_PRIORITY_MANUAL = 1
         const val SOURCE_PRIORITY_SYSTEM_HEALTH = 2
     }

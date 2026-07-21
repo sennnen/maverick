@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: in progress. WC-P0 through WC-P13 are complete; WC-P14 is next.
+Status: in progress. WC-P0 through WC-P14 are complete; WC-P15 is next.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -378,7 +378,7 @@ explicit full-Xcode prerequisite before compilation.
 
 ## Packet WC-P14: Implement Android acquisition and connector management UI
 
-Status: pending; future frontend work.
+Status: complete.
 
 - **Repositories touched:** `maverick`.
 - **Likely files/modules:** Android SAF/intents/share/URL acquisition, connector UI/view model,
@@ -398,6 +398,15 @@ Status: pending; future frontend work.
 - **Risks:** content-provider lifetime, background restrictions, BLE vendor variance.
 - **Frontend:** this is owning Android packet.
 - **Temporary compatibility:** none.
+
+Android now converges SAF, VIEW/SEND intents, and HTTPS acquisition on one bounded exact-byte
+source before mandatory core inspection and approval. The UI exposes publisher, capabilities,
+permissions, fixtures, install failure, rollback, quarantine removal, and revocation states. A
+device-neutral BLE executor resolves manifest-signed UUIDs and maps every core action/event plus
+timers, permission suspension, and opaque process-restoration checkpoints. Release configuration
+keeps third-party trust disabled while independently gating manager and remote acquisition. Unit
+tests, lint, debug/release APK builds, FFI parity, common Rust gates, and stale-reference searches
+pass with JDK 17.
 
 ## Packet WC-P15: Add signed registry, publishing, rotation, and revocation flow
 

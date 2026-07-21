@@ -13,10 +13,10 @@ class HonestEmptinessTest {
     @Test
     fun strainAndSleepInputsStayEmptyUntilTheCoreServesThem() = runTest {
         val repo = MavRepo()
-        assertTrue(repo.days("my-whoop").isEmpty())
-        assertTrue(repo.workouts("my-whoop", 0, Long.MAX_VALUE).isEmpty())
-        assertTrue(repo.sleepSessionsUnion("my-whoop", 0, Long.MAX_VALUE).isEmpty())
-        assertTrue(repo.computedSleepSessionsUnion("my-whoop", 0, Long.MAX_VALUE).isEmpty())
-        assertTrue(repo.metricSeries("my-whoop", "strain", "1970-01-01", "2100-01-01").isEmpty())
+        assertTrue(repo.days("active-device").isEmpty())
+        assertTrue(repo.workouts("active-device", 0, Long.MAX_VALUE).isEmpty())
+        assertTrue(repo.sleepSessionsUnion("active-device", 0, Long.MAX_VALUE).isEmpty())
+        assertTrue(repo.computedSleepSessionsUnion("active-device", 0, Long.MAX_VALUE).isEmpty())
+        assertTrue(repo.metricSeries("active-device", "strain", "1970-01-01", "2100-01-01").isEmpty())
     }
 }

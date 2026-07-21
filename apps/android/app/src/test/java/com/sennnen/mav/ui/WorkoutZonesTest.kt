@@ -38,8 +38,8 @@ class WorkoutZonesTest {
     @Test
     fun summaryIsDurationWeighted_andSkipsZonelessRows() {
         fun row(start: Long, durS: Double, zones: String?) = WorkoutRow(
-            deviceId = "my-whoop", startTs = start, endTs = start + durS.toLong(),
-            sport = "Running", source = "my-whoop", durationS = durS, zonesJSON = zones,
+            deviceId = "active-device", startTs = start, endTs = start + durS.toLong(),
+            sport = "Running", source = "active-device", durationS = durS, zonesJSON = zones,
         )
         val s = zoneSummary(
             listOf(

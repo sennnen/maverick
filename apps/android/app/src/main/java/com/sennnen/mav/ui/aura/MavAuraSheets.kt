@@ -26,6 +26,7 @@ import com.sennnen.mav.ui.AppViewModel
 @Composable
 fun AuraPairingSheet(vm: AppViewModel, onDismiss: () -> Unit, onOpenDevices: () -> Unit) {
     val live by vm.live.collectAsStateWithLifecycle()
+    val installed by vm.connectors.installed.collectAsStateWithLifecycle()
     val p = Aura.palette
     AuraSheet("Pair a strap", onDismiss, family = AuraFamily.HEART) {
         Row {
@@ -37,8 +38,11 @@ fun AuraPairingSheet(vm: AppViewModel, onDismiss: () -> Unit, onOpenDevices: () 
         Spacer(Modifier.padding(top = 14.dp))
         AuraDarkCard {
             Text(
-                "Mav pairs through device connectors — signed packages that carry each strap's " +
-                    "protocol. None are bundled yet, so scanning is disabled.",
+                if (installed.isEmpty()) {
+                    "Import and approve a signed connector before scanning for a wearable."
+                } else {
+                    "${installed.size} signed connector${if (installed.size == 1) " is" else "s are"} installed. Open Devices to connect."
+                },
                 style = AuraType.sub, color = p.ink.copy(alpha = 0.68f),
             )
         }
@@ -68,16 +72,14 @@ fun AuraMigrateSheet(vm: AppViewModel, onDismiss: () -> Unit) {
 @Composable
 fun AuraDiagnosticsSheet(vm: AppViewModel, onDismiss: () -> Unit) {
     val state by vm.state.collectAsStateWithLifecycle()
-    val snapshot = (state as? MavAppState.Ready)?.snapshot
+    val connectors by vm.connectors.installed.collectAsStateWithLifecycle()
     val p = Aura.palette
     AuraSheet("Diagnostics", onDismiss) {
         AuraDarkCard(padding = 0.dp) {
             Column(Modifier.padding(vertical = 4.dp)) {
-                DiagRow("Core", snapshot?.coreVersion ?: "unavailable")
-                DiagRow("Storage schema", snapshot?.storageSchema?.toString() ?: "--")
-                DiagRow("Snapshot revision", snapshot?.revision?.toString() ?: "--")
-                DiagRow("Connection", snapshot?.connectionState ?: "--")
-                DiagRow("Snapshot hash", snapshot?.hash?.take(12) ?: "--")
+                DiagRow("Core runtime", if (state == MavAppState.Ready) "ready" else "unavailable")
+                DiagRow("Installed connectors", connectors.size.toString())
+                DiagRow("Connection", "managed by active connector session")
             }
         }
         Spacer(Modifier.padding(top = 10.dp))

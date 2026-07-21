@@ -48,7 +48,7 @@ fun AuraTrendsScreen(vm: AppViewModel, onClose: () -> Unit) {
 
     LaunchedEffect(days) {
         restSeries = runCatching {
-            vm.repo.metricSeries("my-whoop", "sleep_performance", "0000-00-00", "9999-99-99")
+            vm.repo.metricSeries(vm.activeDeviceSource, "sleep_performance", "0000-00-00", "9999-99-99")
         }.getOrDefault(emptyList()).map { AuraPoint(it.day, it.value) }
     }
 

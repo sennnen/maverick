@@ -102,16 +102,6 @@ object MavPrefs {
         of(context).edit().putBoolean(KEY_HR_BROADCAST, enabled).apply()
     }
 
-    /** "Buzz WHOOP 4" (#536): arm the strap's firmware alarm at the phone smart alarm's earliest wake
-     *  time, so the strap buzzes first and the OS alarm fires at the hard deadline as backup. Default OFF. */
-    const val KEY_BUZZ_WHOOP4_WITH_ALARM = "mav.buzzWhoop4WithAlarm"
-    fun buzzWhoop4WithAlarm(context: Context): Boolean =
-        of(context).getBoolean(KEY_BUZZ_WHOOP4_WITH_ALARM, false)
-
-    fun setBuzzWhoop4WithAlarm(context: Context, enabled: Boolean) {
-        of(context).edit().putBoolean(KEY_BUZZ_WHOOP4_WITH_ALARM, enabled).apply()
-    }
-
     /** Launcher-icon preference (v3 "Titanium & Gold"). false = machined-titanium (.IconDefault,
      *  the default); true = blued/dark-blue titanium (.IconNavy). The actual swap is done by
      *  enabling exactly one of the two <activity-alias> entries via PackageManager, this bool just
@@ -533,26 +523,4 @@ object MavPrefs {
     }
 
 
-    /** Wall-clock (unix seconds) of the last history offload that ran to HISTORY_COMPLETE. Persisted
-     *  (reimpl of @tavelli's PR #556) so the Live screen's "Last synced N ago" SURVIVES a BLE-client
-     *  recreation / process restart and stops reverting to "Never". 0 = never synced on this install. */
-    const val KEY_LAST_SYNC_AT = "mav.lastSyncAtSec"
-
-    fun lastSyncAt(context: Context): Long = of(context).getLong(KEY_LAST_SYNC_AT, 0L)
-
-    fun setLastSyncAt(context: Context, epochSec: Long) {
-        of(context).edit().putLong(KEY_LAST_SYNC_AT, epochSec).apply()
-    }
-
-    /** Last-known strap firmware string, persisted on connect so the debug export can name it OFFLINE
-     *  (LiveState.strapFirmware is cleared on disconnect and gone in the scheduled/background export). */
-    const val KEY_LAST_FIRMWARE = "mav.lastFirmware"
-
-    fun lastFirmware(context: Context): String? = of(context).getString(KEY_LAST_FIRMWARE, null)
-
-    fun setLastFirmware(context: Context, fw: String?) {
-        of(context).edit().apply {
-            if (fw.isNullOrBlank()) remove(KEY_LAST_FIRMWARE) else putString(KEY_LAST_FIRMWARE, fw)
-        }.apply()
-    }
 }

@@ -78,7 +78,7 @@ import kotlin.math.abs
 private val AuraEase = AuraMotion.ease
 
 @Composable
-fun AuraRootScreen(viewModel: AppViewModel) {
+fun AuraRootScreen(viewModel: AppViewModel, onChooseConnectorFile: () -> Unit) {
     AuraTheme {
         // Countdown timer: revive a persisted end instant + hand the engine its strap I/O.
         val timerContext = androidx.compose.ui.platform.LocalContext.current
@@ -182,7 +182,7 @@ fun AuraRootScreen(viewModel: AppViewModel) {
                     LiveScreen(viewModel, onManageDevices = { nav.navigate("devices") })
                 }
                 composable("devices") {
-                    DevicesScreen(viewModel, onUseFileImport = { nav.navigate("data_sources") })
+                    DevicesScreen(viewModel, onChooseConnectorFile = onChooseConnectorFile)
                 }
                 composable("data_sources") { DataSourcesScreen(viewModel) }
                 composable("workouts") { WorkoutsScreen(viewModel) }

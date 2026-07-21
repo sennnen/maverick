@@ -72,7 +72,7 @@ fun AuraTodayScreen(
     var restPct by remember { mutableStateOf<Double?>(null) }
     LaunchedEffect(days) {
         val series = runCatching {
-            vm.repo.metricSeries("my-whoop", "sleep_performance", "0000-00-00", "9999-99-99")
+            vm.repo.metricSeries(vm.activeDeviceSource, "sleep_performance", "0000-00-00", "9999-99-99")
         }.getOrDefault(emptyList())
         val byDay = series.associate { it.day to it.value }
         restPct = anchor?.let { a ->
@@ -154,7 +154,7 @@ fun AuraTodayScreen(
 
             AuraLiveHRPill(
                 bpm = bpm,
-                deviceName = live.advertisingName ?: "WHOOP",
+                deviceName = live.advertisingName ?: "Wearable",
                 batteryPercent = live.batteryPct?.roundToInt(),
                 bonded = live.bonded,
                 onClick = onOpenLive,

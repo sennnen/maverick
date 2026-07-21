@@ -41,7 +41,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sennnen.mav.MavAppState
 import com.sennnen.mav.analytics.CyclePhaseEngine
 import com.sennnen.mav.analytics.IllnessSignalEngine
 import com.sennnen.mav.data.DailyMetric
@@ -77,8 +76,7 @@ fun AuraRecoveryScreen(vm: AppViewModel) {
     val p = Aura.palette
     val days by vm.recentDays.collectAsStateWithLifecycle()
     val signals by vm.v5Signals.collectAsStateWithLifecycle()
-    val appState by vm.state.collectAsStateWithLifecycle()
-    val recoveryReason = (appState as? MavAppState.Ready)?.snapshot?.recoveryUnavailableReason
+    val recoveryReason = "Recovery is unavailable until the core admits a stored read model."
 
     val anchor = auraAnchorDay(days)
     val vitalsDay = auraLastVitalsDay(days, anchor)

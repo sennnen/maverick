@@ -69,7 +69,7 @@ fun AuraSleepScreen(vm: AppViewModel, onOpenAlarm: () -> Unit) {
     LaunchedEffect(days) {
         val a = anchor ?: return@LaunchedEffect
         suspend fun series(key: String) = runCatching {
-            vm.repo.metricSeries("my-whoop", key, "0000-00-00", "9999-99-99")
+            vm.repo.metricSeries(vm.activeDeviceSource, key, "0000-00-00", "9999-99-99")
         }.getOrDefault(emptyList()).associate { it.day to it.value }
 
         val perf = series("sleep_performance")
@@ -88,8 +88,8 @@ fun AuraSleepScreen(vm: AppViewModel, onOpenAlarm: () -> Unit) {
         val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
         fun dayKey(ts: Long) = fmt.format(Date(ts * 1000L))
         val all = runCatching {
-            val imported = vm.repo.sleepSessionsUnion(vm.activeStrapId, 0L, now)
-            val computed = vm.repo.computedSleepSessionsUnion(vm.activeStrapId, 0L, now)
+            val imported = vm.repo.sleepSessionsUnion(vm.activeDeviceSource, 0L, now)
+            val computed = vm.repo.computedSleepSessionsUnion(vm.activeDeviceSource, 0L, now)
             // Exact-duplicate blocks recorded under both id families: prefer the
             // one that carries a stage timeline.
             (imported + computed)

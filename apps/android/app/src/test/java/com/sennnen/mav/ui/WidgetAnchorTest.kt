@@ -19,7 +19,7 @@ class WidgetAnchorTest {
      *  banked night, `totalSleepMin`). */
     private fun day(key: String, recovery: Double?, sleepMin: Double? = null, strain: Double? = null) =
         DailyMetric(
-            deviceId = "my-whoop", day = key, recovery = recovery,
+            deviceId = "active-device", day = key, recovery = recovery,
             totalSleepMin = sleepMin, strain = strain,
         )
 

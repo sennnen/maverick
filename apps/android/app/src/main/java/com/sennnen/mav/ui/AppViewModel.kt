@@ -3,18 +3,15 @@ package com.sennnen.mav.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.sennnen.mav.BuildConfig
 import com.sennnen.mav.MavAppState
 import com.sennnen.mav.MavSnapshot
-import com.sennnen.mav.MavSnapshotDecoder
 import com.sennnen.mav.analytics.V5HealthSignals
 import com.sennnen.mav.ble.LiveState
+import com.sennnen.mav.connector.AndroidConnectorManager
 import com.sennnen.mav.data.DailyMetric
 import com.sennnen.mav.data.MetricSeriesRow
 import com.sennnen.mav.data.SleepSession
 import com.sennnen.mav.data.WorkoutRow
-import java.io.File
-import java.util.TimeZone
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,13 +19,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import uniffi.mav_ffi.FfiException
-import uniffi.mav_ffi.MavRuntime
-import uniffi.mav_ffi.RuntimeConfig
 
 /**
  * The single app-wide view model behind the Aura UI. It exposes the member surface the
- * Aura screens read, backed by the Rust core's
- * from `host-snapshot/v1` instead of the legacy on-device Room store and BLE engine.
+ * Aura screens read, backed by the Rust core instead of the legacy Room store and BLE engine.
  *
  * Surfaces the core cannot fill yet stay HONESTLY empty (no fabricated rows, no cached scores):
  * `recentDays` / `workouts` emit empty lists and the repo facade returns empty series, so every
@@ -69,11 +63,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     val repo: MavRepo = MavRepo()
     val mlEngine: MavMlSignals = MavMlSignals()
+    val connectors = AndroidConnectorManager(application, viewModelScope)
 
-    /** The canonical device id day-keyed reads use; mirrors the legacy `activeStrapId`. */
-    val activeStrapId: String get() = "my-whoop"
+    /** Generic source id used until stored read models carry the active connector identity. */
+    val activeDeviceSource: String get() = "active-device"
 
-    private var runtime: MavRuntime? = null
     private var refreshJob: Job? = null
 
     init {
@@ -84,21 +78,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (refreshJob?.isActive == true) return
         refreshJob = viewModelScope.launch(Dispatchers.IO) {
             // Keep the last good snapshot on screen during a re-read; Loading only before the first.
-            if (mutableState.value !is MavAppState.Ready) mutableState.value = MavAppState.Loading
+            if (mutableState.value != MavAppState.Ready) mutableState.value = MavAppState.Loading
             mutableState.value = runCatching {
-                val active = runtime ?: openRuntime().also { runtime = it }
-                val result = active.hostSnapshot(System.currentTimeMillis())
-                val snapshot = MavSnapshotDecoder.decode(result.json, result.hash)
-                val progress = active.historicalProgress()
-                mutableSyncNote.value = syncProgressLabel(
-                    state = progress.state,
-                    recordsSeen = progress.recordsSeen.toLong(),
-                    recordsInserted = progress.recordsInserted.toLong(),
-                    duplicates = progress.duplicates.toLong(),
-                    failureCode = progress.failureCode?.toInt(),
-                )
-                publishLive(snapshot)
-                MavAppState.Ready(snapshot)
+                connectors.start()
+                mutableSyncNote.value = null
+                MavAppState.Ready
             }.getOrElse(::failureState)
         }
     }
@@ -118,27 +102,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun stopHaptics() {}
 
     override fun onCleared() {
-        runtime?.close()
-    }
-
-    private fun publishLive(snapshot: MavSnapshot) {
-        val live = liveStateOf(snapshot)
-        mutableBpm.value = live.heartRate
-        mutableLive.value = live
-    }
-
-    private fun openRuntime(): MavRuntime {
-        val context = getApplication<Application>()
-        val database = File(context.noBackupFilesDir, "mav.sqlite")
-        return MavRuntime(
-            RuntimeConfig(
-                databasePath = database.absolutePath,
-                timezoneId = TimeZone.getDefault().id,
-                transportCapacity = 128u,
-                appVersion = BuildConfig.VERSION_NAME,
-                appBuild = BuildConfig.VERSION_CODE.toString(),
-            ),
-        )
+        connectors.close()
     }
 
     private fun failureState(error: Throwable): MavAppState.Failed =

@@ -135,7 +135,7 @@ fun AuraSettingsSheet(
 
         // MARK: Device
         SettingsGroup("Device") {
-            InfoRow("Strap", live.advertisingName ?: "WHOOP")
+            InfoRow("Wearable", live.advertisingName ?: "Not connected")
             GroupDivider()
             InfoRow("Status", if (live.bonded) "Paired · encrypted" else "Not paired")
             GroupDivider()
@@ -194,8 +194,8 @@ fun AuraSettingsSheet(
                     Text("System health sync", style = AuraType.label, color = p.ink.copy(alpha = 0.92f))
                     Text(
                         if (hcAvailable)
-                            "Health Connect fills gaps when the strap is off-wrist. WHOOP telemetry " +
-                                "always wins and is never overwritten."
+                            "Health Connect fills gaps when the wearable is off-wrist. Direct " +
+                                "telemetry always wins and is never overwritten."
                         else "Health Connect isn't available on this device.",
                         style = AuraType.caption, color = p.ink.copy(alpha = 0.55f),
                     )
@@ -283,7 +283,7 @@ fun AuraSettingsSheet(
         SettingsGroup("Data") {
             AuraNavRow(
                 icon = Icons.Filled.FileUpload, title = "Export CSV",
-                detail = "WHOOP-format zip", onClick = onOpenDataSources,
+                detail = "Portable archive", onClick = onOpenDataSources,
             )
             GroupDivider()
             AuraNavRow(
@@ -339,7 +339,7 @@ fun AuraSettingsSheet(
         Column(Modifier.padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Maverick", style = AuraType.heading(17.sp), color = p.ink)
             Text(
-                "Connects directly to your WHOOP strap over Bluetooth. No account, no cloud, nothing ever leaves this device.",
+                "Connects directly to approved wearables over Bluetooth. No account, no cloud, nothing ever leaves this device.",
                 style = AuraType.sub, color = p.ink.copy(alpha = 0.55f),
             )
         }
