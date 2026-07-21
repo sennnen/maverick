@@ -91,22 +91,6 @@ pub struct HandshakeConfig {
     pub max_retries: u8,
 }
 
-impl HandshakeConfig {
-    /// The gen5 handshake from docs/protocol/whoop.md: GET_HELLO (145, b3 1, data [0x01]) then
-    /// toggle_realtime_hr (3). The realtime b3 is unconfirmed, so it is left unset.
-    pub fn gen5() -> Self {
-        Self {
-            wire_format: WireFormat::Gen5,
-            hello_opcode: 145,
-            hello_b3: Some(1),
-            hello_payload: vec![0x01],
-            realtime_opcode: 3,
-            realtime_b3: None,
-            max_retries: 3,
-        }
-    }
-}
-
 /// What a single `step` produced: commands to write and frames reassembled from incoming bytes.
 #[derive(Clone, PartialEq, Debug, Default)]
 pub struct StepOutcome {
@@ -398,7 +382,15 @@ mod tests {
 
     fn machine() -> (Acquisition, RecordingTap) {
         (
-            Acquisition::new(HandshakeConfig::gen5()),
+            Acquisition::new(HandshakeConfig {
+                wire_format: WireFormat::Gen5,
+                hello_opcode: 145,
+                hello_b3: Some(1),
+                hello_payload: vec![0x01],
+                realtime_opcode: 3,
+                realtime_b3: None,
+                max_retries: 3,
+            }),
             RecordingTap::default(),
         )
     }

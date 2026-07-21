@@ -1,6 +1,6 @@
 # WC — Runtime-loaded WebAssembly connectors
 
-Status: in progress. WC-P0 through WC-P11 are complete; WC-P12 is next.
+Status: in progress. WC-P0 through WC-P12 are complete; WC-P13 and WC-P14 are next.
 
 This lane replaces ADR-016's compiled device codecs with signed, runtime-loaded `.mavconn`
 artifacts under [ADR-017](../../adr/ADR-017.md). Architecture and current-state evidence are in
@@ -316,7 +316,7 @@ Status: complete
 
 ## Packet WC-P12: Switch active path and delete bundled connector architecture
 
-Status: pending
+Status: complete
 
 - **Repositories touched:** both.
 - **Likely files/modules:** Cargo workspace/manifests, `mav-codec`, engine, FFI, replay,
@@ -568,3 +568,13 @@ the listed order minimizes simultaneous migration surfaces.
   Xcode simulator SDK; Android execution is unavailable without SDK/NDK and JDK 17. Both remain CI
   gates. Temporary signers were deleted; native and artifact paths remain dual only in tests until
   WC-P12.
+- 2026-07-21: WC-P12 removed the complete compiled WHOOP crate, workspace/edge dependencies,
+  manifest registry and per-device KV plugin surface, factory/runtime selector, manifest-only FFI,
+  and compiled replay adapter. `mav-codec` now admits only declarative layouts and open standards;
+  `mav-replay` verifies signed bytes and executes embedded fixtures through the production Wasm
+  interpreter. Fresh runtimes list zero connectors, both committed WHOOP artifacts activate only
+  after byte install, and the device-neutral template remains installable. A permanent stale-
+  architecture gate, Cargo graph inspection, and built symbol/name inspection prove no proprietary
+  connector is linked. Decode codes 3004–3006 remain numerically reserved under the ADR-017
+  amendment but their obsolete names are retired. The sibling deletion is
+  `maverick-connectors@a510c91`; both full Rust/doc/dependency and SDK/Wasm/package gates passed.

@@ -1,6 +1,19 @@
 # Connector architecture audit
 
-Audit date: 2026-07-18. Repositories were clean on `main` before planning began.
+Initial audit: 2026-07-18. WC-P12 deletion proof: 2026-07-21.
+
+## WC-P12 result
+
+The compiled architecture below is historical. Maverick now starts with zero device connectors,
+installs exact signed artifact bytes through one byte-oriented repository, and opens only the
+sandboxed event/action host. The workspace has no `core/connectors` member, edge crate dependency,
+factory registry, manifest-only installer, or compiled replay selector. `mav-replay` verifies a
+publisher key and executes embedded `.mavconn` fixtures through the production interpreter.
+
+`tools/check_no_bundled_connectors.py`, `cargo tree`, and binary symbol/name inspection enforce the
+absence. Remaining WHOOP occurrences are classified as: connector source in the sibling repository;
+signed fixture names and user-visible hardware identity; confidence-tagged protocol evidence;
+historical ADR/plan/audit text; or frozen retired JSON evidence that no active test imports.
 
 ## Evidence inspected
 
@@ -14,7 +27,7 @@ Audit date: 2026-07-18. Repositories were clean on `main` before planning began.
 - `/Users/sennen/Developer/maverick-signing`: contains only `maverick-release.jks`. Its contents
   were not opened. It is an Android application-signing asset, not a connector trust store.
 
-## Current architecture
+## Pre-migration architecture
 
 The present system imports a JSON manifest, resolves its optional `codec` string against a table of
 compiled Rust factories, builds a `RealtimeProcessor`, subscribes every manifest notify UUID, and
@@ -36,7 +49,7 @@ Adding a logical codec therefore requires core-repository edits, a rebuild, and 
 ADR-016 accurately calls this cost unavoidable for compiled code; it does not satisfy the revised
 plugin product model.
 
-## WHOOP leaks
+## Pre-migration WHOOP leaks
 
 Device protocol logic that must move into the two connector source projects:
 
@@ -79,9 +92,9 @@ flags while the reference describes sixteen. Current manifests still carry `forc
 reference treats force-trim as destructive and never sends it. These differences require explicit
 fixture/hardware adjudication; neither repository is copied wholesale.
 
-## Deletion inventory
+## Deletion inventory (completed WC-P12)
 
-Final migration deletes or redesigns:
+WC-P12 deleted or redesigned:
 
 - `core/connectors/mav-connector-whoop/` and its workspace/dependency entries;
 - `DeviceCodec`, `ManifestCodec` as a device-plugin surface, `CodecFactory`, `register_codec`,
@@ -92,8 +105,8 @@ Final migration deletes or redesigns:
 - obsolete error codes, tests, docs, examples, feature flags, and dependency allowances;
 - temporary native/Wasm parity adapters after WC-P12.
 
-Useful frame, decode, protocol, and golden tests migrate to SDK or packaged-artifact tests before
-their old files are removed.
+Useful frame, decode, protocol, and golden cases migrated to SDK or packaged-artifact tests. Frozen
+retired JSON remains evidence only and is unreachable from production or active replay.
 
 ## Required cleanup proof
 

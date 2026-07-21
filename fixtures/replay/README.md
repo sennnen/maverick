@@ -1,6 +1,7 @@
 # Replay fixtures
 
-A capture, a manifest, and the snapshot they produce, for `mav-replay` and the pipeline test.
+A capture, a manifest, and the snapshot they produce for open-standard pipeline tests. Device
+protocol replay now consumes signed `.mavconn` artifacts from `fixtures/connectors/`.
 
 The live fixtures are the `_v2` set. The `_v1` files remain as the record of what they pinned
 (fixtures are never edited or deleted, per skills/golden-fixtures), but they are superseded: their
@@ -31,7 +32,9 @@ The decoder drops the zero placeholder, SQI rejects 50 ms, and the two equal 800
 distinct through their `seq` values. Frame CRCs and the expected time-domain values were generated
 with an independent Python implementation, not Maverick.
 
-`mixed_history_v2` is the M5-P5 canonical-merge fixture: five gen5 chunks mixing packet-40
+`mixed_history_v1/v2` are frozen, retired evidence from the compiled decoder path. No active test
+or runtime reads them after WC-P12; equivalent and expanded cases execute from the signed WHOOP
+artifact fixture suites. The v2 set mixed five gen5 chunks combining packet-40
 realtime seconds with packet-47 K=18 history records, including a duplicated historical chunk
 (must store once) and a stale-clock record (1970 timestamp: the wall time falls back to the
 capture wall, the raw device time is preserved, and the sample carries the implausible-timestamp

@@ -48,29 +48,6 @@ pub struct Manifest {
     /// empty `packets` map (PL-P8).
     #[serde(default)]
     pub standard_profile: Option<String>,
-    /// The device codec id this family needs (`whoop`), when the manifest DSL cannot express the
-    /// whole decode. The runtime resolves the id against the codec factories its edge registered
-    /// (a codec is a compiled crate under `core/connectors/`, never loaded from data); a manifest
-    /// naming an unregistered codec does not install. Absent means fully manifest-driven
-    /// (ADR-016).
-    #[serde(default)]
-    pub codec: Option<String>,
-    /// Historical record version/subtype byte to an admitted decoder id (`r20_k18`, `r20_k26`).
-    /// These layouts carry bit fields and sentinel semantics the manifest DSL cannot express, so
-    /// each admitted version is a reviewed decoder module in the device's codec crate, and the
-    /// manifest only names which versions this family admits — requiring `codec`, and checked
-    /// against the codec's admitted list at install. A version byte absent from this map is
-    /// unknown: no samples, the raw bytes stay evidence, and the journal records the version
-    /// (M5-P4).
-    #[serde(default)]
-    pub record_versions: BTreeMap<u8, String>,
-    /// An admitted event-vocabulary id (`whoop`): the interpretation of the event packet's number
-    /// byte and per-event bodies. Event numbers are a device-family fact the layout DSL cannot
-    /// express (one number selects a body layout), so the vocabulary is a reviewed module in the
-    /// device's codec crate and the manifest only names which one applies — requiring `codec`,
-    /// checked at install like `record_versions`.
-    #[serde(default)]
-    pub event_vocabulary: Option<String>,
     /// The stream kinds this device can produce. Capability negotiation intersects these with
     /// what each analytic requires.
     pub capabilities: Vec<StreamKind>,
@@ -482,17 +459,6 @@ impl Manifest {
                 "identity.models must not be empty",
             ));
         }
-        // Record decoders and event vocabularies live in a device codec crate, so their ids can
-        // only be checked against a codec instance (`validate_against_codec`); here we hold the
-        // structural rule that naming them at all requires naming a codec.
-        if self.codec.is_none()
-            && (!self.record_versions.is_empty() || self.event_vocabulary.is_some())
-        {
-            return Err(MavError::new(
-                codes::DECODE_LAYOUT_INVALID,
-                "record_versions and event_vocabulary route through a device codec; the manifest names none",
-            ));
-        }
         for (key, layout) in &self.layouts {
             for repeat in &layout.repeats {
                 if repeat.stride == 0 || repeat.max_count == 0 {
@@ -521,34 +487,6 @@ impl Manifest {
                     "name_field {} >= payload {}",
                     sequence.name_field_bytes, sequence.payload_bytes
                 )));
-            }
-        }
-        Ok(())
-    }
-
-    /// The install-time half of validation: every decoder id this manifest names must be a
-    /// reviewed module the paired codec admits. Runs where a manifest and its codec meet (the
-    /// runtime's connector install, the registry), because only a codec instance knows its lists.
-    pub fn validate_against_codec(&self, codec: &dyn crate::codec::DeviceCodec) -> Result<()> {
-        for decoder_id in self.record_versions.values() {
-            if !codec
-                .admitted_record_decoders()
-                .contains(&decoder_id.as_str())
-            {
-                return Err(MavError::new(
-                    codes::DECODE_LAYOUT_INVALID,
-                    "record_versions names a record decoder the codec does not admit",
-                )
-                .context(decoder_id.clone()));
-            }
-        }
-        if let Some(vocabulary) = self.event_vocabulary.as_deref() {
-            if !codec.admitted_event_vocabularies().contains(&vocabulary) {
-                return Err(MavError::new(
-                    codes::DECODE_LAYOUT_INVALID,
-                    "event_vocabulary names a vocabulary the codec does not admit",
-                )
-                .context(vocabulary.to_owned()));
             }
         }
         Ok(())
@@ -623,60 +561,6 @@ mod tests {
         let json = minimal_json().replace("gen5", "gen9");
         let err = Manifest::from_json(&json).unwrap_err();
         assert_eq!(err.code, codes::DECODE_LAYOUT_INVALID);
-    }
-
-    #[test]
-    fn naming_device_decoders_without_a_codec_is_refused() {
-        let json = minimal_json().replace(
-            "\"capabilities\"",
-            "\"event_vocabulary\": \"whoop\", \"capabilities\"",
-        );
-        let err = Manifest::from_json(&json).unwrap_err();
-        assert_eq!(err.code, codes::DECODE_LAYOUT_INVALID);
-        assert!(err.to_string().contains("device codec"), "{err}");
-    }
-
-    /// A stub device codec that admits one record decoder and one vocabulary.
-    struct StubCodec;
-    impl crate::codec::DeviceCodec for StubCodec {
-        fn decode(
-            &mut self,
-            _frame: &mav_frame::frame::RawFrame,
-            _manifest: &Manifest,
-            _kv: &mut dyn crate::kv::DeviceKv,
-        ) -> Result<Vec<mav_model::raw::RawSample>> {
-            Ok(Vec::new())
-        }
-        fn admitted_record_decoders(&self) -> &'static [&'static str] {
-            &["stub_v1"]
-        }
-        fn admitted_event_vocabularies(&self) -> &'static [&'static str] {
-            &["stub"]
-        }
-    }
-
-    #[test]
-    fn validate_against_codec_checks_the_named_ids() {
-        let json = minimal_json().replace(
-            "\"capabilities\"",
-            r#""codec": "stub", "record_versions": { "18": "stub_v1" },
-               "event_vocabulary": "stub", "capabilities""#,
-        );
-        let manifest = Manifest::from_json(&json).unwrap();
-        manifest.validate_against_codec(&StubCodec).unwrap();
-
-        let bad = Manifest::from_json(&json.replace("stub_v1", "acme_v9")).unwrap();
-        let err = bad.validate_against_codec(&StubCodec).unwrap_err();
-        assert_eq!(err.code, codes::DECODE_LAYOUT_INVALID);
-        assert!(err.to_string().contains("acme_v9"), "{err}");
-
-        let bad = Manifest::from_json(&json.replace(
-            r#""event_vocabulary": "stub""#,
-            r#""event_vocabulary": "acme""#,
-        ))
-        .unwrap();
-        let err = bad.validate_against_codec(&StubCodec).unwrap_err();
-        assert!(err.to_string().contains("acme"), "{err}");
     }
 
     #[test]

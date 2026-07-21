@@ -16,7 +16,6 @@ mav-engine = { workspace = true }
 mav-connector-abi = { workspace = true }
 mav-connector-runtime = { workspace = true }
 mav-connector-store = { workspace = true }
-mav-connector-whoop = { workspace = true }
 uniffi = { version = "0.28" }
 thiserror = { workspace = true }
 

@@ -9,26 +9,13 @@ If a Swift or Kotlin change needs to know how a frame is decoded, which samples 
 merge, whether an analytic is available, or how a metric is computed, the boundary is wrong. That
 knowledge belongs in Rust and crosses as a read model.
 
-## Two surfaces, two jobs
+## Runtime surface
 
-`mav-ffi` exposes two separate surfaces.
-
-The stateless fixture surface is:
-
-```text
-core_version() -> String
-run_capture(manifest_json, capture_json) -> RunResult
-```
-
-It exists for replay, binding smoke tests, and cross-platform parity. It opens no product database
-and owns no live session. The same manifest and capture must return the same session and analytics
-hashes in Rust, Swift, and Kotlin.
-
-The product surface is one stateful `MavRuntime` object. A runtime owns the database connection,
+`core_version()` is the stateless binding smoke test. Artifact fixture replay belongs to
+`mav-replay`; the product surface is one stateful `MavRuntime` object. A runtime owns the database connection,
 installed connector artifacts, trust and source metadata, acquisition state, connector instance,
-pipeline state, bounded action queue, and immutable host snapshot. Native code never holds a stage,
-database, interpreter, or connector handle. Current code still uses the audited manifest/compiled
-codec path until the WC migration switches it.
+pipeline state, and bounded action queue. Native code never holds a stage, database, interpreter,
+or connector handle. Signed `.mavconn` bytes are the only device execution path.
 
 ## Runtime construction
 
@@ -82,9 +69,7 @@ and a 40-byte opaque one-time approval token. `ConnectorInstallRequest` groups b
 activation choice, and injected time so the large byte buffer crosses once per call.
 
 Every result is a value record: native code never receives a SQLite, artifact, Wasm, policy, or Rust
-handle. Current `install_connector(ConnectorRegistration)` remains explicitly as the compiled-codec
-migration surface until WC-P12. New frontend work uses the byte-oriented calls. The complete
-transaction rules are in [connectors.md](connectors.md).
+handle. The complete transaction rules are in [connectors.md](connectors.md).
 
 ## Native transport events
 

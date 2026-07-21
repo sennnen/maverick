@@ -41,9 +41,9 @@ past the channel is async.
 ## StageCtx
 
 Every stage is handed a `&mut StageCtx`. It is the stage's only door to the outside world, and it
-is deliberately narrow. Through it a stage can emit tap events, log errors against the current
-ids, read its device's manifest, and (where the contract allows) read or write the per-device
-key-value store. The context carries the current `DeviceId`, `SessionId`, and the ids of the frame
+is deliberately narrow. Through it a stage can emit tap events and log errors against the current
+ids. Connector state is not a stage handle: signed artifacts request bounded transactional state
+actions from the host. The context carries the current `DeviceId`, `SessionId`, and the ids of the frame
 or stream in flight, so that anything logged is traceable back to the bytes that caused it. A stage
 does not receive a handle to another stage. The only way one stage's output reaches another is by
 being returned up to the engine and passed down as the next stage's input.
@@ -94,23 +94,18 @@ with one reason vocabulary, rather than scattered through the decoder.
 
 ### 3. Decode
 
-**In today:** `Frame` plus the device manifest and current compiled `DeviceCodec`.
+**In:** validated `EmitSamples` output from a signed artifact, or a declarative/open-standard frame
+admitted by `mav-codec`.
 **Out:** `RawSampleBatch` — a batch of raw samples, one stream kind at a time, with device
 timestamps and raw (un-normalised, un-scored) values.
 
-Decode turns a frame's body into samples using the field layouts in the manifest, and, for the
-parts a manifest cannot express, the device's codec. Most of a WHOOP record is pure field slicing
-that the manifest describes directly. The parts that need memory or a learned value (the gen4
-skin-temp anchor is the standing example) go through the codec, which reads and writes the
-per-device key-value store for exactly that purpose. This compiled route remains current app code,
-while WC-P5 implements the target connector admission path beside it. ADR-017 moves device-specific
-reassembly, decode, protocol state, and learned state into a sandboxed `.mavconn`;
-`ConnectorHost` validates bounded `EmitSamples` against signed stream and unit declarations,
-converts them into `RawSampleBatch`, then sends them through the same SQI, timeline, provenance, and
-store contracts. During parity migration both paths must produce the same batch before WC-P12
-deletes the compiled route. Target contract: [connectors.md](connectors.md).
+Device-specific reassembly, decode, protocol state, and learned state execute inside a sandboxed
+`.mavconn`. `ConnectorHost` validates bounded `EmitSamples` against signed stream and unit
+declarations, converts them into `RawSampleBatch`, then sends them through SQI, timeline,
+provenance, and storage. `mav-codec` remains only for normalized declarative layouts and explicitly
+admitted open Bluetooth profiles; it has no device registry. Contract: [connectors.md](connectors.md).
 
-Decode **may** read the manifest and the per-device store and produce raw samples. It **may not**
+Decode **may** read signed declarations and produce raw samples. It **may not**
 score signal quality, correct clocks, normalise units into calibrated physical values that hide the
 raw reading, or write to storage. A raw sample carries the number the device sent and the device's
 own timestamp, nothing yet interpreted about its trustworthiness.

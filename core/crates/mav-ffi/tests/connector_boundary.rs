@@ -95,6 +95,45 @@ fn trust(revision: u64) -> (ConnectorTrustPolicy, ConnectorTrustRevocations) {
     )
 }
 
+fn packaged_trust(public_key_hex: &str) -> (ConnectorTrustPolicy, ConnectorTrustRevocations) {
+    let public_key = (0..public_key_hex.len())
+        .step_by(2)
+        .map(|index| u8::from_str_radix(&public_key_hex[index..index + 2], 16).unwrap())
+        .collect();
+    (
+        ConnectorTrustPolicy {
+            revision: 1,
+            allow_third_party: false,
+            allow_development: true,
+            keys: vec![ConnectorPublisherKey {
+                id: "maverick-whoop-test".to_owned(),
+                public_key,
+                scope: ConnectorKeyScope::Development,
+                valid_from_ms: 0,
+                valid_until_ms: Some(10_000),
+                status: ConnectorKeyStatus::Active,
+                status_at_ms: None,
+                status_detail: None,
+            }],
+        },
+        ConnectorTrustRevocations {
+            revision: 1,
+            generated_at_ms: 0,
+            valid_until_ms: 10_000,
+            entries: Vec::new(),
+        },
+    )
+}
+
+fn packaged_artifact(name: &str) -> Vec<u8> {
+    std::fs::read(
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../fixtures/connectors")
+            .join(name),
+    )
+    .unwrap()
+}
+
 #[test]
 fn platform_neutral_connector_boundary_types_exist() {
     assert_ne!(ConnectorSourceKind::Bundled, ConnectorSourceKind::Imported);
@@ -120,6 +159,81 @@ fn platform_neutral_connector_boundary_types_exist() {
     let _ = std::mem::size_of::<InstalledConnectorRecord>();
     let _ = std::mem::size_of::<ConnectorTransportEvent>();
     let _ = std::mem::size_of::<ConnectorTransportRequest>();
+}
+
+#[test]
+fn runtime_starts_empty_and_each_packaged_connector_enables_only_after_install() {
+    for (artifact_name, connector_id, public_key) in [
+        (
+            "whoop4_v1.mavconn",
+            "dev.maverick.whoop4",
+            "7867eb5467961494f9f433a6e4928d10b03a70cd2d6ba5695d8acecc01983cfb",
+        ),
+        (
+            "whoop5_v1.mavconn",
+            "dev.maverick.whoop5",
+            "6aa31efccd2e36f3021f8e691dd839f57032875bdeaba0a2908b2942b92a5d4f",
+        ),
+    ] {
+        let (runtime, path) = runtime();
+        assert!(runtime.list_installed_connectors().unwrap().is_empty());
+        let (policy, revocations) = packaged_trust(public_key);
+        let missing = runtime
+            .open_connector_session(
+                ConnectorSessionConfig {
+                    connector_id: connector_id.to_owned(),
+                    session_id: 1,
+                    device_id: 1,
+                    transport_capacity: 16,
+                    now_ms: 1,
+                },
+                policy.clone(),
+                revocations.clone(),
+            )
+            .expect_err("not linked or installed");
+        let mav_ffi::FfiError::Core { code, .. } = missing;
+        assert_eq!(code, mav_model::error::codes::CONNECTOR_INSTALL_NOT_FOUND);
+
+        let bytes = packaged_artifact(artifact_name);
+        let inspection = runtime
+            .inspect_connector_bytes(
+                bytes.clone(),
+                source(),
+                policy.clone(),
+                revocations.clone(),
+                2,
+                1_000,
+            )
+            .unwrap();
+        runtime
+            .install_connector_bytes(
+                ConnectorInstallRequest {
+                    bytes,
+                    source: source(),
+                    approval_token: inspection.approval_token,
+                    activate: true,
+                    now_ms: 3,
+                },
+                policy.clone(),
+                revocations.clone(),
+            )
+            .unwrap();
+        runtime
+            .open_connector_session(
+                ConnectorSessionConfig {
+                    connector_id: connector_id.to_owned(),
+                    session_id: 1,
+                    device_id: 1,
+                    transport_capacity: 16,
+                    now_ms: 4,
+                },
+                policy,
+                revocations,
+            )
+            .unwrap();
+        assert!(!runtime.drain_connector_actions(16).unwrap().is_empty());
+        let _ = std::fs::remove_file(path);
+    }
 }
 
 #[test]

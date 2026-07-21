@@ -1,9 +1,5 @@
-//! The DeviceCodec trait and the manifest-driven default implementation. The trait's signature is
-//! the boundary: a codec sees a validated frame, its own manifest, and its own device's key-value
-//! store, and nothing else. Storage, network, analytics, and other devices are unreachable from
-//! here by construction, which is what makes a codec safe for one agent to write in one packet.
+//! Normalized sample admission for declarative layouts and open Bluetooth standard profiles.
 
-use crate::kv::DeviceKv;
 use crate::manifest::{Conversion, FieldType, Layout, Manifest, SubsecondsUnit, TimeSpec};
 use mav_frame::frame::RawFrame;
 use mav_frame::reader::TypedReader;
@@ -11,52 +7,19 @@ use mav_model::error::{codes, MavError, Result};
 use mav_model::raw::{RawSample, RawValue};
 use mav_model::time::DeviceTime;
 
-pub trait DeviceCodec: Send {
-    /// Decode one validated frame into raw samples. An empty vec is a normal outcome (control
-    /// packets, packets the manifest knows but does not decode yet); an error means the frame
-    /// claimed to be decodable and was not, and the caller logs it with its code.
-    fn decode(
-        &mut self,
-        frame: &RawFrame,
-        manifest: &Manifest,
-        kv: &mut dyn DeviceKv,
-    ) -> Result<Vec<RawSample>>;
-
-    /// The historical-record decoder ids this codec carries as reviewed modules. A manifest's
-    /// `record_versions` may only name ids from this list; the check runs when the manifest and
-    /// codec meet at install ([`Manifest::validate_against_codec`]).
-    fn admitted_record_decoders(&self) -> &'static [&'static str] {
-        &[]
-    }
-
-    /// The event-vocabulary ids this codec carries, checked the same way for `event_vocabulary`.
-    fn admitted_event_vocabularies(&self) -> &'static [&'static str] {
-        &[]
-    }
-}
-
-/// The default codec: pure interpretation of the manifest's layouts and admitted decoders. Its
-/// only state is the session-monotonic sequence for standard-profile samples, which carry no
-/// device clock of their own. A device family only supplies its own codec when it needs what
-/// this one cannot do.
+/// Pure interpretation of normalized layouts. Its only state is the session-monotonic sequence
+/// for standard-profile samples, which carry no device clock of their own.
 #[derive(Default, Debug, Clone)]
-pub struct ManifestCodec {
+pub struct SampleAdmission {
     standard_seq: u16,
 }
 
-impl ManifestCodec {
+impl SampleAdmission {
     pub fn new() -> Self {
         Self::default()
     }
-}
 
-impl DeviceCodec for ManifestCodec {
-    fn decode(
-        &mut self,
-        frame: &RawFrame,
-        manifest: &Manifest,
-        _kv: &mut dyn DeviceKv,
-    ) -> Result<Vec<RawSample>> {
+    pub fn decode(&mut self, frame: &RawFrame, manifest: &Manifest) -> Result<Vec<RawSample>> {
         if let Some(profile) = manifest.standard_profile.as_deref() {
             return crate::standard::decode_standard_profile(
                 profile,
@@ -71,10 +34,7 @@ impl DeviceCodec for ManifestCodec {
         let layout = match manifest.layout_for_packet(packet_type)? {
             Some(layout) => layout,
             None => {
-                // A layout-less known packet is control, not-yet-decoded, or a kind only a device
-                // codec can interpret (historical records, events); this manifest-only codec
-                // decodes none of them, and a manifest naming such decoders cannot install
-                // without a codec that admits them.
+                // A layout-less known packet is control or intentionally not decoded.
                 return Ok(Vec::new());
             }
         };
@@ -189,7 +149,6 @@ fn field_error(e: MavError, field: &str, packet_type: u8) -> MavError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::kv::MemoryKv;
     use crate::manifest::Manifest;
     use mav_model::stream::StreamKind;
 
@@ -250,9 +209,8 @@ mod tests {
     }
 
     fn decode(payload: Vec<u8>) -> Result<Vec<RawSample>> {
-        let mut codec = ManifestCodec::new();
-        let mut kv = MemoryKv::new();
-        codec.decode(&RawFrame { payload }, &realtime_manifest(), &mut kv)
+        let mut admission = SampleAdmission::new();
+        admission.decode(&RawFrame { payload }, &realtime_manifest())
     }
 
     #[test]
@@ -324,7 +282,7 @@ mod tests {
     }
 
     #[test]
-    fn an_event_packet_without_a_device_codec_yields_no_samples() {
+    fn a_layoutless_packet_yields_no_samples() {
         let manifest = Manifest::from_json(
             r#"{
                 "schema": "connector-manifest/v1",
@@ -337,11 +295,8 @@ mod tests {
         )
         .unwrap();
         let payload = vec![48u8, 1, 9, 0, 0, 0, 0, 0];
-        let mut codec = ManifestCodec::new();
-        let mut kv = MemoryKv::new();
-        let samples = codec
-            .decode(&RawFrame { payload }, &manifest, &mut kv)
-            .unwrap();
+        let mut admission = SampleAdmission::new();
+        let samples = admission.decode(&RawFrame { payload }, &manifest).unwrap();
         assert_eq!(samples, Vec::new());
     }
 
@@ -371,11 +326,8 @@ mod tests {
 
         let mut payload = vec![47u8, 0, 0, 0, 0];
         payload[3..5].copy_from_slice(&3650u16.to_le_bytes());
-        let mut codec = ManifestCodec::new();
-        let mut kv = MemoryKv::new();
-        let samples = codec
-            .decode(&RawFrame { payload }, &manifest, &mut kv)
-            .unwrap();
+        let mut admission = SampleAdmission::new();
+        let samples = admission.decode(&RawFrame { payload }, &manifest).unwrap();
         assert_eq!(samples[0].value, RawValue::Converted(36.5));
     }
 }

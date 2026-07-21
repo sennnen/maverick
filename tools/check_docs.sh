@@ -66,4 +66,5 @@ if [ "$failures" -gt 0 ]; then
     echo "check_docs: $failures problem(s)" >&2
     exit 1
 fi
+tools/check_no_bundled_connectors.py || exit 1
 echo "check_docs: ok"

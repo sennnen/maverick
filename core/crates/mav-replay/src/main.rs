@@ -1,6 +1,4 @@
-//! `mav-replay <manifest.json> <capture.json>` — run a capture through the full pipeline and print
-//! the snapshot, its canonical hash, and every stage boundary. The debugging and fixture tool that
-//! stands in for hardware. See docs/pipeline.md.
+//! `mav-replay <connector.mavconn> <publisher-public-key-hex>`.
 
 use std::path::Path;
 use std::process::ExitCode;
@@ -8,39 +6,37 @@ use std::process::ExitCode;
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().collect();
     if args.len() != 3 {
-        eprintln!("usage: mav-replay <manifest.json> <capture.json>");
+        eprintln!("usage: mav-replay <connector.mavconn> <publisher-public-key-hex>");
         return ExitCode::from(2);
     }
-
-    match mav_replay::replay_files(Path::new(&args[1]), Path::new(&args[2])) {
+    let key = match mav_replay::decode_public_key(&args[2]) {
+        Ok(key) => key,
+        Err(error) => {
+            eprintln!("error: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
+    match mav_replay::replay_file(Path::new(&args[1]), key) {
         Ok(replay) => {
-            match replay.snapshot.canonical_json() {
-                Ok(json) => println!("snapshot: {json}"),
-                Err(e) => {
-                    eprintln!("error: {e}");
-                    return ExitCode::FAILURE;
-                }
-            }
-            println!("hash: {}", replay.hash);
-            match replay.analytics.canonical_json() {
-                Ok(json) => println!("analytics: {json}"),
-                Err(e) => {
-                    eprintln!("error: {e}");
-                    return ExitCode::FAILURE;
-                }
-            }
-            println!("analytics hash: {}", replay.analytics_hash);
-            println!("boundary:");
-            for entry in &replay.boundary {
-                match serde_json::to_string(entry) {
-                    Ok(line) => println!("  {line}"),
-                    Err(e) => eprintln!("  <unserialisable entry: {e}>"),
-                }
+            println!(
+                "connector={} version={} fixtures={}",
+                replay.connector_id,
+                replay.connector_version,
+                replay.fixtures.len()
+            );
+            for fixture in replay.fixtures {
+                println!(
+                    "fixture={} events={} fuel={} memory={}",
+                    fixture.name,
+                    fixture.events_run,
+                    fixture.max_fuel_consumed,
+                    fixture.peak_memory_bytes
+                );
             }
             ExitCode::SUCCESS
         }
-        Err(e) => {
-            eprintln!("error: {e}");
+        Err(error) => {
+            eprintln!("error: {error}");
             ExitCode::FAILURE
         }
     }

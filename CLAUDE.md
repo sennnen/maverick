@@ -34,7 +34,7 @@ maverick/
   core/crates/
     mav-model             the frozen types every other crate speaks in; changes need an ADR
     mav-frame             CRC 8/16/32, the reassembler, the TypedReader
-    mav-codec             current decode/manifest layer; target migration is ADR-017/WC
+    mav-codec             normalized sample admission and explicitly retained open profiles
     mav-timeline          ordering, dedup, clock correction, historical merge
     mav-sqi               signal quality, scored on raw signals before normalization
     mav-feature           primitive, derived, and aggregate features
@@ -44,7 +44,7 @@ maverick/
     mav-engine            orchestration: triggers, task graph, caching
     mav-ffi               the uniffi facade the apps bind to
     mav-replay            runs a capture file through the whole pipeline; our stand-in for hardware
-  core/connectors/        current compiled connector path; deletion is owned by WC-P12
+  core/connectors/        absent by design; device code lives in signed external artifacts
   connectors/             development-only fixtures; connector source/releases live in the
                           separate sennnen/maverick-connectors repo (ADR-017)
   fixtures/               golden fixtures, versioned; see fixtures/README for the naming rules

@@ -21,11 +21,5 @@ mav-obs = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 
-[dev-dependencies]
-# Tests only: the runtime tests exercise the register_codec seam with the real WHOOP codec, the
-# same way the FFI does. The runtime dependency graph stays device-free (check_deps ignores
-# dev-dependencies deliberately).
-mav-connector-whoop = { workspace = true }
-
 [lints]
 workspace = true

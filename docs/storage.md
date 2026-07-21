@@ -52,14 +52,13 @@ frames and raw bytes. It is also what makes "which algorithm version computed th
 the fact, which matters every time an algorithm changes and old values need to be told apart from
 new ones.
 
-## The per-device KV table
+## Connector state
 
-The current per-device KV table exists for compiled codecs. ADR-017 replaces direct access with
-transactional connector-scoped state keyed by connector id, publisher key, device id, and state
+Transactional connector-scoped state is keyed by connector id, publisher key, device id, and state
 schema. A `.mavconn` emits bounded state actions; core selects the namespace, journals digest/schema,
-and snapshots it for update rollback. WC-P6 owns the forward migration and WC-P12 deletes direct
-`DeviceCodec` access. Learned values remain outside disposable derived tiers because dropping them
-would lose accumulated device state.
+and snapshots it for update rollback. Connector code never receives a database or filesystem
+handle. Learned values remain outside disposable derived tiers because dropping them would lose
+accumulated device state.
 
 ## Connector installation and state
 

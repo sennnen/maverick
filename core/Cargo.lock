@@ -648,17 +648,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mav-connector-whoop"
-version = "0.1.0"
-dependencies = [
- "mav-codec",
- "mav-frame",
- "mav-model",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "mav-engine"
 version = "0.1.0"
 dependencies = [
@@ -666,7 +655,6 @@ dependencies = [
  "mav-codec",
  "mav-connector-abi",
  "mav-connector-runtime",
- "mav-connector-whoop",
  "mav-feature",
  "mav-frame",
  "mav-model",
@@ -694,7 +682,6 @@ dependencies = [
  "mav-connector-abi",
  "mav-connector-runtime",
  "mav-connector-store",
- "mav-connector-whoop",
  "mav-engine",
  "mav-model",
  "mav-obs",
@@ -738,12 +725,8 @@ dependencies = [
 name = "mav-replay"
 version = "0.1.0"
 dependencies = [
- "mav-connector-whoop",
- "mav-engine",
+ "mav-connector-runtime",
  "mav-model",
- "mav-obs",
- "serde",
- "serde_json",
 ]
 
 [[package]]

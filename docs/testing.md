@@ -53,18 +53,11 @@ gate, but a fuzz finding is a bug like any other.
 
 ## The parity harness
 
-`mav-ffi` exposes `run_capture(manifest_json, capture_json)`, which returns canonical session and
-analytics JSON plus one hash for each. The iOS and Android test harnesses run the same frozen inputs
-through their bindings and compare both hashes.
-Because the core is one shared library, the pipeline cannot differ between platforms; only the thin
-bindings can. Any hash divergence is therefore a binding bug by definition, and there is no
-investigation needed to establish where the fault lies. Milestone M1's exit criterion is exactly
-this: the same capture file produces an identical snapshot hash on the iOS and Android simulators.
-
-The product runtime has a second parity rule. Feeding the same ordered `TransportEvent` sequence to
-`MavRuntime` in Rust, Swift, and Kotlin must produce the same `host-snapshot/v1` bytes, hash, and
-revision after each event. Event splitting is adversarial: tests divide notification bytes at every
-possible boundary, and all divisions must converge on the same snapshot.
+`mav-replay` validates one signed artifact and executes its embedded event/action suite through the
+same interpreter used by `MavRuntime`. Rust, Swift, and Kotlin feed identical normalized transport
+events and must observe identical lifecycle reports, ordered actions, emitted samples, trace hashes,
+state hashes, fuel, and linear-memory ceilings. Any platform divergence is a binding or transport-
+adapter bug; protocol code is the same artifact bytes.
 
 Every host schema gets a Rust canonical fixture plus strict Swift and Kotlin decode tests. Platform
 decoders reject unknown schema names and missing required fields, while ignoring unknown additive

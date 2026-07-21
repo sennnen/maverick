@@ -1,24 +1,14 @@
-//! The connector contract: manifest types, the boxed `DeviceCodec` trait, the per-device
-//! key-value store handle, the manifest-driven default codec, and the registry that resolves a
-//! model string to a device family. The design and its boundaries are docs/connectors.md; the
-//! short form is that a manifest holds everything static, a codec holds only what data cannot
-//! express, and a codec's interface gives it no way to reach storage, the network, analytics, or
-//! another device. This crate never learns a specific device's facts (ADR-011/ADR-016): device
-//! codecs live in their own crates under `core/connectors/` and reach the pipeline only through
-//! the trait. The one decoder family carried here is `standard`, the open Bluetooth SIG profiles.
+//! Normalized sample admission for declarative layouts and explicitly admitted open Bluetooth SIG
+//! profiles. Device protocol implementations live only in signed `.mavconn` artifacts.
 #![forbid(unsafe_code)]
 
 pub mod codec;
-pub mod kv;
 pub mod manifest;
-pub mod registry;
 pub mod standard;
 
-pub use codec::{DeviceCodec, ManifestCodec};
-pub use kv::{DeviceKv, MemoryKv};
+pub use codec::SampleAdmission;
 pub use manifest::{
     CommandSpec, Conversion, EnableFlag, EnableSequence, FieldSpec, FieldType, FrameConfig,
     FrameSpecConfig, Gatt, GattProfile, HeaderCrcConfig, Identity, IntervalSourceConfig, Layout,
     LengthFieldConfig, Manifest, RepeatSpec, StandardGatt, SubsecondsUnit, TimeSpec, TrailerConfig,
 };
-pub use registry::Registry;

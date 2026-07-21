@@ -58,9 +58,9 @@ fails the build.
 | 3001 | DECODE_UNKNOWN_PACKET_TYPE | a packet type has no entry in the device's manifest packet map |
 | 3002 | DECODE_LAYOUT_INVALID | a manifest field layout is internally inconsistent or unusable |
 | 3003 | DECODE_FIELD_UNREADABLE | a manifest-declared field could not be read from the payload |
-| 3004 | DECODE_NO_MANIFEST_FOR_MODEL | no registered manifest matches a device model string |
-| 3005 | DECODE_UNKNOWN_RECORD_VERSION | a historical record's version byte has no admitted decoder; the bytes stay raw evidence |
-| 3006 | DECODE_CODEC_UNAVAILABLE | a manifest names a device codec this build has not registered, so the connector cannot install |
+| 3004 | RETIRED_DECODE_3004 | retired compiled-manifest registry code; numeric value remains reserved |
+| 3005 | RETIRED_DECODE_3005 | retired compiled-record decoder code; numeric value remains reserved |
+| 3006 | RETIRED_DECODE_3006 | retired compiled-codec admission code; numeric value remains reserved |
 | 4001 | TIMELINE_IMPLAUSIBLE_TIMESTAMP | a device timestamp fell outside the plausible window and the sample was placed on capture time |
 | 5001 | STORAGE_OPEN | the database could not be opened or initialised |
 | 5002 | STORAGE_MIGRATION | a schema migration failed to apply |

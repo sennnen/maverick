@@ -5,8 +5,7 @@
 
 use crate::snapshot::{AnalyticsSnapshot, Snapshot};
 use mav_analytic::{negotiate, time_domain, IntervalSource, HRV_ALGORITHM, HRV_VERSION};
-use mav_codec::codec::{DeviceCodec, ManifestCodec};
-use mav_codec::kv::MemoryKv;
+use mav_codec::codec::SampleAdmission;
 use mav_codec::manifest::{IntervalSourceConfig, Manifest};
 use mav_feature::hr::{hr_summary, HR_FEATURE_ALGORITHM, HR_FEATURE_VERSION};
 use mav_frame::reassembler::{Reassembler, ReassemblyEvent};
@@ -52,37 +51,20 @@ pub struct IngestStats {
 }
 
 /// Incremental realtime pipeline state for one device session. It preserves frame fragments,
-/// codec state, and timeline dedup across notification callbacks while the durable store remains
+/// admission state, and timeline dedup across notification callbacks while the durable store remains
 /// owned by the caller.
 pub struct RealtimeProcessor {
     manifest: Manifest,
     device: DeviceId,
     reassembler: Reassembler,
-    codec: Box<dyn DeviceCodec>,
-    kv: MemoryKv,
+    admission: SampleAdmission,
     timeline: Timeline,
 }
 
 impl RealtimeProcessor {
-    /// The manifest-only entry: decoding is pure manifest interpretation. A manifest that names a
-    /// device codec needs [`Self::with_codec`] — the engine never knows a device crate, so the
-    /// caller at the edge resolves the id and errors if it cannot.
+    /// Decode declarative layouts and open-standard profiles only. Device protocols execute in
+    /// the artifact host and emit normalized samples directly.
     pub fn new(manifest: Manifest, device: DeviceId) -> Result<Self> {
-        if let Some(id) = manifest.codec.as_deref() {
-            return Err(MavError::new(
-                codes::DECODE_CODEC_UNAVAILABLE,
-                "manifest names a device codec but none was supplied",
-            )
-            .context(id.to_owned()));
-        }
-        Self::with_codec(manifest, device, Box::new(ManifestCodec::new()))
-    }
-
-    pub fn with_codec(
-        manifest: Manifest,
-        device: DeviceId,
-        codec: Box<dyn DeviceCodec>,
-    ) -> Result<Self> {
         let reassembler = if manifest.frame.is_unframed() {
             Reassembler::passthrough_with_max(manifest.frame.max_frame_bytes as usize)
         } else {
@@ -92,8 +74,7 @@ impl RealtimeProcessor {
             manifest,
             device,
             reassembler,
-            codec,
-            kv: MemoryKv::new(),
+            admission: SampleAdmission::new(),
             timeline: Timeline::new(),
         })
     }
@@ -125,7 +106,7 @@ impl RealtimeProcessor {
                 }
             };
 
-            let mut decoded = self.codec.decode(&frame, &self.manifest, &mut self.kv)?;
+            let mut decoded = self.admission.decode(&frame, &self.manifest)?;
             if decoded.is_empty() {
                 continue;
             }
@@ -333,19 +314,6 @@ pub fn run_realtime_output(
     tap: &dyn Tap,
 ) -> Result<PipelineOutput> {
     let processor = RealtimeProcessor::new(manifest.clone(), capture.device)?;
-    run_processor(processor, capture, store, tap)
-}
-
-/// The codec-supplied variant: the caller at the edge resolved the manifest's `codec` id to a
-/// device codec instance (the engine cannot — it never links a device crate).
-pub fn run_realtime_output_with_codec(
-    manifest: &Manifest,
-    capture: &Capture,
-    store: &Store,
-    tap: &dyn Tap,
-    codec: Box<dyn DeviceCodec>,
-) -> Result<PipelineOutput> {
-    let processor = RealtimeProcessor::with_codec(manifest.clone(), capture.device, codec)?;
     run_processor(processor, capture, store, tap)
 }
 
