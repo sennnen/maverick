@@ -71,8 +71,8 @@ internal fun resolveTodayRow(days: List<DailyMetric>, logicalKey: String, localK
 
 /**
  * #911: the SINGLE anchor the home-screen widget push resolves the row it describes through, from BOTH
- * producers (the in-app republish in AppViewModel AND the background-service producer in
- * WhoopConnectionService), so the two can never drift apart. Pure + testable without a live clock.
+ * producers, so foreground and background publication can never drift apart. Pure + testable
+ * without a live clock.
  *
  * It is exactly what the dashboard does: resolve today's row ([resolveTodayRow], which carries the #304
  * pre-04:00 local-day carve-out and the #144 anti-blank guard), then use that row when it's scored, else

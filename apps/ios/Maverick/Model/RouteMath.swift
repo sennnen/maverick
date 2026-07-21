@@ -161,9 +161,8 @@ struct WorkoutRoute: Equatable, Codable {
 }
 
 /// On-device persistence for finished GPS routes, keyed by a workout's natural key (startTs + sport) so a
-/// saved row can look its route back up. The shared `WhoopStore.WorkoutRow` carries no route column on
-/// Apple, so the polyline lives here — mirroring how `moments` / `sleepMarks` / the active-workout
-/// snapshot already persist to `UserDefaults`. Never leaves the device.
+/// saved row can look its route back up. Workout read models carry no route column, so the polyline lives
+/// here beside other bounded `UserDefaults` state. Never leaves the device.
 ///
 /// The codec (`encodeMap` / `decodeMap`) is pure (no `UserDefaults` dependency) so the persist round-trip
 /// is unit-testable; `store` / `load` / `remove` just thread a `UserDefaults` through it. Bounded so a

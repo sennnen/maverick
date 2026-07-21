@@ -1,25 +1,7 @@
 import SwiftUI
 
-// Storage & diagnostics (Data group) — iOS port of Android's `AuraDiagnosticsSheet`
-// (android/app/src/main/java/com/mav/ui/aura/AuraToolSheets.kt). Read-only on-device store
-// stats plus maintenance actions, all running locally.
-//
-// Parity note: Android ships THREE maintenance actions (Compact database / VACUUM, Run
-// integrity test / PRAGMA quick_check, Back up now). This iOS port ships only TWO:
-//   - "Run integrity test" — safe, because `WhoopStore.DatabaseIntegrity.quickCheckFailure(atPath:)`
-//     is an already-public, already-battle-tested helper (used by DataBackup's pre-export
-//     verification) that opens its own short-lived, read-only connection beside the app's live
-//     GRDB pool — exactly the sanctioned pattern for probing the store without touching the actor.
-//   - "Back up now" — reuses the existing `FolderBackup.backupNow`, the same function the
-//     Backup & Sync screen's button calls.
-// "Compact database" (VACUUM) is DELIBERATELY OMITTED: there is no safe, already-exposed way to
-// run it. `WhoopStore`'s public surface has no VACUUM/raw-SQL entry point, and the app target
-// does not link GRDB directly (only `WhoopStore` does, via SwiftPM — `import GRDB` is not
-// available here), so `WhoopStore.registryWriter`'s `any DatabaseWriter` can't actually be driven
-// from this file. Doing it anyway would mean either adding new public API to the WhoopStore
-// package or wiring a brand-new direct GRDB dependency into the app target — both are build-graph
-// changes outside a settings-screen edit, unverifiable without a full Xcode build, and exactly the
-// kind of "hack around it" this port was told to avoid. See the parity report for detail.
+// Read-only local store statistics plus bounded integrity and backup actions. Compaction remains
+// unavailable until the repository exposes an owned maintenance API.
 struct AuraDiagnosticsView: View {
   @EnvironmentObject private var repo: Repository
 

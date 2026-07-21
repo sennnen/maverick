@@ -14,36 +14,9 @@ object MavPrefs {
     /** ISO-8601 timestamp of the last terms acceptance — the on-device consent record (version + when). */
     const val KEY_ACCEPTED_TERMS_AT = "mav.acceptedTermsAt"
 
-    /** "Keep connected in the background", drives [com.sennnen.mav.ble.WhoopConnectionService]. Default on. */
-    const val KEY_BACKGROUND_CONNECTION = "mav.backgroundConnection"
-
-    /** "Continuous HRV capture", when on (AND background connection is on), Maverick holds the dense
-     *  realtime HR stream armed even with no Live screen open, so the strap banks beat-to-beat R-R 24/7
-     *  for far better overnight HRV/recovery/sleep. Uses more battery (continuous HR streaming). Default
-     *  OFF. Drives [com.sennnen.mav.ble.WhoopBleClient.setKeepStreamForData] via [AppViewModel]. */
-    const val KEY_CONTINUOUS_HRV = "mav.continuousHrv"
-
-    /** "Overnight only" refinement of Continuous HRV capture (#927): when on (with [KEY_CONTINUOUS_HRV]),
-     *  the dense realtime stream is armed only inside the nightly quiet-hours window (22:00 to 07:00 by
-     *  default, wrap-aware, local wall time) instead of 24/7, roughly halving the battery cost. Default
-     *  OFF, so existing Continuous HRV users keep the always-on behaviour with no migration. Read by
-     *  [com.sennnen.mav.ble.WhoopBleClient] at every arm site (re-derived at arm time, never cached). */
-    const val KEY_CONTINUOUS_HRV_OVERNIGHT = "mav.continuousHrvOvernight"
-
     /** The calendar day (yyyy-MM-dd) on which the morning-journal nudge was last shown, keeps the
      *  Sleep screen's "Good morning" sheet to at most once per day. */
     const val KEY_LAST_JOURNAL_PROMPT = "mav.lastJournalPromptDay"
-
-    /** "Debug logging", when on, the strap log is also written to logcat (`adb`). Default OFF so a
-     *  normal user never emits the connection log to the system log; the in-app ring buffer (and the
-     *  "Share strap log" export) work regardless. See [com.sennnen.mav.ble.WhoopBleClient.debugLogcat]. */
-    const val KEY_DEBUG_LOGGING = "mav.debugLogging"
-
-    /** "Broadcast heart rate", when on, Maverick acts as a standard BLE Heart Rate peripheral (0x180D /
-     *  0x2A37) and re-broadcasts the live strap HR so a gym treadmill / Zwift / Peloton can read it.
-     *  LOCAL Bluetooth only, nothing leaves the device. Default OFF. Drives [com.sennnen.mav.ble.HrBroadcaster]
-     *  via [AppViewModel]. Distinct from the WHOOP strap's own "broadcast HR" firmware config. */
-    const val KEY_HR_BROADCAST = "mav.hrBroadcast"
 
     const val KEY_ANALYZE_WATERMARK = "mav.analyzeWatermark"
 
@@ -58,48 +31,6 @@ object MavPrefs {
 
     fun setAnalyzeWatermark(context: Context, fingerprint: String) {
         of(context).edit().putString(KEY_ANALYZE_WATERMARK, fingerprint).apply()
-    }
-
-    /** Whether Maverick should hold the strap connection open via a foreground service. Default true. */
-    fun backgroundConnection(context: Context): Boolean =
-        of(context).getBoolean(KEY_BACKGROUND_CONNECTION, true)
-
-    fun setBackgroundConnection(context: Context, enabled: Boolean) {
-        of(context).edit().putBoolean(KEY_BACKGROUND_CONNECTION, enabled).apply()
-    }
-
-    /** Whether Maverick keeps the dense realtime HR stream armed 24/7 for continuous HRV capture. Default
-     *  false. Only takes effect while [backgroundConnection] is also on. */
-    fun continuousHrv(context: Context): Boolean =
-        of(context).getBoolean(KEY_CONTINUOUS_HRV, false)
-
-    fun setContinuousHrv(context: Context, enabled: Boolean) {
-        of(context).edit().putBoolean(KEY_CONTINUOUS_HRV, enabled).apply()
-    }
-
-    /** Whether Continuous HRV capture arms the stream only inside the nightly window (#927). Default
-     *  false = always-on, the pre-#927 behaviour. */
-    fun continuousHrvOvernight(context: Context): Boolean =
-        of(context).getBoolean(KEY_CONTINUOUS_HRV_OVERNIGHT, false)
-
-    fun setContinuousHrvOvernight(context: Context, enabled: Boolean) {
-        of(context).edit().putBoolean(KEY_CONTINUOUS_HRV_OVERNIGHT, enabled).apply()
-    }
-
-    /** Whether the strap log is mirrored to logcat. Default false (normal users don't log to adb). */
-    fun debugLogging(context: Context): Boolean =
-        of(context).getBoolean(KEY_DEBUG_LOGGING, false)
-
-    fun setDebugLogging(context: Context, enabled: Boolean) {
-        of(context).edit().putBoolean(KEY_DEBUG_LOGGING, enabled).apply()
-    }
-
-    /** Whether Maverick re-broadcasts its live HR as a standard BLE Heart Rate peripheral. Default OFF. */
-    fun hrBroadcast(context: Context): Boolean =
-        of(context).getBoolean(KEY_HR_BROADCAST, false)
-
-    fun setHrBroadcast(context: Context, enabled: Boolean) {
-        of(context).edit().putBoolean(KEY_HR_BROADCAST, enabled).apply()
     }
 
     /** Launcher-icon preference (v3 "Titanium & Gold"). false = machined-titanium (.IconDefault,

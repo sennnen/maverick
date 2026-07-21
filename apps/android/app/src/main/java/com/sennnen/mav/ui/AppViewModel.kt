@@ -141,8 +141,8 @@ internal fun liveStateOf(snapshot: MavSnapshot): LiveState {
 }
 
 /**
- * Read facade with legacy `WhoopRepository` signatures, returning empty results until the core
- * exposes the matching read models. Suspend so call-sites keep their coroutine shape.
+ * Read facade returning empty results until the core exposes the matching read models. Suspend so
+ * call-sites keep their coroutine shape without inventing data.
  */
 class MavRepo {
     suspend fun metricSeries(

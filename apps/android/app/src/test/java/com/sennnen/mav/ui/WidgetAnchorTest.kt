@@ -6,9 +6,9 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * #911: the SHARED anchor selector both widget producers (the in-app republish in AppViewModel AND the
- * background-service producer in WhoopConnectionService) resolve the widget's day through, so the two
- * can never drift apart around the rollover. Pins the SAME selection the iOS [WidgetAnchorTests] asserts
+ * #911: the SHARED anchor selector both foreground and background widget producers resolve the widget's
+ * day through, so the two can never drift apart around the rollover. Pins the SAME selection the iOS
+ * [WidgetAnchorTests] asserts
  * (Swift Repository.widgetAnchor) so the two platforms stay byte-for-byte in agreement: anchor on today's
  * row when scored, else carry the freshest STRICTLY-PRIOR scored day, with the #304 pre-04:00 carve-out
  * and the #547 future-day guard folded in.
