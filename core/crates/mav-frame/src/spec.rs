@@ -1,8 +1,8 @@
 //! A frame format described as data. The reassembler and the outbound builder are both driven by
 //! a `FrameSpec` rather than a hardcoded pair of formats, so a device declares its framing
 //! (start-of-frame byte, header template, length field, header and trailer CRCs, padding) instead
-//! of the core knowing it. gen4 and gen5 are two presets expressed in exactly this form; a
-//! connector can supply a third. The rationale is ADR-012.
+//! of the core knowing it. No device format is named here; every one arrives as data from its
+//! connector. The rationale is ADR-012.
 
 use crate::crc::{crc16_modbus, crc32, crc8};
 
@@ -110,8 +110,8 @@ pub struct FrameSpec {
     pub sof: u8,
     pub header_len: usize,
     pub length: LengthField,
-    /// True when the declared length counts the trailer (gen4/gen5, whose length includes the
-    /// CRC-32); false when it counts the payload only (custom formats may do this).
+    /// True when the declared length counts the trailer (formats whose length includes the
+    /// trailer CRC); false when it counts the payload only.
     pub length_includes_trailer: bool,
     pub header_crc: Option<HeaderCrc>,
     pub trailer: Trailer,
@@ -120,70 +120,11 @@ pub struct FrameSpec {
     pub pad_payload_to: usize,
     /// Fixed header bytes the builder starts from (first `header_len` used); the SOF, length, and
     /// header CRC are written over it. Carries wire constants a format demands beyond those
-    /// fields, such as the gen5 `0x01` / `0x00 0x01` markers its header CRC covers.
+    /// fields, such as routing markers a header CRC covers.
     pub header_template: [u8; HEADER_TEMPLATE_MAX],
 }
 
 impl FrameSpec {
-    /// WHOOP 4.0: `[0xAA][len u16 LE][crc8(len)]` then payload and a trailing CRC-32. The declared
-    /// length includes the CRC-32.
-    pub const fn gen4() -> Self {
-        Self {
-            sof: 0xAA,
-            header_len: 4,
-            length: LengthField {
-                offset: 1,
-                width: 2,
-                endian: Endian::Le,
-            },
-            length_includes_trailer: true,
-            header_crc: Some(HeaderCrc {
-                kind: CrcKind::Crc8,
-                over: (1, 3),
-                at: 3,
-                endian: Endian::Le,
-            }),
-            trailer: Trailer {
-                kind: CrcKind::Crc32,
-                endian: Endian::Le,
-            },
-            pad_payload_to: 1,
-            header_template: [0; HEADER_TEMPLATE_MAX],
-        }
-    }
-
-    /// WHOOP 5.0 / MG: `[0xAA][0x01][len u16 LE][0x00 0x01][crc16 LE]` then a 4-byte-padded payload
-    /// and a trailing CRC-32. The declared length includes the CRC-32.
-    pub const fn gen5() -> Self {
-        Self {
-            sof: 0xAA,
-            header_len: 8,
-            length: LengthField {
-                offset: 2,
-                width: 2,
-                endian: Endian::Le,
-            },
-            length_includes_trailer: true,
-            header_crc: Some(HeaderCrc {
-                kind: CrcKind::Crc16Modbus,
-                over: (0, 6),
-                at: 6,
-                endian: Endian::Le,
-            }),
-            trailer: Trailer {
-                kind: CrcKind::Crc32,
-                endian: Endian::Le,
-            },
-            pad_payload_to: 4,
-            header_template: {
-                let mut t = [0; HEADER_TEMPLATE_MAX];
-                t[1] = 0x01;
-                t[5] = 0x01;
-                t
-            },
-        }
-    }
-
     /// The smallest declared length that leaves room for the payload. When the length counts the
     /// trailer, it must be at least the trailer width; when it counts the payload only, zero is fine.
     pub const fn min_declared(&self) -> usize {
@@ -247,19 +188,37 @@ mod tests {
         assert_eq!(Endian::Be.read(&[0x12, 0x34]), 0x1234);
     }
 
-    #[test]
-    fn gen4_total_and_payload_range() {
-        let spec = FrameSpec::gen4();
-        // declared 8 = 4-byte payload + 4-byte crc32; total = 12; payload = [4, 8).
-        assert_eq!(spec.total_len(8), 12);
-        assert_eq!(spec.payload_range(12), (4, 8));
-        assert_eq!(spec.min_declared(), 4);
+    /// A four-byte header with a CRC-32 trailer counted by the declared length.
+    fn spec_with_header(header_len: usize) -> FrameSpec {
+        FrameSpec {
+            sof: 0xAA,
+            header_len,
+            length: LengthField {
+                offset: 1,
+                width: 2,
+                endian: Endian::Le,
+            },
+            length_includes_trailer: true,
+            header_crc: None,
+            trailer: Trailer {
+                kind: CrcKind::Crc32,
+                endian: Endian::Le,
+            },
+            pad_payload_to: 1,
+            header_template: [0; HEADER_TEMPLATE_MAX],
+        }
     }
 
     #[test]
-    fn gen5_total_and_payload_range() {
-        let spec = FrameSpec::gen5();
-        assert_eq!(spec.total_len(8), 16);
-        assert_eq!(spec.payload_range(16), (8, 12));
+    fn total_and_payload_range_follow_the_header_length() {
+        // declared 8 = 4-byte payload + 4-byte crc32; total = header + declared.
+        let short = spec_with_header(4);
+        assert_eq!(short.total_len(8), 12);
+        assert_eq!(short.payload_range(12), (4, 8));
+        assert_eq!(short.min_declared(), 4);
+
+        let long = spec_with_header(8);
+        assert_eq!(long.total_len(8), 16);
+        assert_eq!(long.payload_range(16), (8, 12));
     }
 }

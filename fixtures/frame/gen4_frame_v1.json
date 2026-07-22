@@ -1,9 +1,0 @@
-{
-  "schema": "frame/v1",
-  "wire_format": "gen4",
-  "confidence": "PROV",
-  "source": "Synthetic: a gen4 command frame (REPORT_VERSION_INFO, command 7, sequence 10) constructed to the [XVAL] gen4 layout with an independent implementation (Python, zlib crc32), not with the code under test. No real gen4 capture is held in this repository yet; regenerate from a live capture in the hardware epoch.",
-  "produced_with": { "mav-frame": "0.1.0" },
-  "input_hex": "aa0800a823070a015511641b",
-  "expected_payload_hex": "23070a01"
-}

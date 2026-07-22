@@ -140,7 +140,9 @@ third source found arbitrary values at `[6..7]` accepted for outbound commands),
 check it anyway, because it is the only integrity check on the header and it costs nothing. [JUDES,
 and the src/dst routing is [ONE] from the fourth source]. The proof all sources cite is the static
 gen5 hello frame `aa0108000001e67123019101363e5c8d`, which decodes exactly under the 8-byte layout
-and which `mav-frame` reproduces byte for byte in `fixtures/frame/gen5_hello_v1.json`.
+and which the `whoop-protocol` crate in `sennnen/maverick-connectors` reproduces byte for byte in
+its `maverick_generation_goldens_decode_exactly` reference vectors. The core carries no copy: it
+names no device wire format (ADR-012).
 
 ### Reassembly
 

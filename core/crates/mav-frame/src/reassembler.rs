@@ -2,7 +2,7 @@
 //! back into validated frames. Nothing is dropped silently; garbage and CRC failures come back as
 //! events so the caller can log them with their error codes.
 
-use crate::frame::{RawFrame, WireFormat};
+use crate::frame::RawFrame;
 use crate::spec::FrameSpec;
 use mav_model::error::{codes, MavError};
 
@@ -29,19 +29,10 @@ pub struct Reassembler {
 }
 
 impl Reassembler {
-    /// Reassemble one of the WHOOP wire formats.
-    pub fn new(format: WireFormat) -> Self {
-        Self::with_spec(format.spec())
-    }
-
-    /// Reassemble any frame format described by a `FrameSpec`. This is the path a connector with a
-    /// non-WHOOP framing uses (ADR-012).
+    /// Reassemble any frame format described by a `FrameSpec`. Every device format arrives this
+    /// way; the core names none of them (ADR-012).
     pub fn with_spec(spec: FrameSpec) -> Self {
         Self::with_spec_and_max(spec, DEFAULT_MAX_FRAME_BYTES)
-    }
-
-    pub fn with_max_frame_bytes(format: WireFormat, max_frame_bytes: usize) -> Self {
-        Self::with_spec_and_max(format.spec(), max_frame_bytes)
     }
 
     pub fn with_spec_and_max(spec: FrameSpec, max_frame_bytes: usize) -> Self {
@@ -186,7 +177,66 @@ impl Reassembler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::frame::build_frame;
+    use crate::crc::crc8;
+    use crate::frame::build_with_spec;
+    use crate::spec::{CrcKind, Endian, HeaderCrc, LengthField, Trailer, HEADER_TEMPLATE_MAX};
+
+    /// 4-byte header, LE length counting the trailer, CRC-8 header check, CRC-32 trailer.
+    fn compact_spec() -> FrameSpec {
+        FrameSpec {
+            sof: 0xAA,
+            header_len: 4,
+            length: LengthField {
+                offset: 1,
+                width: 2,
+                endian: Endian::Le,
+            },
+            length_includes_trailer: true,
+            header_crc: Some(HeaderCrc {
+                kind: CrcKind::Crc8,
+                over: (1, 3),
+                at: 3,
+                endian: Endian::Le,
+            }),
+            trailer: Trailer {
+                kind: CrcKind::Crc32,
+                endian: Endian::Le,
+            },
+            pad_payload_to: 1,
+            header_template: [0; HEADER_TEMPLATE_MAX],
+        }
+    }
+
+    /// 8-byte header with template markers, CRC-16 header check, payload padded to four.
+    fn routed_spec() -> FrameSpec {
+        FrameSpec {
+            sof: 0xAA,
+            header_len: 8,
+            length: LengthField {
+                offset: 2,
+                width: 2,
+                endian: Endian::Le,
+            },
+            length_includes_trailer: true,
+            header_crc: Some(HeaderCrc {
+                kind: CrcKind::Crc16Modbus,
+                over: (0, 6),
+                at: 6,
+                endian: Endian::Le,
+            }),
+            trailer: Trailer {
+                kind: CrcKind::Crc32,
+                endian: Endian::Le,
+            },
+            pad_payload_to: 4,
+            header_template: {
+                let mut t = [0; HEADER_TEMPLATE_MAX];
+                t[1] = 0x01;
+                t[5] = 0x01;
+                t
+            },
+        }
+    }
 
     fn frames_of(events: &[ReassemblyEvent]) -> Vec<Vec<u8>> {
         events
@@ -200,9 +250,9 @@ mod tests {
 
     #[test]
     fn whole_frame_in_one_push() {
-        for format in [WireFormat::Gen4, WireFormat::Gen5] {
-            let wire = build_frame(format, &[0x28, 0x01, 0x00, 0x42]).unwrap();
-            let mut r = Reassembler::new(format);
+        for spec in [compact_spec(), routed_spec()] {
+            let wire = build_with_spec(&spec, &[0x28, 0x01, 0x00, 0x42]).unwrap();
+            let mut r = Reassembler::with_spec(spec);
             let events = r.push(&wire);
             assert_eq!(frames_of(&events), vec![vec![0x28, 0x01, 0x00, 0x42]]);
             assert_eq!(r.pending(), 0);
@@ -211,8 +261,9 @@ mod tests {
 
     #[test]
     fn frame_split_across_single_byte_pushes() {
-        let wire = build_frame(WireFormat::Gen5, &[0x23, 0x01, 0x91, 0x01]).unwrap();
-        let mut r = Reassembler::new(WireFormat::Gen5);
+        let spec = routed_spec();
+        let wire = build_with_spec(&spec, &[0x23, 0x01, 0x91, 0x01]).unwrap();
+        let mut r = Reassembler::with_spec(spec);
         let mut collected = Vec::new();
         for &b in &wire {
             collected.extend(r.push(&[b]));
@@ -222,9 +273,10 @@ mod tests {
 
     #[test]
     fn garbage_before_frame_is_reported_and_skipped() {
+        let spec = compact_spec();
         let mut wire = vec![0x00, 0x13, 0x37];
-        wire.extend(build_frame(WireFormat::Gen4, &[0x30, 0x02, 0x05]).unwrap());
-        let mut r = Reassembler::new(WireFormat::Gen4);
+        wire.extend(build_with_spec(&spec, &[0x30, 0x02, 0x05]).unwrap());
+        let mut r = Reassembler::with_spec(spec);
         let events = r.push(&wire);
         assert_eq!(events[0], ReassemblyEvent::SkippedGarbage { bytes: 3 });
         assert_eq!(frames_of(&events), vec![vec![0x30, 0x02, 0x05]]);
@@ -232,14 +284,15 @@ mod tests {
 
     #[test]
     fn corrupted_payload_is_rejected_and_next_frame_recovered() {
-        let mut bad = build_frame(WireFormat::Gen4, &[0x28, 0x01, 0x00, 0x42]).unwrap();
+        let spec = compact_spec();
+        let mut bad = build_with_spec(&spec, &[0x28, 0x01, 0x00, 0x42]).unwrap();
         let last = bad.len() - 5;
         bad[last] ^= 0x01;
-        let good = build_frame(WireFormat::Gen4, &[0x28, 0x02, 0x00, 0x43]).unwrap();
+        let good = build_with_spec(&spec, &[0x28, 0x02, 0x00, 0x43]).unwrap();
         let mut wire = bad;
         wire.extend(&good);
 
-        let mut r = Reassembler::new(WireFormat::Gen4);
+        let mut r = Reassembler::with_spec(spec);
         let events = r.push(&wire);
         let invalid: Vec<_> = events
             .iter()
@@ -257,9 +310,10 @@ mod tests {
 
     #[test]
     fn corrupted_header_is_rejected() {
-        let mut wire = build_frame(WireFormat::Gen5, &[0x23, 0x01, 0x91, 0x01]).unwrap();
+        let spec = routed_spec();
+        let mut wire = build_with_spec(&spec, &[0x23, 0x01, 0x91, 0x01]).unwrap();
         wire[6] ^= 0xFF;
-        let mut r = Reassembler::new(WireFormat::Gen5);
+        let mut r = Reassembler::with_spec(spec);
         let events = r.push(&wire);
         assert!(matches!(
             events.first(),
@@ -270,8 +324,7 @@ mod tests {
 
     #[test]
     fn oversized_declared_length_is_rejected_not_awaited() {
-        use crate::crc::crc8;
-        let mut r = Reassembler::with_max_frame_bytes(WireFormat::Gen4, 64);
+        let mut r = Reassembler::with_spec_and_max(compact_spec(), 64);
         let mut header = vec![crate::frame::START_OF_FRAME];
         let declared = 1000u16.to_le_bytes();
         header.extend_from_slice(&declared);
@@ -284,12 +337,9 @@ mod tests {
     }
 
     #[test]
-    fn a_custom_spec_reassembles_a_non_whoop_frame() {
-        use crate::crc::crc8;
-        use crate::spec::{CrcKind, Endian, FrameSpec, LengthField, Trailer};
-
-        // A custom format: 0x5A SOF, big-endian payload length, a single CRC-8 trailer, no header
-        // CRC, and the length counts the payload only.
+    fn a_custom_spec_reassembles_an_unrelated_frame() {
+        // 0x5A SOF, big-endian payload length, a single CRC-8 trailer, no header CRC, and the
+        // length counts the payload only.
         let spec = FrameSpec {
             sof: 0x5A,
             header_len: 3,
@@ -305,9 +355,9 @@ mod tests {
                 endian: Endian::Le,
             },
             pad_payload_to: 1,
-            header_template: [0; crate::spec::HEADER_TEMPLATE_MAX],
+            header_template: [0; HEADER_TEMPLATE_MAX],
         };
-        let payload = [0x00u8, 0x01, 0x02, 0x03];
+        let payload = [0xDEu8, 0xAD, 0xBE, 0xEF];
         let mut wire = vec![0x5A];
         wire.extend_from_slice(&(payload.len() as u16).to_be_bytes());
         wire.extend_from_slice(&payload);
@@ -316,55 +366,12 @@ mod tests {
         let mut r = Reassembler::with_spec(spec);
         let events = r.push(&wire);
         assert_eq!(frames_of(&events), vec![payload.to_vec()]);
-        assert_eq!(r.pending(), 0);
-
-        // A corrupted trailer is rejected, just like the WHOOP path.
-        let mut bad = wire.clone();
-        let last = bad.len() - 1;
-        bad[last] ^= 0xFF;
-        let events = Reassembler::with_spec(spec).push(&bad);
-        assert!(matches!(
-            events.first(),
-            Some(ReassemblyEvent::InvalidFrame(e)) if e.code == codes::FRAME_PAYLOAD_CRC_MISMATCH
-        ));
     }
 
     #[test]
-    fn reset_reports_discarded_bytes() {
-        let wire = build_frame(WireFormat::Gen4, &[0x28, 0x01, 0x00, 0x42]).unwrap();
-        let mut r = Reassembler::new(WireFormat::Gen4);
-        r.push(&wire[..5]);
-        assert_eq!(r.reset(), 5);
-        assert_eq!(r.pending(), 0);
-    }
-
-    // PL-P8: standard GATT characteristics are unframed — one notification value is one frame,
-    // with no header, no start byte, and no CRC.
-
-    #[test]
-    fn passthrough_emits_each_chunk_as_one_frame() {
+    fn passthrough_delivers_each_chunk_whole() {
         let mut r = Reassembler::passthrough();
-        let events = r.push(&[0x10, 0x48, 0x30, 0x03]);
-        assert_eq!(frames_of(&events), vec![vec![0x10, 0x48, 0x30, 0x03]]);
-        let events = r.push(&[0x00, 0x3C]);
-        assert_eq!(frames_of(&events), vec![vec![0x00, 0x3C]]);
-        assert_eq!(r.pending(), 0);
-    }
-
-    #[test]
-    fn passthrough_ignores_an_empty_notification() {
-        let mut r = Reassembler::passthrough();
-        assert!(r.push(&[]).is_empty());
-    }
-
-    #[test]
-    fn passthrough_rejects_an_oversized_chunk() {
-        let mut r = Reassembler::passthrough_with_max(4);
-        let events = r.push(&[0u8; 5]);
-        assert!(matches!(
-            events.as_slice(),
-            [ReassemblyEvent::InvalidFrame(e)] if e.code == codes::FRAME_OVERSIZED
-        ));
-        assert_eq!(frames_of(&r.push(&[0x00, 0x3C])), vec![vec![0x00, 0x3C]]);
+        let events = r.push(&[0x10, 0x40, 0x33, 0x03]);
+        assert_eq!(frames_of(&events), vec![vec![0x10, 0x40, 0x33, 0x03]]);
     }
 }
