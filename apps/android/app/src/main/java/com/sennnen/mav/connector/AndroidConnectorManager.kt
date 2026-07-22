@@ -11,6 +11,7 @@ import java.net.URL
 import java.util.TimeZone
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +21,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import uniffi.mav_ffi.ConnectorInspection
 import uniffi.mav_ffi.ConnectorInstallRequest
+import uniffi.mav_ffi.ConnectorCancelReason
+import uniffi.mav_ffi.ConnectorLifecycleState
 import uniffi.mav_ffi.ConnectorRemovalMode
 import uniffi.mav_ffi.ConnectorRegistryCheckpoint
 import uniffi.mav_ffi.ConnectorRegistryEntry
@@ -56,6 +59,15 @@ class AndroidConnectorManager(
     private val mutableRegistryEntries = MutableStateFlow<List<ConnectorRegistryEntry>>(emptyList())
     val registryEntries: StateFlow<List<ConnectorRegistryEntry>> = mutableRegistryEntries.asStateFlow()
 
+    private val mutableRegistryError = MutableStateFlow<String?>(null)
+    val registryError: StateFlow<String?> = mutableRegistryError.asStateFlow()
+
+    private val mutableConnection = MutableStateFlow(ConnectorConnectionState())
+    val connection: StateFlow<ConnectorConnectionState> = mutableConnection.asStateFlow()
+
+    private val mutableDiscoveredDevices = MutableStateFlow<List<ConnectorScanDevice>>(emptyList())
+    val discoveredDevices: StateFlow<List<ConnectorScanDevice>> = mutableDiscoveredDevices.asStateFlow()
+
     val managerEnabled: Boolean = BuildConfig.MAV_CONNECTOR_MANAGER_ENABLED
     val remoteImportEnabled: Boolean = BuildConfig.MAV_ALLOW_REMOTE_CONNECTORS
     val thirdPartyEnabled: Boolean = BuildConfig.MAV_ALLOW_THIRD_PARTY_CONNECTORS
@@ -64,19 +76,31 @@ class AndroidConnectorManager(
         revision = 1uL,
         allowThirdParty = thirdPartyEnabled,
         allowDevelopment = BuildConfig.DEBUG,
-        keys = emptyList(),
+        keys = AndroidConnectorTrust.configuredKeys(),
     )
     private var revocations = ConnectorTrustRevocations(
         revision = 0uL,
-        generatedAtMs = if (registryConfiguration == null) 0 else 1,
-        validUntilMs = if (registryConfiguration == null) {
+        generatedAtMs = if (registryConfiguration == null || BuildConfig.DEBUG) 0 else 1,
+        validUntilMs = if (registryConfiguration == null || BuildConfig.DEBUG) {
             System.currentTimeMillis() + 31_536_000_000
         } else {
             0
         },
         entries = emptyList(),
     )
-    private val bluetooth = MavBleExecutor(appContext, ::applyTransportEvent)
+    private val transportEvents = Channel<ConnectorTransportEvent>(Channel.UNLIMITED)
+    private val bluetooth = MavBleExecutor(
+        appContext,
+        ::enqueueTransportEvent,
+        { mutableDiscoveredDevices.value = it },
+        { failConnection(IllegalStateException(it)) },
+    )
+
+    init {
+        scope.launch(Dispatchers.IO) {
+            for (event in transportEvents) applyTransportEvent(event)
+        }
+    }
 
     suspend fun start() {
         gate.withLock { ensureRuntime() }
@@ -118,7 +142,9 @@ class AndroidConnectorManager(
                     )
                     applyRegistrySnapshot(bytes, snapshot)
                 }
-            }.onFailure(::fail)
+            }.onSuccess {
+                mutableRegistryError.value = null
+            }.onFailure(::failRegistry)
         }
     }
 
@@ -132,9 +158,17 @@ class AndroidConnectorManager(
                 val connection = URL(entry.artifactUrl).openConnection() as HttpURLConnection
                 connection.connectTimeout = 15_000
                 connection.readTimeout = 30_000
-                connection.instanceFollowRedirects = false
+                connection.instanceFollowRedirects = true
                 try {
-                    if (connection.responseCode !in 200..299) throw ConnectorAcquisitionException.InvalidResponse()
+                    connection.connect()
+                    if (!connection.url.protocol.equals("https", ignoreCase = true) ||
+                        connection.responseCode !in 200..299
+                    ) {
+                        throw ConnectorAcquisitionException.InvalidResponse()
+                    }
+                    if (connection.contentLengthLong > ConnectorAcquisition.MAXIMUM_BYTES.toLong()) {
+                        throw ConnectorAcquisitionException.TooLarge()
+                    }
                     connection.inputStream.use(BoundedConnectorReader::read)
                 } finally {
                     connection.disconnect()
@@ -346,12 +380,39 @@ class AndroidConnectorManager(
             cancellationGeneration = 0uL,
         )
         bluetooth.checkpoint = checkpoint
+        mutableConnection.value = ConnectorConnectionState(
+            connectorId = record.connectorId,
+            label = "Starting",
+        )
         scope.launch(Dispatchers.IO) {
-            runCatching { resumeSession(checkpoint) }.onFailure(::fail)
+            runCatching { resumeSession(checkpoint) }.onFailure(::failConnection)
         }
     }
 
-    fun reportFailure(error: Throwable) = fail(error)
+    fun disconnect() {
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                gate.withLock {
+                    val active = ensureRuntime()
+                    active.cancelConnectorSession(
+                        ConnectorCancelReason.USER,
+                        System.currentTimeMillis(),
+                    )
+                    active.drainConnectorActions(64u) to active.connectorTelemetry()
+                }
+            }.onSuccess { (actions, telemetry) ->
+                publishTelemetry(telemetry)
+                withContext(Dispatchers.Main) { actions.forEach(bluetooth::execute) }
+                if (telemetry.lifecycle == ConnectorLifecycleState.DISCONNECTED) {
+                    bluetooth.checkpoint = null
+                }
+            }.onFailure(::failConnection)
+        }
+    }
+
+    fun selectDevice(deviceId: String) = bluetooth.selectDevice(deviceId)
+
+    fun reportFailure(error: Throwable) = failConnection(error)
 
     fun onBluetoothPermissionResult(granted: Boolean) = bluetooth.onPermissionResult(granted)
 
@@ -416,7 +477,10 @@ class AndroidConnectorManager(
                     System.currentTimeMillis(),
                 )
             }
-        }.onSuccess { snapshot -> applyRegistrySnapshot(cached.bytes, snapshot) }.onFailure(::fail)
+        }.onSuccess { snapshot ->
+            applyRegistrySnapshot(cached.bytes, snapshot)
+            mutableRegistryError.value = null
+        }.onFailure(::failRegistry)
     }
 
     private fun applyRegistrySnapshot(bytes: ByteArray, snapshot: uniffi.mav_ffi.ConnectorRegistrySnapshot) {
@@ -428,7 +492,7 @@ class AndroidConnectorManager(
     }
 
     private suspend fun resumeSession(checkpoint: ConnectorRestorationCheckpoint) {
-        val actions = gate.withLock {
+        val (actions, telemetry) = gate.withLock {
             val active = ensureRuntime()
             active.openConnectorSession(
                 ConnectorSessionConfig(
@@ -441,23 +505,41 @@ class AndroidConnectorManager(
                 policy,
                 revocations,
             )
-            active.drainConnectorActions(64u)
+            active.drainConnectorActions(64u) to active.connectorTelemetry()
         }
+        publishTelemetry(telemetry)
         withContext(Dispatchers.Main) { actions.forEach(bluetooth::execute) }
     }
 
-    private fun applyTransportEvent(event: ConnectorTransportEvent) {
-        scope.launch(Dispatchers.IO) {
-            runCatching {
-                gate.withLock {
-                    val active = ensureRuntime()
-                    active.applyConnectorEvent(event, System.currentTimeMillis())
-                    active.drainConnectorActions(64u)
-                }
-            }.onSuccess { actions ->
-                withContext(Dispatchers.Main) { actions.forEach(bluetooth::execute) }
-            }.onFailure(::fail)
+    private fun enqueueTransportEvent(event: ConnectorTransportEvent) {
+        if (transportEvents.trySend(event).isFailure) {
+            failConnection(IllegalStateException("Bluetooth event queue is unavailable."))
         }
+    }
+
+    private suspend fun applyTransportEvent(event: ConnectorTransportEvent) {
+        runCatching {
+            gate.withLock {
+                val active = ensureRuntime()
+                active.applyConnectorEvent(event, System.currentTimeMillis())
+                active.drainConnectorActions(64u) to active.connectorTelemetry()
+            }
+        }.onSuccess { (actions, telemetry) ->
+            publishTelemetry(telemetry)
+            withContext(Dispatchers.Main) { actions.forEach(bluetooth::execute) }
+            if (telemetry.lifecycle == ConnectorLifecycleState.DISCONNECTED && actions.isEmpty()) {
+                bluetooth.checkpoint = null
+            }
+        }.onFailure(::failConnection)
+    }
+
+    private fun publishTelemetry(telemetry: uniffi.mav_ffi.ConnectorTelemetrySnapshot) {
+        bluetooth.checkpoint = ConnectorRestorationCheckpoint(
+            connectorId = telemetry.connectorId,
+            sessionId = telemetry.sessionId,
+            cancellationGeneration = telemetry.cancellationGeneration,
+        )
+        mutableConnection.value = ConnectorConnectionState.from(telemetry)
     }
 
     private fun ensureRuntime(): MavRuntime {
@@ -497,6 +579,29 @@ class AndroidConnectorManager(
     private fun fail(message: String) {
         machine.fail(message)
         mutablePhase.value = machine.phase
+    }
+
+    private fun failRegistry(error: Throwable) {
+        mutableRegistryError.value = error.userMessage()
+    }
+
+    private fun failConnection(error: Throwable) {
+        val message = error.userMessage()
+        mutableConnection.value = mutableConnection.value.copy(
+            lifecycle = ConnectorLifecycleState.FAILED,
+            label = "Failed",
+            connected = false,
+            heartRateBpm = null,
+            batteryPercent = null,
+            onWrist = null,
+            lastSampleWallTimeMs = null,
+            errorMessage = message,
+        )
+    }
+
+    private fun Throwable.userMessage(): String = when (this) {
+        is FfiException.Core -> safeMessage
+        else -> message ?: "Connector operation failed."
     }
 
     @Suppress("DEPRECATION")

@@ -3,8 +3,11 @@ package com.sennnen.mav.connector
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.security.MessageDigest
+import java.util.UUID
 import uniffi.mav_ffi.ConnectorSourceKind
 import uniffi.mav_ffi.ConnectorSourceMetadata
+import uniffi.mav_ffi.ConnectorLifecycleState
+import uniffi.mav_ffi.ConnectorTelemetrySnapshot
 import uniffi.mav_ffi.ConnectorTransportRequest
 
 enum class ConnectorImportOrigin {
@@ -82,6 +85,74 @@ data class ConnectorApprovalSummary(
     val capabilities: List<String> = emptyList(),
     val permissions: List<String> = emptyList(),
 )
+
+data class ConnectorConnectionState(
+    val connectorId: String? = null,
+    val lifecycle: ConnectorLifecycleState? = null,
+    val label: String = "Disconnected",
+    val connected: Boolean = false,
+    val heartRateBpm: Int? = null,
+    val batteryPercent: Int? = null,
+    val onWrist: Boolean? = null,
+    val lastSampleWallTimeMs: Long? = null,
+    val errorMessage: String? = null,
+) {
+    companion object {
+        fun from(telemetry: ConnectorTelemetrySnapshot): ConnectorConnectionState =
+            ConnectorConnectionState(
+                connectorId = telemetry.connectorId,
+                lifecycle = telemetry.lifecycle,
+                label = telemetry.lifecycle.displayLabel(),
+                connected = telemetry.lifecycle == ConnectorLifecycleState.STREAMING ||
+                    telemetry.lifecycle == ConnectorLifecycleState.HISTORICAL,
+                heartRateBpm = telemetry.heartRateBpm?.toInt(),
+                batteryPercent = telemetry.batteryPercent?.toInt(),
+                onWrist = telemetry.onWrist,
+                lastSampleWallTimeMs = telemetry.lastSampleWallTimeMs,
+            )
+    }
+}
+
+data class ConnectorScanDevice(
+    val id: String,
+    val name: String,
+    val rssi: Int,
+)
+
+internal class ConnectorScanCatalog {
+    private val byId = linkedMapOf<String, ConnectorScanDevice>()
+
+    fun observe(device: ConnectorScanDevice) {
+        byId[device.id] = device
+    }
+
+    fun devices(): List<ConnectorScanDevice> = byId.values.sortedByDescending { it.rssi }
+
+    fun clear() = byId.clear()
+}
+
+internal fun connectorWireUuid(value: UUID): String {
+    val normalized = value.toString().lowercase()
+    val suffix = "-0000-1000-8000-00805f9b34fb"
+    if (!normalized.endsWith(suffix)) return normalized
+    val prefix = normalized.removeSuffix(suffix)
+    return if (prefix.startsWith("0000")) prefix.removePrefix("0000") else prefix
+}
+
+private fun ConnectorLifecycleState.displayLabel(): String = when (this) {
+    ConnectorLifecycleState.INSTALLED -> "Installed"
+    ConnectorLifecycleState.SELECTED -> "Starting"
+    ConnectorLifecycleState.SCANNING -> "Scanning"
+    ConnectorLifecycleState.CONNECTING -> "Connecting"
+    ConnectorLifecycleState.DISCOVERING -> "Discovering services"
+    ConnectorLifecycleState.PAIRING -> "Pairing"
+    ConnectorLifecycleState.CONFIGURING -> "Configuring"
+    ConnectorLifecycleState.STREAMING -> "Streaming"
+    ConnectorLifecycleState.HISTORICAL -> "Syncing history"
+    ConnectorLifecycleState.SUSPENDING -> "Suspending"
+    ConnectorLifecycleState.DISCONNECTED -> "Disconnected"
+    ConnectorLifecycleState.FAILED -> "Failed"
+}
 
 sealed interface ConnectorApprovalPhase {
     data object Idle : ConnectorApprovalPhase

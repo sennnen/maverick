@@ -32,6 +32,8 @@ import uniffi.mav_ffi.ConnectorTransportEvent
 class MavBleExecutor(
     context: Context,
     private val eventSink: (ConnectorTransportEvent) -> Unit,
+    private val discoverySink: (List<ConnectorScanDevice>) -> Unit,
+    private val errorSink: (String) -> Unit,
 ) : AutoCloseable {
     companion object {
         private const val CHECKPOINT_KEY = "connector.ble.restoration.v1"
@@ -50,7 +52,10 @@ class MavBleExecutor(
     private val pendingReads = mutableMapOf<String, Pair<ULong, String>>()
     private val pendingWrites = mutableMapOf<String, Pair<ULong, String>>()
     private val notificationTargets = mutableMapOf<String, Pair<String, Boolean>>()
+    private val subscriptionQueue = ArrayDeque<Triple<ConnectorTransportAction, ConnectorNativeOperation, Boolean>>()
     private val queuedForPermission = mutableListOf<ConnectorTransportAction>()
+    private val scanCatalog = ConnectorScanCatalog()
+    private val advertisements = mutableMapOf<String, ConnectorTransportEvent.Advertisement>()
     private var manufacturerFilter = emptySet<UShort>()
     private var gatt: BluetoothGatt? = null
 
@@ -95,7 +100,6 @@ class MavBleExecutor(
             is ConnectorNativeOperation.Scan -> startScan(action, operation)
             ConnectorNativeOperation.StopScan -> {
                 if (hasScanPermission()) adapter?.bluetoothLeScanner?.stopScan(scanCallback)
-                eventSink(ConnectorTransportEvent.ScanStopped(0u))
             }
             is ConnectorNativeOperation.Connect -> {
                 if (!hasConnectPermission()) {
@@ -116,12 +120,14 @@ class MavBleExecutor(
                     fail(action.operationId, 3u, "Bluetooth service discovery could not start.")
                 }
             }
-            is ConnectorNativeOperation.Subscribe -> setSubscription(action, operation, true)
-            is ConnectorNativeOperation.Unsubscribe -> setSubscription(action, operation, false)
+            is ConnectorNativeOperation.Subscribe -> enqueueSubscription(action, operation, true)
+            is ConnectorNativeOperation.Unsubscribe -> enqueueSubscription(action, operation, false)
             is ConnectorNativeOperation.Read -> read(action, operation)
             is ConnectorNativeOperation.Write -> write(action, operation)
             ConnectorNativeOperation.Disconnect -> {
-                if (hasConnectPermission()) gatt?.disconnect()
+                if (hasScanPermission()) adapter?.bluetoothLeScanner?.stopScan(scanCallback)
+                if (hasConnectPermission() && gatt != null) gatt?.disconnect()
+                else eventSink(ConnectorTransportEvent.Disconnected(0u))
             }
             is ConnectorNativeOperation.SetTimer -> {
                 timers.remove(operation.token)?.let(handler::removeCallbacks)
@@ -145,10 +151,16 @@ class MavBleExecutor(
         else pending.forEach { fail(it.operationId, 1u, "Bluetooth permission was denied.") }
     }
 
+    fun selectDevice(id: String) {
+        advertisements[id]?.let(eventSink)
+    }
+
     @SuppressLint("MissingPermission")
     override fun close() {
         timers.values.forEach(handler::removeCallbacks)
         timers.clear()
+        subscriptionQueue.clear()
+        subscriptionInFlight = false
         if (hasScanPermission()) adapter?.bluetoothLeScanner?.stopScan(scanCallback)
         if (hasConnectPermission()) {
             gatt?.disconnect()
@@ -170,6 +182,9 @@ class MavBleExecutor(
             return
         }
         manufacturerFilter = operation.manufacturerIds.toSet()
+        scanCatalog.clear()
+        advertisements.clear()
+        discoverySink(emptyList())
         val filters = operation.serviceUuids.map { value ->
             ScanFilter.Builder().setServiceUuid(ParcelUuid(uuid(value))).build()
         }
@@ -204,6 +219,7 @@ class MavBleExecutor(
     ) {
         if (!hasConnectPermission()) {
             fail(action.operationId, 1u, "Bluetooth permission is required.")
+            finishSubscription()
             return
         }
         val target = when (operation) {
@@ -215,6 +231,7 @@ class MavBleExecutor(
         val activeGatt = gatt
         if (characteristic == null || activeGatt == null) {
             fail(action.operationId, 7u, "A declared Bluetooth characteristic was not discovered.")
+            finishSubscription()
             return
         }
         val nativeKey = key(characteristic)
@@ -222,11 +239,13 @@ class MavBleExecutor(
         notificationTargets[nativeKey] = target.first to enabled
         if (!activeGatt.setCharacteristicNotification(characteristic, enabled)) {
             fail(action.operationId, 8u, "Bluetooth notification state could not be changed.")
+            finishSubscription()
             return
         }
         val descriptor = characteristic.getDescriptor(CLIENT_CONFIG)
         if (descriptor == null) {
             fail(action.operationId, 9u, "The notification descriptor is missing.")
+            finishSubscription()
             return
         }
         val value = when {
@@ -243,7 +262,33 @@ class MavBleExecutor(
             @Suppress("DEPRECATION")
             activeGatt.writeDescriptor(descriptor)
         }
-        if (!started) fail(action.operationId, 10u, "Bluetooth descriptor write could not start.")
+        if (!started) {
+            fail(action.operationId, 10u, "Bluetooth descriptor write could not start.")
+            finishSubscription()
+        }
+    }
+
+    private var subscriptionInFlight = false
+
+    private fun enqueueSubscription(
+        action: ConnectorTransportAction,
+        operation: ConnectorNativeOperation,
+        enabled: Boolean,
+    ) {
+        subscriptionQueue.addLast(Triple(action, operation, enabled))
+        startNextSubscription()
+    }
+
+    private fun startNextSubscription() {
+        if (subscriptionInFlight) return
+        val next = subscriptionQueue.removeFirstOrNull() ?: return
+        subscriptionInFlight = true
+        setSubscription(next.first, next.second, next.third)
+    }
+
+    private fun finishSubscription() {
+        subscriptionInFlight = false
+        startNextSubscription()
     }
 
     @SuppressLint("MissingPermission")
@@ -311,6 +356,7 @@ class MavBleExecutor(
     } == true
 
     private fun fail(operationId: ULong?, code: UShort, message: String) {
+        errorSink(message)
         eventSink(ConnectorTransportEvent.TransportError(operationId, code, message))
     }
 
@@ -372,15 +418,24 @@ class MavBleExecutor(
                 return
             }
             devices[result.device.address] = result.device
-            eventSink(
-                ConnectorTransportEvent.Advertisement(
-                    address = result.device.address,
-                    rssi = result.rssi.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort(),
-                    serviceUuids = record?.serviceUuids?.map { it.uuid.toString() } ?: emptyList(),
-                    manufacturerData = manufacturerBytes,
-                    name = record?.deviceName ?: runCatching { result.device.name }.getOrNull(),
+            val address = result.device.address
+            val name = record?.deviceName ?: runCatching { result.device.name }.getOrNull()
+            val advertisement = ConnectorTransportEvent.Advertisement(
+                address = address,
+                rssi = result.rssi.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort(),
+                serviceUuids = record?.serviceUuids?.map { connectorWireUuid(it.uuid) } ?: emptyList(),
+                manufacturerData = manufacturerBytes,
+                name = name,
+            )
+            advertisements[address] = advertisement
+            scanCatalog.observe(
+                ConnectorScanDevice(
+                    id = address,
+                    name = name ?: "Nearby wearable",
+                    rssi = result.rssi,
                 ),
             )
+            discoverySink(scanCatalog.devices())
         }
 
         override fun onScanFailed(errorCode: Int) {
@@ -418,7 +473,7 @@ class MavBleExecutor(
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                eventSink(ConnectorTransportEvent.ServicesDiscovered(gatt.services.map { it.uuid.toString() }))
+                eventSink(ConnectorTransportEvent.ServicesDiscovered(gatt.services.map { connectorWireUuid(it.uuid) }))
             } else {
                 fail(null, status.toUShort(), "Bluetooth service discovery failed.")
             }
@@ -426,7 +481,10 @@ class MavBleExecutor(
 
         override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
             val nativeKey = key(descriptor.characteristic)
-            val target = notificationTargets.remove(nativeKey) ?: return
+            val target = notificationTargets.remove(nativeKey) ?: run {
+                handler.post(::finishSubscription)
+                return
+            }
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 fail(null, status.toUShort(), "Bluetooth subscription failed.")
             } else if (target.second) {
@@ -434,6 +492,7 @@ class MavBleExecutor(
             } else {
                 eventSink(ConnectorTransportEvent.Unsubscribed(target.first))
             }
+            handler.post(::finishSubscription)
         }
 
         @Deprecated("Called through Android 12")

@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sennnen.mav.connector.ConnectorApprovalPhase
 import com.sennnen.mav.connector.ConnectorApprovalSummary
+import com.sennnen.mav.connector.ConnectorScanDevice
 import com.sennnen.mav.ui.aura.Aura
 import com.sennnen.mav.ui.aura.AuraDarkCard
 import com.sennnen.mav.ui.aura.AuraFamily
@@ -47,12 +48,18 @@ import com.sennnen.mav.ui.aura.AuraScreen
 import com.sennnen.mav.ui.aura.AuraSectionHeader
 import com.sennnen.mav.ui.aura.AuraType
 import uniffi.mav_ffi.InstalledConnectorRecord
+import uniffi.mav_ffi.ConnectorRegistryEntry
+import uniffi.mav_ffi.ConnectorLifecycleState
 
 @Composable
 fun DevicesScreen(vm: AppViewModel, onChooseConnectorFile: () -> Unit) {
     val manager = vm.connectors
     val phase by manager.phase.collectAsStateWithLifecycle()
     val installed by manager.installed.collectAsStateWithLifecycle()
+    val registryEntries by manager.registryEntries.collectAsStateWithLifecycle()
+    val registryError by manager.registryError.collectAsStateWithLifecycle()
+    val connection by manager.connection.collectAsStateWithLifecycle()
+    val discoveredDevices by manager.discoveredDevices.collectAsStateWithLifecycle()
     var remoteUrl by remember { mutableStateOf("") }
     val palette = Aura.palette
 
@@ -110,12 +117,60 @@ fun DevicesScreen(vm: AppViewModel, onChooseConnectorFile: () -> Unit) {
 
             ConnectorPhaseCard(phase, manager::approve, manager::cancel)
 
+            registryError?.let {
+                StatusCard(
+                    icon = { Icon(Icons.Filled.ErrorOutline, contentDescription = null) },
+                    title = "Online catalog unavailable",
+                    body = "Local .mavconn files still work.",
+                )
+            }
+
+            if (registryEntries.isNotEmpty()) {
+                AuraSectionHeader(title = "Available")
+                registryEntries.filterNot { it.revoked }.forEach { entry ->
+                    RegistryEntryCard(entry) { manager.importRegistryEntry(entry) }
+                }
+            }
+
+            connection.connectorId?.let {
+                StatusCard(
+                    icon = { Icon(Icons.Filled.Bluetooth, contentDescription = null) },
+                    title = connection.label,
+                    body = buildString {
+                        append(it)
+                        connection.heartRateBpm?.let { bpm -> append(" · $bpm bpm") }
+                        connection.batteryPercent?.let { battery -> append(" · $battery%") }
+                        connection.errorMessage?.let { error -> append(" · $error") }
+                    },
+                )
+            }
+
+            if (connection.lifecycle == ConnectorLifecycleState.SCANNING) {
+                AuraSectionHeader(title = "Nearby")
+                if (discoveredDevices.isEmpty()) {
+                    StatusCard(
+                        icon = { CircularProgressIndicator(modifier = Modifier.height(22.dp)) },
+                        title = "Looking for wearables…",
+                        body = "Keep the strap nearby and awake.",
+                    )
+                } else {
+                    discoveredDevices.forEach { device ->
+                        ScanDeviceCard(device) { manager.selectDevice(device.id) }
+                    }
+                }
+            }
+
             if (installed.isNotEmpty()) {
                 AuraSectionHeader(title = "Installed")
                 installed.forEach { record ->
                     InstalledConnectorCard(
                         record = record,
+                        connectedConnectorId = connection.connectorId.takeIf {
+                            connection.lifecycle != ConnectorLifecycleState.DISCONNECTED &&
+                                connection.lifecycle != ConnectorLifecycleState.FAILED
+                        },
                         onConnect = { manager.connect(record) },
+                        onDisconnect = manager::disconnect,
                         onRollback = { manager.rollback(record.connectorId) },
                         onRemove = { manager.remove(record) },
                     )
@@ -134,6 +189,38 @@ fun DevicesScreen(vm: AppViewModel, onChooseConnectorFile: () -> Unit) {
                     color = palette.ink.copy(alpha = 0.5f),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ScanDeviceCard(device: ConnectorScanDevice, onConnect: () -> Unit) {
+    val palette = Aura.palette
+    AuraDarkCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(device.name, style = AuraType.label, color = palette.ink)
+                Text("${device.rssi} dBm", style = AuraType.caption, color = palette.ink.copy(alpha = 0.55f))
+            }
+            Button(onClick = onConnect) { Text("Use this device") }
+        }
+    }
+}
+
+@Composable
+private fun RegistryEntryCard(entry: ConnectorRegistryEntry, onInstall: () -> Unit) {
+    val palette = Aura.palette
+    AuraDarkCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(entry.connectorId, style = AuraType.label, color = palette.ink)
+                Text(
+                    "v${entry.version} · ${entry.channel} · signed",
+                    style = AuraType.caption,
+                    color = palette.ink.copy(alpha = 0.55f),
+                )
+            }
+            Button(onClick = onInstall) { Text("Inspect") }
         }
     }
 }
@@ -229,7 +316,9 @@ private fun ApprovalRow(label: String, value: String) {
 @Composable
 private fun InstalledConnectorCard(
     record: InstalledConnectorRecord,
+    connectedConnectorId: String?,
     onConnect: () -> Unit,
+    onDisconnect: () -> Unit,
     onRollback: () -> Unit,
     onRemove: () -> Unit,
 ) {
@@ -256,9 +345,13 @@ private fun InstalledConnectorCard(
                 Text(it, style = AuraType.caption, color = palette.bad)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onConnect, enabled = record.active && record.disabledReason == null) {
+                val connected = connectedConnectorId == record.connectorId
+                Button(
+                    onClick = if (connected) onDisconnect else onConnect,
+                    enabled = record.active && record.disabledReason == null,
+                ) {
                     Icon(Icons.Filled.Bluetooth, contentDescription = null)
-                    Text("Connect")
+                    Text(if (connected) "Disconnect" else "Connect")
                 }
                 OutlinedButton(onClick = onRollback, enabled = record.active) { Text("Roll back") }
                 OutlinedButton(onClick = onRemove) { Text("Remove") }

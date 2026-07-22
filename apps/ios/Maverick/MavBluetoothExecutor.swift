@@ -1,6 +1,14 @@
 import CoreBluetooth
 import Foundation
 
+func connectorWireUUID(_ value: String) -> String {
+  let normalized = value.lowercased()
+  let suffix = "-0000-1000-8000-00805f9b34fb"
+  guard normalized.hasSuffix(suffix) else { return normalized }
+  let prefix = String(normalized.dropLast(suffix.count))
+  return prefix.hasPrefix("0000") ? String(prefix.dropFirst(4)) : prefix
+}
+
 @MainActor
 final class MavBluetoothExecutor: NSObject {
   private static let restorationKey = "connector.ble.restoration.v1"
@@ -11,6 +19,8 @@ final class MavBluetoothExecutor: NSObject {
   }
 
   private let eventSink: (ConnectorTransportEvent) -> Void
+  private let discoverySink: ([ConnectorScanDevice]) -> Void
+  private let errorSink: (String) -> Void
   private lazy var central = CBCentralManager(
     delegate: self,
     queue: nil,
@@ -18,6 +28,8 @@ final class MavBluetoothExecutor: NSObject {
   )
   private var queued: [ConnectorTransportAction] = []
   private var peripherals: [String: CBPeripheral] = [:]
+  private var advertisements: [String: ConnectorTransportEvent] = [:]
+  private var discoveredDevices: [String: ConnectorScanDevice] = [:]
   private var peripheral: CBPeripheral?
   private var manufacturerFilter = Set<UInt16>()
   private var timers: [UInt64: DispatchWorkItem] = [:]
@@ -26,11 +38,21 @@ final class MavBluetoothExecutor: NSObject {
   private var pendingReads: [String: (operationID: UInt64, logicalID: String)] = [:]
   private var pendingWrites: [String: (operationID: UInt64, logicalID: String)] = [:]
 
-  init(eventSink: @escaping (ConnectorTransportEvent) -> Void) {
+  init(
+    eventSink: @escaping (ConnectorTransportEvent) -> Void,
+    discoverySink: @escaping ([ConnectorScanDevice]) -> Void,
+    errorSink: @escaping (String) -> Void
+  ) {
     self.eventSink = eventSink
+    self.discoverySink = discoverySink
+    self.errorSink = errorSink
     super.init()
     restoreCheckpoint()
     _ = central
+  }
+
+  func selectDevice(_ id: String) {
+    if let advertisement = advertisements[id] { eventSink(advertisement) }
   }
 
   func execute(_ action: ConnectorTransportAction) {
@@ -46,6 +68,9 @@ final class MavBluetoothExecutor: NSObject {
     switch ConnectorNativeOperation.map(action.request) {
     case let .scan(serviceUUIDs, manufacturerIDs):
       manufacturerFilter = Set(manufacturerIDs)
+      advertisements.removeAll(keepingCapacity: true)
+      discoveredDevices.removeAll(keepingCapacity: true)
+      discoverySink([])
       let services = serviceUUIDs.isEmpty ? nil : serviceUUIDs.map(CBUUID.init(string:))
       central.scanForPeripherals(
         withServices: services,
@@ -53,7 +78,6 @@ final class MavBluetoothExecutor: NSObject {
       )
     case .stopScan:
       central.stopScan()
-      eventSink(.scanStopped(reasonCode: 0))
     case let .connect(address):
       guard let target = peripherals[address] else {
         fail(action.operationId, code: 1, "The selected Bluetooth device is no longer visible.")
@@ -104,7 +128,9 @@ final class MavBluetoothExecutor: NSObject {
         eventSink(.writeResult(operationId: action.operationId, characteristicId: id))
       }
     case .disconnect:
+      central.stopScan()
       if let peripheral { central.cancelPeripheralConnection(peripheral) }
+      else { eventSink(.disconnected(reasonCode: 0)) }
     case let .setTimer(token, delayMs):
       timers[token]?.cancel()
       let item = DispatchWorkItem { [weak self] in
@@ -139,6 +165,7 @@ final class MavBluetoothExecutor: NSObject {
   }
 
   private func fail(_ operationID: UInt64?, code: UInt16, _ message: String) {
+    errorSink(message)
     eventSink(.transportError(operationId: operationID, code: code, safeMessage: message))
   }
 
@@ -194,14 +221,21 @@ extension MavBluetoothExecutor: CBCentralManagerDelegate {
     let address = peripheral.identifier.uuidString
     peripherals[address] = peripheral
     let services = (advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] ?? [])
-      .map(\.uuidString)
-    eventSink(.advertisement(
+      .map { connectorWireUUID($0.uuidString) }
+    let name = advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? peripheral.name
+    let event = ConnectorTransportEvent.advertisement(
       address: address,
       rssi: Int16(clamping: RSSI.intValue),
       serviceUuids: services,
       manufacturerData: manufacturerData,
-      name: advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? peripheral.name
-    ))
+      name: name
+    )
+    advertisements[address] = event
+    discoveredDevices[address] = ConnectorScanDevice(
+      id: address,
+      name: name ?? "Nearby wearable",
+      rssi: RSSI.intValue)
+    discoverySink(discoveredDevices.values.sorted { $0.rssi > $1.rssi })
   }
 
   func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
@@ -255,7 +289,8 @@ extension MavBluetoothExecutor: CBPeripheralDelegate {
     }
     pendingCharacteristicDiscovery = max(0, pendingCharacteristicDiscovery - 1)
     if pendingCharacteristicDiscovery == 0 {
-      eventSink(.servicesDiscovered(serviceUuids: (peripheral.services ?? []).map { $0.uuid.uuidString }))
+      eventSink(.servicesDiscovered(
+        serviceUuids: (peripheral.services ?? []).map { connectorWireUUID($0.uuid.uuidString) }))
     }
   }
 

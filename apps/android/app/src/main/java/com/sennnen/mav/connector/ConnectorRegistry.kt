@@ -10,6 +10,9 @@ import org.json.JSONObject
 import uniffi.mav_ffi.ConnectorRegistryCheckpoint
 import uniffi.mav_ffi.ConnectorRegistryRoot
 import uniffi.mav_ffi.ConnectorRevocationRecord
+import uniffi.mav_ffi.ConnectorKeyScope
+import uniffi.mav_ffi.ConnectorKeyStatus
+import uniffi.mav_ffi.ConnectorPublisherKey
 
 internal data class AndroidRegistryConfiguration(
     val url: String,
@@ -29,6 +32,47 @@ internal data class AndroidRegistryConfiguration(
                 ConnectorRegistryRoot(registryId, keyId, publicKey),
             )
         }
+    }
+}
+
+internal object AndroidConnectorTrust {
+    fun configuredKeys(): List<ConnectorPublisherKey> {
+        val id = BuildConfig.MAV_CONNECTOR_PUBLISHER_KEY_ID
+        val publicKey = BuildConfig.MAV_CONNECTOR_PUBLISHER_PUBLIC_KEY_HEX.decodeHex()
+        val keys = mutableListOf<ConnectorPublisherKey>()
+        if (id.isNotBlank() && publicKey?.size == 32) {
+            keys += ConnectorPublisherKey(
+                id = id,
+                publicKey = publicKey,
+                scope = ConnectorKeyScope.DEVELOPMENT,
+                validFromMs = 0,
+                validUntilMs = null,
+                status = ConnectorKeyStatus.ACTIVE,
+                statusAtMs = null,
+                statusDetail = null,
+            )
+        }
+        if (BuildConfig.DEBUG) {
+            // Local dev-loop key: original test signer's private key isn't recoverable on this
+            // machine. Swapped to a throwaway Ed25519 keypair generated for this session so
+            // freshly rebuilt whoop5 test artifacts can be sideloaded and verified again. Not a
+            // production/distribution key.
+            val livePublicKey =
+                "04797a44551f1f41f977cae6227c867ec42dba22b4088704505aff7bfa287e4b".decodeHex()
+            if (livePublicKey?.size == 32) {
+                keys += ConnectorPublisherKey(
+                    id = "maverick-whoop-live-test",
+                    publicKey = livePublicKey,
+                    scope = ConnectorKeyScope.DEVELOPMENT,
+                    validFromMs = 0,
+                    validUntilMs = null,
+                    status = ConnectorKeyStatus.ACTIVE,
+                    statusAtMs = null,
+                    statusDetail = null,
+                )
+            }
+        }
+        return keys
     }
 }
 

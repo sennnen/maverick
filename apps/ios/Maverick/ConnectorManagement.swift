@@ -20,6 +20,7 @@ enum ConnectorAcquisitionError: Error, Equatable, LocalizedError {
   case unsupportedURL
   case remoteImportDisabled
   case invalidResponse
+  case transport(String)
 
   var errorDescription: String? {
     switch self {
@@ -28,6 +29,7 @@ enum ConnectorAcquisitionError: Error, Equatable, LocalizedError {
     case .unsupportedURL: "Use a local file or an HTTPS URL."
     case .remoteImportDisabled: "Remote connector import is disabled in this release."
     case .invalidResponse: "The connector download returned an invalid response."
+    case let .transport(message): message
     }
   }
 }
@@ -69,6 +71,74 @@ struct ConnectorApprovalSummary: Equatable {
   var sourceName: String = ""
   var capabilities: [String] = []
   var permissions: [String] = []
+}
+
+struct ConnectorConnectionState: Equatable {
+  var connectorID: String?
+  var lifecycle: ConnectorLifecycleState?
+  var label: String
+  var connected: Bool
+  var heartRateBPM: Int?
+  var batteryPercent: Int?
+  var onWrist: Bool?
+  var lastSampleWallTimeMs: Int64?
+  var errorMessage: String?
+
+  static let disconnected = ConnectorConnectionState(
+    connectorID: nil, lifecycle: nil, label: "Disconnected", connected: false,
+    heartRateBPM: nil, batteryPercent: nil, onWrist: nil,
+    lastSampleWallTimeMs: nil, errorMessage: nil)
+
+  init(
+    connectorID: String?, lifecycle: ConnectorLifecycleState?, label: String, connected: Bool,
+    heartRateBPM: Int?, batteryPercent: Int?, onWrist: Bool?,
+    lastSampleWallTimeMs: Int64?, errorMessage: String?
+  ) {
+    self.connectorID = connectorID
+    self.lifecycle = lifecycle
+    self.label = label
+    self.connected = connected
+    self.heartRateBPM = heartRateBPM
+    self.batteryPercent = batteryPercent
+    self.onWrist = onWrist
+    self.lastSampleWallTimeMs = lastSampleWallTimeMs
+    self.errorMessage = errorMessage
+  }
+
+  init(telemetry: ConnectorTelemetrySnapshot) {
+    connectorID = telemetry.connectorId
+    lifecycle = telemetry.lifecycle
+    label = Self.label(for: telemetry.lifecycle)
+    connected = telemetry.lifecycle == .streaming || telemetry.lifecycle == .historical
+    heartRateBPM = telemetry.heartRateBpm.map(Int.init)
+    batteryPercent = telemetry.batteryPercent.map(Int.init)
+    onWrist = telemetry.onWrist
+    lastSampleWallTimeMs = telemetry.lastSampleWallTimeMs
+    errorMessage = nil
+  }
+
+  private static func label(for lifecycle: ConnectorLifecycleState) -> String {
+    switch lifecycle {
+    case .installed: "Installed"
+    case .selected: "Starting"
+    case .scanning: "Scanning"
+    case .connecting: "Connecting"
+    case .discovering: "Discovering services"
+    case .pairing: "Pairing"
+    case .configuring: "Configuring"
+    case .streaming: "Streaming"
+    case .historical: "Syncing history"
+    case .suspending: "Suspending"
+    case .disconnected: "Disconnected"
+    case .failed: "Failed"
+    }
+  }
+}
+
+struct ConnectorScanDevice: Equatable, Identifiable {
+  let id: String
+  let name: String
+  let rssi: Int
 }
 
 struct ConnectorApprovalMachine {
@@ -222,7 +292,7 @@ struct ConnectorReleasePolicy {
           root: ConnectorRegistryRoot(
             registryId: registryID, keyId: keyID, publicKey: publicKey))
       }
-    return ConnectorReleasePolicy(
+    let configured = ConnectorReleasePolicy(
       managerEnabled: bundle.object(forInfoDictionaryKey: "MAVConnectorManagerEnabled") as? Bool ?? false,
       remoteImportEnabled: bundle.object(forInfoDictionaryKey: "MAVAllowRemoteConnectorImport") as? Bool ?? false,
       trust: ConnectorTrustPolicy(
@@ -239,6 +309,53 @@ struct ConnectorReleasePolicy {
       ),
       registry: registry
     )
+#if DEBUG
+    if configured.trust.keys.isEmpty && configured.registry == nil {
+      return development(nowMs: nowMs)
+    }
+#endif
+    return configured
+  }
+
+  static func development(nowMs: Int64) -> ConnectorReleasePolicy {
+    let publisher = Data(base64Encoded: "3+8dkqaFyd9iO4oyF0CwpZ3g3lOLv+qd23AzlKHg9b0=") ?? Data()
+    let livePublisher = Data(base64Encoded: "1C5+7VPZq+m9LpP41yvXobJUOado7z6r76CpxXBqpdI=") ?? Data()
+    let registryRoot = Data(base64Encoded: "hBZ9CgKL4s8nWeyHGZ9+z0DygZ6KelR9K34zjDHR+7s=") ?? Data()
+    return ConnectorReleasePolicy(
+      managerEnabled: true,
+      remoteImportEnabled: true,
+      trust: ConnectorTrustPolicy(
+        revision: 1,
+        allowThirdParty: false,
+        allowDevelopment: true,
+        keys: [
+          ConnectorPublisherKey(
+            id: "maverick-whoop-test",
+            publicKey: publisher,
+            scope: .development,
+            validFromMs: 0,
+            validUntilMs: nil,
+            status: .active,
+            statusAtMs: nil,
+            statusDetail: nil),
+          ConnectorPublisherKey(
+            id: "maverick-whoop-live-test",
+            publicKey: livePublisher,
+            scope: .development,
+            validFromMs: 0,
+            validUntilMs: nil,
+            status: .active,
+            statusAtMs: nil,
+            statusDetail: nil),
+        ]),
+      revocations: ConnectorTrustRevocations(
+        revision: 0, generatedAtMs: 0, validUntilMs: nowMs + 31_536_000_000, entries: []),
+      registry: ConnectorRegistryConfiguration(
+        url: URL(string: "https://raw.githubusercontent.com/sennnen/maverick-connectors/main/registry/index-v1.json")!,
+        root: ConnectorRegistryRoot(
+          registryId: "dev.maverick.connectors",
+          keyId: "registry-root-v1",
+          publicKey: registryRoot)))
   }
 }
 
@@ -291,13 +408,20 @@ final class ConnectorManager: ObservableObject {
   @Published private(set) var machine = ConnectorApprovalMachine()
   @Published private(set) var installed: [InstalledConnectorRecord] = []
   @Published private(set) var registryEntries: [ConnectorRegistryEntry] = []
+  @Published private(set) var registryError: String?
+  @Published private(set) var connection = ConnectorConnectionState.disconnected
+  @Published private(set) var discoveredDevices: [ConnectorScanDevice] = []
 
   private let worker: ConnectorRuntimeWorker
   private var inspection: ConnectorInspection?
   private var acquisition: ConnectorAcquisition?
-  private lazy var bluetooth = MavBluetoothExecutor { [weak self] event in
-    self?.applyTransportEvent(event)
-  }
+  private lazy var bluetooth = MavBluetoothExecutor(
+    eventSink: { [weak self] event in self?.applyTransportEvent(event) },
+    discoverySink: { [weak self] devices in self?.discoveredDevices = devices },
+    errorSink: { [weak self] message in
+      self?.failConnection(ConnectorAcquisitionError.transport(message))
+    }
+  )
   private(set) var releasePolicy: ConnectorReleasePolicy
   private var registryCheckpoint: ConnectorRegistryCheckpoint?
   private let registryCacheKey = "mav.connector-registry.cache.v1"
@@ -326,12 +450,14 @@ final class ConnectorManager: ObservableObject {
           Task { @MainActor in
             guard let self else { return }
             switch result {
-            case let .success(snapshot): self.applyRegistry(snapshot, bytes: bytes)
-            case let .failure(error): self.machine.fail(Self.message(error))
+            case let .success(snapshot):
+              self.registryError = nil
+              self.applyRegistry(snapshot, bytes: bytes)
+            case let .failure(error): self.registryError = Self.message(error)
             }
           }
         }
-      } catch { machine.fail(Self.message(error)) }
+      } catch { registryError = Self.message(error) }
     }
   }
 
@@ -520,6 +646,10 @@ final class ConnectorManager: ObservableObject {
       cancellationGeneration: 0
     )
     bluetooth.checkpoint = checkpoint
+    connection = ConnectorConnectionState(
+      connectorID: record.connectorId, lifecycle: .selected, label: "Starting", connected: false,
+      heartRateBPM: nil, batteryPercent: nil, onWrist: nil,
+      lastSampleWallTimeMs: nil, errorMessage: nil)
     worker.openSession(
       checkpoint: checkpoint,
       policy: releasePolicy
@@ -528,10 +658,28 @@ final class ConnectorManager: ObservableObject {
         guard let self else { return }
         switch result {
         case .success: self.drainTransportActions()
-        case let .failure(error): self.machine.fail(Self.message(error))
+        case let .failure(error): self.failConnection(error)
         }
       }
     }
+  }
+
+  func disconnect() {
+    worker.cancelSession { [weak self] result in
+      Task { @MainActor in
+        guard let self else { return }
+        switch result {
+        case let .success(telemetry):
+          self.publishTelemetry(telemetry)
+          self.drainTransportActions()
+        case let .failure(error): self.failConnection(error)
+        }
+      }
+    }
+  }
+
+  func selectDevice(_ id: String) {
+    bluetooth.selectDevice(id)
   }
 
   private func inspect(_ payload: ConnectorAcquisition) {
@@ -587,10 +735,11 @@ final class ConnectorManager: ObservableObject {
         guard let self else { return }
         switch result {
         case let .success(snapshot):
+          self.registryError = nil
           self.applyRegistry(snapshot, bytes: cached.bytes)
           self.refreshRegistry()
         case let .failure(error):
-          self.machine.fail(Self.message(error))
+          self.registryError = Self.message(error)
           self.refreshRegistry()
         }
       }
@@ -641,7 +790,7 @@ final class ConnectorManager: ObservableObject {
         guard let self else { return }
         switch result {
         case .success: self.drainTransportActions()
-        case let .failure(error): self.machine.fail(Self.message(error))
+        case let .failure(error): self.failConnection(error)
         }
       }
     }
@@ -653,7 +802,7 @@ final class ConnectorManager: ObservableObject {
         guard let self else { return }
         switch result {
         case .success: self.drainTransportActions()
-        case let .failure(error): self.machine.fail(Self.message(error))
+        case let .failure(error): self.failConnection(error)
         }
       }
     }
@@ -664,11 +813,51 @@ final class ConnectorManager: ObservableObject {
       Task { @MainActor in
         guard let self else { return }
         switch result {
-        case let .success(actions): actions.forEach(self.bluetooth.execute)
-        case let .failure(error): self.machine.fail(Self.message(error))
+        case let .success(actions):
+          actions.forEach(self.bluetooth.execute)
+          self.refreshTelemetry()
+        case let .failure(error): self.failConnection(error)
         }
       }
     }
+  }
+
+  private func refreshTelemetry() {
+    worker.telemetry { [weak self] result in
+      Task { @MainActor in
+        guard let self else { return }
+        switch result {
+        case let .success(telemetry):
+          self.publishTelemetry(telemetry)
+          if telemetry.lifecycle == .disconnected || telemetry.lifecycle == .failed {
+            self.bluetooth.checkpoint = nil
+          }
+        case let .failure(error): self.failConnection(error)
+        }
+      }
+    }
+  }
+
+  private func publishTelemetry(_ telemetry: ConnectorTelemetrySnapshot) {
+    bluetooth.checkpoint = ConnectorRestorationCheckpoint(
+      connectorID: telemetry.connectorId,
+      sessionID: telemetry.sessionId,
+      cancellationGeneration: telemetry.cancellationGeneration)
+    connection = ConnectorConnectionState(telemetry: telemetry)
+  }
+
+  private func failConnection(_ error: Error) {
+    let message = Self.message(error)
+    connection = ConnectorConnectionState(
+      connectorID: connection.connectorID,
+      lifecycle: .failed,
+      label: "Failed",
+      connected: false,
+      heartRateBPM: connection.heartRateBPM,
+      batteryPercent: connection.batteryPercent,
+      onWrist: connection.onWrist,
+      lastSampleWallTimeMs: connection.lastSampleWallTimeMs,
+      errorMessage: message)
   }
 
   nonisolated private static var nowMs: Int64 { Int64(Date().timeIntervalSince1970 * 1_000) }
@@ -836,6 +1025,21 @@ private final class ConnectorRuntimeWorker: @unchecked Sendable {
     completion: @escaping @Sendable (Result<[ConnectorTransportAction], Error>) -> Void
   ) {
     perform(completion) { try $0.drainConnectorActions(limit: 64) }
+  }
+
+  func telemetry(
+    completion: @escaping @Sendable (Result<ConnectorTelemetrySnapshot, Error>) -> Void
+  ) {
+    perform(completion) { try $0.connectorTelemetry() }
+  }
+
+  func cancelSession(
+    completion: @escaping @Sendable (Result<ConnectorTelemetrySnapshot, Error>) -> Void
+  ) {
+    perform(completion) { runtime in
+      _ = try runtime.cancelConnectorSession(reason: .user, wallTimeMs: Self.nowMs)
+      return try runtime.connectorTelemetry()
+    }
   }
 
   private func perform<T>(

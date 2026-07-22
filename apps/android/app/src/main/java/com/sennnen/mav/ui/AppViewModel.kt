@@ -71,6 +71,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var refreshJob: Job? = null
 
     init {
+        viewModelScope.launch {
+            connectors.connection.collect { connection ->
+                mutableLive.value = liveStateOf(connection)
+                mutableBpm.value = connection.heartRateBpm
+            }
+        }
         refresh()
     }
 
@@ -141,6 +147,18 @@ internal fun liveStateOf(snapshot: MavSnapshot): LiveState {
         statusNote = snapshot.recoveryUnavailableReason,
     )
 }
+
+internal fun liveStateOf(connection: com.sennnen.mav.connector.ConnectorConnectionState): LiveState =
+    LiveState(
+        connected = connection.connected,
+        bonded = connection.connected,
+        heartRate = connection.heartRateBpm,
+        batteryPct = connection.batteryPercent?.toDouble(),
+        worn = connection.onWrist ?: true,
+        advertisingName = connection.connectorId,
+        scanning = connection.lifecycle == uniffi.mav_ffi.ConnectorLifecycleState.SCANNING,
+        statusNote = connection.errorMessage ?: connection.label,
+    )
 
 /**
  * Read facade returning empty results until the core exposes the matching read models. Suspend so

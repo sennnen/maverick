@@ -3,6 +3,13 @@ import XCTest
 @testable import Mav
 
 final class ConnectorManagementTests: XCTestCase {
+  func testBluetoothBaseUUIDsUseCanonicalConnectorForm() {
+    XCTAssertEqual(connectorWireUUID("0000180D-0000-1000-8000-00805F9B34FB"), "180d")
+    XCTAssertEqual(
+      connectorWireUUID("FD4B0001-CCE1-4033-93CE-002D5875F58A"),
+      "fd4b0001-cce1-4033-93ce-002d5875f58a")
+  }
+
   func testEveryAcquisitionSourcePreservesExactBytesAndSanitizesLocator() throws {
     let bytes = Data([0, 1, 2, 0xff])
     let file = try ConnectorAcquisition.make(
@@ -99,5 +106,33 @@ final class ConnectorManagementTests: XCTestCase {
       ConnectorRestorationCheckpoint.self, from: JSONEncoder().encode(checkpoint))
     XCTAssertEqual(restored, checkpoint)
     XCTAssertFalse(String(data: try JSONEncoder().encode(checkpoint), encoding: .utf8)!.contains("mavconn"))
+  }
+
+  func testDevelopmentPolicyPinsSignedRegistryAndOfficialPublisher() {
+    let policy = ConnectorReleasePolicy.development(nowMs: 100)
+    XCTAssertEqual(policy.trust.keys.count, 1)
+    XCTAssertEqual(policy.trust.keys.first?.id, "maverick-whoop-test")
+    XCTAssertEqual(policy.trust.keys.first?.publicKey.count, 32)
+    XCTAssertEqual(policy.registry?.root.registryId, "dev.maverick.connectors")
+    XCTAssertEqual(policy.registry?.root.keyId, "registry-root-v1")
+    XCTAssertEqual(policy.registry?.root.publicKey.count, 32)
+  }
+
+  func testConnectorTelemetryMapsToVisibleLiveState() {
+    let state = ConnectorConnectionState(telemetry: ConnectorTelemetrySnapshot(
+      connectorId: "dev.maverick.whoop5",
+      lifecycle: .streaming,
+      sessionId: 42,
+      cancellationGeneration: 0,
+      deviceId: 1,
+      heartRateBpm: 73,
+      batteryPercent: 82,
+      onWrist: true,
+      lastSampleWallTimeMs: 1_700_000_000_123
+    ))
+    XCTAssertEqual(state.label, "Streaming")
+    XCTAssertEqual(state.heartRateBPM, 73)
+    XCTAssertEqual(state.batteryPercent, 82)
+    XCTAssertTrue(state.connected)
   }
 }

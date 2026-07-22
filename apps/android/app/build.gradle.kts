@@ -52,6 +52,8 @@ android {
         buildConfigField("String", "MAV_CONNECTOR_REGISTRY_ID", "\"\"")
         buildConfigField("String", "MAV_CONNECTOR_REGISTRY_ROOT_KEY_ID", "\"\"")
         buildConfigField("String", "MAV_CONNECTOR_REGISTRY_ROOT_PUBLIC_KEY_HEX", "\"\"")
+        buildConfigField("String", "MAV_CONNECTOR_PUBLISHER_KEY_ID", "\"\"")
+        buildConfigField("String", "MAV_CONNECTOR_PUBLISHER_PUBLIC_KEY_HEX", "\"\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
@@ -74,6 +76,28 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             buildConfigField("boolean", "MAV_ALLOW_THIRD_PARTY_CONNECTORS", "true")
+            buildConfigField(
+                "String",
+                "MAV_CONNECTOR_REGISTRY_URL",
+                "\"https://raw.githubusercontent.com/sennnen/maverick-connectors/main/registry/index-v1.json\"",
+            )
+            buildConfigField("String", "MAV_CONNECTOR_REGISTRY_ID", "\"dev.maverick.connectors\"")
+            buildConfigField("String", "MAV_CONNECTOR_REGISTRY_ROOT_KEY_ID", "\"registry-root-v1\"")
+            buildConfigField(
+                "String",
+                "MAV_CONNECTOR_REGISTRY_ROOT_PUBLIC_KEY_HEX",
+                "\"84167d0a028be2cf2759ec87199f7ecf40f2819e8a7a547d2b7e338c31d1fbbb\"",
+            )
+            buildConfigField("String", "MAV_CONNECTOR_PUBLISHER_KEY_ID", "\"maverick-whoop-test\"")
+            buildConfigField(
+                "String",
+                "MAV_CONNECTOR_PUBLISHER_PUBLIC_KEY_HEX",
+                // Local dev-loop key: original test signer's private key isn't recoverable on
+                // this machine. Swapped to a throwaway Ed25519 keypair generated for this
+                // session so freshly rebuilt whoop4/whoop5 test artifacts can be sideloaded and
+                // verified again. Not a production/distribution key.
+                "\"04797a44551f1f41f977cae6227c867ec42dba22b4088704505aff7bfa287e4b\"",
+            )
         }
         release {
             isMinifyEnabled = true

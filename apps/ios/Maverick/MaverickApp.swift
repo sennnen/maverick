@@ -32,6 +32,9 @@ struct MaverickApp: App {
           }
         }
         .onAppear { repo.reload = { store.retry() } }
+        .onReceive(connectors.$connection) { connection in
+          model.apply(connection: connection, to: live)
+        }
     }
   }
 }

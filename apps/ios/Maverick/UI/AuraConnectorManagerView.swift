@@ -18,6 +18,10 @@ struct AuraPairingView: View {
           intro
           acquisition
           status
+          registryStatus
+          registry
+          connectionStatus
+          nearbyDevices
           installed
           releasePolicy
         }
@@ -44,6 +48,88 @@ struct AuraPairingView: View {
           connectors.reportAcquisitionFailure(error)
         }
       }
+    }
+  }
+
+  @ViewBuilder
+  private var nearbyDevices: some View {
+    if connectors.connection.lifecycle == .scanning {
+      VStack(alignment: .leading, spacing: 12) {
+        AuraSectionHeader(title: "Nearby")
+        if connectors.discoveredDevices.isEmpty {
+          statusCard(
+            icon: "dot.radiowaves.left.and.right",
+            title: "Looking for wearables…",
+            body: "Keep the strap nearby and awake."
+          ) { ProgressView().tint(AuraDesign.accent) }
+        } else {
+          ForEach(connectors.discoveredDevices) { device in
+            HStack(spacing: 12) {
+              VStack(alignment: .leading, spacing: 3) {
+                Text(device.name).font(AuraDesign.label).foregroundStyle(AuraDesign.ink)
+                Text("\(device.rssi) dBm")
+                  .font(AuraDesign.caption).foregroundStyle(AuraDesign.ink.opacity(0.55))
+              }
+              Spacer()
+              Button("Use this device") { connectors.selectDevice(device.id) }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(18)
+            .background(AuraDesign.card, in: AuraDesign.tileShape)
+          }
+        }
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var registryStatus: some View {
+    if connectors.registryError != nil {
+      statusCard(
+        icon: "icloud.slash",
+        title: "Online catalog unavailable",
+        body: "Local .mavconn files still work."
+      ) { EmptyView() }
+    }
+  }
+
+  @ViewBuilder
+  private var registry: some View {
+    let entries = connectors.registryEntries.filter { !$0.revoked }
+    if !entries.isEmpty {
+      VStack(alignment: .leading, spacing: 12) {
+        AuraSectionHeader(title: "Available")
+        ForEach(entries, id: \.artifactSha256) { entry in
+          HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+              Text(entry.connectorId).font(AuraDesign.label).foregroundStyle(AuraDesign.ink)
+              Text("v\(entry.version) · \(entry.channel) · signed")
+                .font(AuraDesign.caption).foregroundStyle(AuraDesign.ink.opacity(0.55))
+            }
+            Spacer()
+            Button("Inspect") { connectors.importRegistryEntry(entry) }
+              .buttonStyle(.borderedProminent)
+          }
+          .padding(18)
+          .background(AuraDesign.card, in: AuraDesign.tileShape)
+        }
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var connectionStatus: some View {
+    if let connectorID = connectors.connection.connectorID {
+      statusCard(
+        icon: "antenna.radiowaves.left.and.right",
+        title: connectors.connection.label,
+        body: [
+          connectorID,
+          connectors.connection.heartRateBPM.map { "\($0) bpm" },
+          connectors.connection.batteryPercent.map { "\($0)%" },
+          connectors.connection.errorMessage,
+        ].compactMap { $0 }.joined(separator: " · ")
+      ) { EmptyView() }
     }
   }
 
@@ -216,7 +302,12 @@ struct AuraPairingView: View {
               Text(reason).font(AuraDesign.caption).foregroundStyle(Color.orange)
             }
             HStack {
-              Button(record.active ? "Connect" : "Activate first") { connectors.connect(record) }
+              let activeSession = connectors.connection.connectorID == record.connectorId
+                && connectors.connection.lifecycle != .disconnected
+                && connectors.connection.lifecycle != .failed
+              Button(record.active ? (activeSession ? "Disconnect" : "Connect") : "Activate first") {
+                if activeSession { connectors.disconnect() } else { connectors.connect(record) }
+              }
                 .buttonStyle(.borderedProminent)
                 .tint(AuraDesign.accent)
                 .foregroundStyle(Color.black)

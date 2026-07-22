@@ -1,16 +1,40 @@
 package com.sennnen.mav.connector
 
 import java.io.ByteArrayInputStream
+import java.util.UUID
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import uniffi.mav_ffi.ConnectorSourceKind
+import uniffi.mav_ffi.ConnectorLifecycleState
+import uniffi.mav_ffi.ConnectorTelemetrySnapshot
 import uniffi.mav_ffi.ConnectorTransportRequest
 
 class ConnectorManagementTest {
+    @Test
+    fun `scan catalog deduplicates devices and keeps strongest first`() {
+        val catalog = ConnectorScanCatalog()
+        catalog.observe(ConnectorScanDevice("mg", "WHOOP MG", -70))
+        catalog.observe(ConnectorScanDevice("four", "WHOOP 4.0", -45))
+        catalog.observe(ConnectorScanDevice("mg", "WHOOP MG", -30))
+
+        assertEquals(listOf("mg", "four"), catalog.devices().map { it.id })
+        assertEquals(-30, catalog.devices().first().rssi)
+    }
+
+    @Test
+    fun `bluetooth base uuids cross the connector boundary in canonical short form`() {
+        assertEquals("180d", connectorWireUuid(UUID.fromString("0000180d-0000-1000-8000-00805f9b34fb")))
+        assertEquals(
+            "fd4b0001-cce1-4033-93ce-002d5875f58a",
+            connectorWireUuid(UUID.fromString("fd4b0001-cce1-4033-93ce-002d5875f58a")),
+        )
+    }
+
     @Test
     fun `url local content and share preserve identical bytes with sanitized provenance`() {
         val bytes = byteArrayOf(0, 1, 2, -1)
@@ -48,8 +72,38 @@ class ConnectorManagementTest {
     }
 
     @Test
-    fun `empty release registry configuration disables discovery without affecting direct import`() {
-        assertNull(AndroidRegistryConfiguration.current())
+    fun `debug release pins signed registry and official publisher`() {
+        val registry = AndroidRegistryConfiguration.current()!!
+        assertEquals("dev.maverick.connectors", registry.root.registryId)
+        assertEquals("registry-root-v1", registry.root.keyId)
+        assertEquals(32, registry.root.publicKey.size)
+        val keys = AndroidConnectorTrust.configuredKeys()
+        assertEquals(
+            setOf("maverick-whoop-test", "maverick-whoop-live-test"),
+            keys.map { it.id }.toSet(),
+        )
+        assertTrue(keys.all { it.publicKey.size == 32 })
+    }
+
+    @Test
+    fun `connector telemetry maps to visible live state`() {
+        val state = ConnectorConnectionState.from(
+            ConnectorTelemetrySnapshot(
+                connectorId = "dev.maverick.whoop5",
+                lifecycle = ConnectorLifecycleState.STREAMING,
+                sessionId = 42u,
+                cancellationGeneration = 0u,
+                deviceId = 1u,
+                heartRateBpm = 73u,
+                batteryPercent = 82u,
+                onWrist = true,
+                lastSampleWallTimeMs = 1_700_000_000_123,
+            ),
+        )
+        assertEquals("Streaming", state.label)
+        assertEquals(73, state.heartRateBpm)
+        assertEquals(82, state.batteryPercent)
+        assertEquals(true, state.connected)
     }
 
     @Test

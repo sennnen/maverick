@@ -70,6 +70,17 @@ final class AppModel: ObservableObject {
     live.worn = connected ? (snapshot.onWrist ?? true) : true
     live.advertisingName = snapshot.deviceName
   }
+
+  func apply(connection: ConnectorConnectionState, to live: LiveState) {
+    bpm = connection.connected ? connection.heartRateBPM : nil
+    live.connected = connection.connected
+    live.bonded = connection.connected
+    live.heartRate = connection.connected ? connection.heartRateBPM : nil
+    live.batteryPct = connection.connected ? connection.batteryPercent.map(Double.init) : nil
+    live.charging = nil
+    live.worn = connection.connected ? (connection.onWrist ?? true) : true
+    live.advertisingName = connection.connectorID
+  }
 }
 
 /// Behaviour/automation preferences the settings sheet edits. UserDefaults-backed.
