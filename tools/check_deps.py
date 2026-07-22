@@ -27,10 +27,10 @@ ALLOWED = {
     "mav-analytic": {"mav-model", "mav-feature"},
     "mav-engine": {
         "mav-model", "mav-connector-abi", "mav-connector-runtime", "mav-timeline",
-        "mav-sqi", "mav-store", "mav-obs",
+        "mav-sqi", "mav-store", "mav-obs", "mav-feature", "mav-analytic",
     },
     "mav-ffi": {
-        "mav-model", "mav-obs", "mav-engine", "mav-connector-abi",
+        "mav-model", "mav-obs", "mav-engine", "mav-analytic", "mav-connector-abi",
         "mav-connector-runtime", "mav-connector-store",
     },
     "mav-replay": {"mav-model", "mav-connector-runtime"},

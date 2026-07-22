@@ -430,6 +430,7 @@ final class ConnectorManager: ObservableObject {
     let now = Self.nowMs
     releasePolicy = .current(nowMs: now)
     worker = ConnectorRuntimeWorker(config: MavStore.runtimeConfig())
+    worker.publishTimezoneSpans { _ in }
     if !restoreRegistryIfAvailable() { refreshRegistry() }
     refreshInstalled()
     DispatchQueue.main.async { [weak self] in self?.resumeIfNeeded() }
@@ -1025,6 +1026,39 @@ private final class ConnectorRuntimeWorker: @unchecked Sendable {
     completion: @escaping @Sendable (Result<[ConnectorTransportAction], Error>) -> Void
   ) {
     perform(completion) { try $0.drainConnectorActions(limit: 64) }
+  }
+
+  /// Hand the core the platform's own zone table. Rust holds no tzdata (ADR-024): iOS has a correct
+  /// and updated one, and it is the only place the user's zone is genuinely known. Two years back
+  /// and one forward covers every day the app can show plus the next transition.
+  func publishTimezoneSpans(completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
+    let zone = TimeZone.current
+    let day = 86_400.0
+    let now = Date().timeIntervalSince1970
+    var spans: [TimezoneSpan] = []
+    var last: Int?
+    var cursor = now - 730 * day
+    while cursor <= now + 365 * day {
+      let offset = zone.secondsFromGMT(for: Date(timeIntervalSince1970: cursor))
+      if offset != last {
+        spans.append(TimezoneSpan(startUnixSeconds: Int64(cursor), offsetSeconds: Int32(offset)))
+        last = offset
+      }
+      cursor += day
+    }
+    if spans.isEmpty {
+      spans = [TimezoneSpan(startUnixSeconds: 0, offsetSeconds: Int32(zone.secondsFromGMT()))]
+    }
+    let identifier = zone.identifier
+    perform(completion) { try $0.setTimezoneSpans(timezoneId: identifier, spans: spans) }
+  }
+
+  /// One local day's analytics from the core.
+  func dailySnapshot(
+    deviceID: UInt64,
+    completion: @escaping @Sendable (Result<DailySnapshotReport, Error>) -> Void
+  ) {
+    perform(completion) { try $0.dailySnapshot(deviceId: deviceID, wallTimeMs: Self.nowMs) }
   }
 
   func telemetry(

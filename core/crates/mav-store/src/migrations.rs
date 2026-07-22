@@ -4,7 +4,7 @@
 
 /// The schema version this build understands. Opening a database recorded as newer than this is
 /// refused rather than migrated.
-pub const CURRENT_SCHEMA_VERSION: i64 = 1;
+pub const CURRENT_SCHEMA_VERSION: i64 = 2;
 
 pub const MIGRATIONS: &[&str] = &[
     // v1 — the Milestone 1 slice.
@@ -40,6 +40,19 @@ pub const MIGRATIONS: &[&str] = &[
         context_json TEXT    NOT NULL,
         created_ns   INTEGER NOT NULL
     );
+    ",
+    // v2 — the derived daily snapshot. Derived by construction: dropping every row here and
+    // recomputing from `sample` must reproduce it byte for byte, which is what makes it safe to
+    // rebuild after an algorithm change rather than migrate.
+    "
+    CREATE TABLE daily_snapshot (
+        device_id     INTEGER NOT NULL,
+        local_day     INTEGER NOT NULL,
+        snapshot_json TEXT    NOT NULL,
+        algorithms    TEXT    NOT NULL,
+        computed_ns   INTEGER NOT NULL,
+        PRIMARY KEY (device_id, local_day)
+    ) WITHOUT ROWID;
     ",
 ];
 

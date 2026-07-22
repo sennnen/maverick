@@ -290,6 +290,59 @@ impl Store {
     }
 
     /// Append an error to the durable journal, the ring log's persistent sibling.
+    /// Write one derived daily snapshot, replacing any row for the same device and local day.
+    /// Derived rows are replaceable by definition; raw samples are not, which is why only this
+    /// table uses `INSERT OR REPLACE`.
+    pub fn upsert_daily_snapshot(
+        &self,
+        device: DeviceId,
+        local_day: i64,
+        snapshot_json: &str,
+        algorithms: &str,
+        computed_ns: i64,
+    ) -> Result<()> {
+        self.conn
+            .execute(
+                "INSERT OR REPLACE INTO daily_snapshot \
+                 (device_id, local_day, snapshot_json, algorithms, computed_ns) \
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    device.get() as i64,
+                    local_day,
+                    snapshot_json,
+                    algorithms,
+                    computed_ns
+                ],
+            )
+            .map_err(|e| query_err("writing a daily snapshot", &e))?;
+        Ok(())
+    }
+
+    /// The stored snapshot for one local day, or `None` when it has not been computed.
+    pub fn daily_snapshot(&self, device: DeviceId, local_day: i64) -> Result<Option<String>> {
+        self.conn
+            .query_row(
+                "SELECT snapshot_json FROM daily_snapshot WHERE device_id = ?1 AND local_day = ?2",
+                params![device.get() as i64, local_day],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(|e| query_err("reading a daily snapshot", &e))
+    }
+
+    /// Discard every derived snapshot for a device. Safe by construction: recomputing from the
+    /// retained samples reproduces them, which is the property the derived table is defined by.
+    pub fn clear_daily_snapshots(&self, device: DeviceId) -> Result<u64> {
+        let removed = self
+            .conn
+            .execute(
+                "DELETE FROM daily_snapshot WHERE device_id = ?1",
+                params![device.get() as i64],
+            )
+            .map_err(|e| query_err("clearing daily snapshots", &e))?;
+        Ok(removed as u64)
+    }
+
     pub fn record_error(&self, error: &MavError, created_ns: i64) -> Result<()> {
         self.conn
             .execute(

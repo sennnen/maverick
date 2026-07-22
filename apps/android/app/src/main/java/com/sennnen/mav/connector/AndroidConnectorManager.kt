@@ -32,7 +32,9 @@ import uniffi.mav_ffi.ConnectorTrustPolicy
 import uniffi.mav_ffi.ConnectorTrustRevocations
 import uniffi.mav_ffi.FfiException
 import uniffi.mav_ffi.InstalledConnectorRecord
+import uniffi.mav_ffi.DailySnapshotReport
 import uniffi.mav_ffi.MavRuntime
+import uniffi.mav_ffi.TimezoneSpan
 import uniffi.mav_ffi.RuntimeConfig
 
 class AndroidConnectorManager(
@@ -549,12 +551,45 @@ class AndroidConnectorManager(
             RuntimeConfig(
                 databasePath = database.absolutePath,
                 timezoneId = TimeZone.getDefault().id,
-                transportCapacity = 256u,
-                appVersion = BuildConfig.VERSION_NAME,
-                appBuild = BuildConfig.VERSION_CODE.toString(),
+                appVersion = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
             ),
-        ).also { runtime = it }
+        ).also {
+            runtime = it
+            it.setTimezoneSpans(TimeZone.getDefault().id, offsetSpans(TimeZone.getDefault()))
+            com.sennnen.mav.ui.AuraZoneMath.runtime = it
+        }
     }
+
+    /**
+     * The platform's own zone database, flattened into the explicit spans the core buckets days by.
+     * Rust holds no tzdata (ADR-024): the phone has a correct and updated one, and it is the only
+     * place the user's zone is genuinely known. Two years back and one forward covers every day the
+     * app can show plus the next transition.
+     */
+    private fun offsetSpans(zone: TimeZone): List<TimezoneSpan> {
+        val day = 86_400L
+        val now = System.currentTimeMillis() / 1000L
+        var cursor = now - 730 * day
+        val end = now + 365 * day
+        val spans = mutableListOf<TimezoneSpan>()
+        var last: Int? = null
+        while (cursor <= end) {
+            val offset = zone.getOffset(cursor * 1000L) / 1000
+            if (offset != last) {
+                spans.add(TimezoneSpan(startUnixSeconds = cursor, offsetSeconds = offset))
+                last = offset
+            }
+            cursor += day
+        }
+        if (spans.isEmpty()) {
+            spans.add(TimezoneSpan(startUnixSeconds = 0L, offsetSeconds = zone.rawOffset / 1000))
+        }
+        return spans
+    }
+
+    /** One local day's analytics from the core, or null when no runtime is open yet. */
+    fun dailySnapshot(deviceId: ULong, wallTimeMs: Long): DailySnapshotReport? =
+        runCatching { ensureRuntime().dailySnapshot(deviceId, wallTimeMs) }.getOrNull()
 
     private fun displayName(uri: Uri): String {
         if (uri.scheme == "file") return uri.lastPathSegment ?: "Connector"

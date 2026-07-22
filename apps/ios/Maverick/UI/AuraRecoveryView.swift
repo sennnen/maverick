@@ -271,80 +271,20 @@ struct AuraRecoveryView: View {
   // MARK: Signals
 
   @ViewBuilder private var signals: some View {
-    let illness = model.illnessSignal
-    let cycle = model.cyclePhase
-    if illnessVisible(illness) || cycleVisible(cycle) {
-      VStack(alignment: .leading, spacing: 14) {
-        AuraSectionHeader(title: "Signals")
-        VStack(spacing: AuraDesign.cardSpacing) {
-          if let r = illness, illnessVisible(r) { illnessCard(r) }
-          if let c = cycle, cycleVisible(c) { cycleCard(c) }
-        }
+    // Illness and cycle awareness are declared analytics the core does not yet serve. The card
+    // states which, and why, rather than disappearing or showing a number this app computed for
+    // itself — one metric, one implementation (ADR-024).
+    VStack(alignment: .leading, spacing: 14) {
+      AuraSectionHeader(title: "Signals")
+      VStack(spacing: AuraDesign.cardSpacing) {
+        AuraUnavailableCard(title: "Heads-up", entry: availability("illnessrisk"))
+        AuraUnavailableCard(title: "Cycle phase", entry: availability("cyclephase"))
       }
     }
   }
 
-  private func illnessVisible(_ r: IllnessSignalEngine.Result?) -> Bool {
-    guard let r else { return false }
-    return r.level != .quiet
-  }
-  private func cycleVisible(_ c: CyclePhaseEngine.Result?) -> Bool {
-    guard let c else { return false }
-    return c.phase != .unknown && c.phase != .learning
-  }
-
-  private func illnessCard(_ r: IllnessSignalEngine.Result) -> some View {
-    let (title, body, kind): (String, String, AuraStatusChip.Kind) = {
-      switch r.level {
-      case .raised: ("Heads up", "Several vitals are running away from baseline. Consider taking it easy.", .negative)
-      case .mild: ("Watching", "Some vitals are slightly off baseline. Nothing conclusive yet.", .caution)
-      case .suppressed: ("Explained shift", "Vitals are off baseline, but your journal explains it.", .neutral)
-      case .alreadyUnwell: ("Rest up", "You logged feeling unwell, so recovery weighting is adjusted.", .caution)
-      case .quiet: ("Quiet", "", .neutral)
-      }
-    }()
-    return HStack(alignment: .top, spacing: 14) {
-      Image(systemName: "waveform.path.ecg")
-        .font(.system(size: 18, weight: .medium))
-        .foregroundStyle(kind.color)
-        .frame(width: 26)
-      VStack(alignment: .leading, spacing: 5) {
-        Text(title).font(AuraDesign.label).foregroundStyle(AuraDesign.ink.opacity(0.92))
-        Text(body).font(AuraDesign.sub).foregroundStyle(AuraDesign.ink.opacity(0.7))
-          .fixedSize(horizontal: false, vertical: true)
-        if !r.firedSignals.isEmpty {
-          Text(r.firedSignals.joined(separator: " · "))
-            .font(AuraDesign.caption).foregroundStyle(AuraDesign.ink.opacity(0.5))
-        }
-      }
-      Spacer(minLength: 0)
-    }
-    .auraDarkCard()
-  }
-
-  private func cycleCard(_ c: CyclePhaseEngine.Result) -> some View {
-    let phase: String = {
-      switch c.phase {
-      case .follicular: "Follicular phase"
-      case .periOvulatory: "Peri-ovulatory"
-      case .luteal: "Luteal phase"
-      case .unknown, .learning: ""
-      }
-    }()
-    return HStack(alignment: .top, spacing: 14) {
-      Image(systemName: "circle.dotted")
-        .font(.system(size: 18, weight: .medium))
-        .foregroundStyle(AuraDesign.Family.effort.glow)
-        .frame(width: 26)
-      VStack(alignment: .leading, spacing: 5) {
-        Text(phase).font(AuraDesign.label).foregroundStyle(AuraDesign.ink.opacity(0.92))
-        Text("Estimated from your overnight temperature rhythm. Baselines adapt with your cycle.")
-          .font(AuraDesign.sub).foregroundStyle(AuraDesign.ink.opacity(0.7))
-          .fixedSize(horizontal: false, vertical: true)
-      }
-      Spacer(minLength: 0)
-    }
-    .auraDarkCard()
+  private func availability(_ id: String) -> AnalyticAvailabilityReport? {
+    model.dailySnapshot?.availability.first { $0.analytic == id }
   }
 
   // MARK: Trend

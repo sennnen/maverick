@@ -5,10 +5,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.sennnen.mav.MavAppState
 import com.sennnen.mav.MavSnapshot
-import com.sennnen.mav.analytics.V5HealthSignals
 import com.sennnen.mav.ble.LiveState
 import com.sennnen.mav.connector.AndroidConnectorManager
 import com.sennnen.mav.data.DailyMetric
+import uniffi.mav_ffi.DailySnapshotReport
 import com.sennnen.mav.data.MetricSeriesRow
 import com.sennnen.mav.data.SleepSession
 import com.sennnen.mav.data.WorkoutRow
@@ -57,9 +57,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     /** The core's `historical-status/v1` progress as a display line; null when idle or unknown. */
     val syncNote: StateFlow<String?> = mutableSyncNote.asStateFlow()
 
-    private val mutableV5Signals = MutableStateFlow<V5HealthSignals.Snapshot?>(null)
-    /** Nightly heads-up bundle (cycle / illness ward); published once those analytics are admitted. */
-    val v5Signals: StateFlow<V5HealthSignals.Snapshot?> = mutableV5Signals.asStateFlow()
+    private val mutableSnapshot = MutableStateFlow<DailySnapshotReport?>(null)
+    /**
+     * Today's analytics as the shared core computed them, with the availability list that says why
+     * anything absent is absent. The only source of an analytic number in this app: a screen that
+     * cannot find a value here renders the core's reason, never a locally computed substitute.
+     */
+    val dailySnapshot: StateFlow<DailySnapshotReport?> = mutableSnapshot.asStateFlow()
 
     val repo: MavRepo = MavRepo()
     val mlEngine: MavMlSignals = MavMlSignals()
@@ -67,6 +71,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Generic source id used until stored read models carry the active connector identity. */
     val activeDeviceSource: String get() = "active-device"
+
+    companion object {
+        /** The device the connector host writes under; one strap at a time until multi-device. */
+        const val ACTIVE_DEVICE_ID: ULong = 1uL
+    }
 
     private var refreshJob: Job? = null
 
@@ -88,6 +97,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             mutableState.value = runCatching {
                 connectors.start()
                 mutableSyncNote.value = null
+                mutableSnapshot.value =
+                    connectors.dailySnapshot(ACTIVE_DEVICE_ID, System.currentTimeMillis())
                 MavAppState.Ready
             }.getOrElse(::failureState)
         }

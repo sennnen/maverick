@@ -15,6 +15,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -64,10 +66,12 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import uniffi.mav_ffi.AnalyticAvailabilityReport
 import androidx.compose.ui.unit.sp
 import com.sennnen.mav.ui.MavPrefs
 import kotlin.math.abs
@@ -566,5 +570,64 @@ fun rememberHubHiddenCards(hub: String): Pair<String, (String) -> Unit> {
     return csv to { new: String ->
         csv = new
         AuraHubCards.save(context, hub, new)
+    }
+}
+
+// MARK: - Unavailable analytics
+//
+// A card backed by an analytic the core cannot serve renders the core's reason, never a locally
+// computed substitute and never silence. One component so the wording is written once and every
+// screen says the same thing.
+
+/** Turn a core `AnalyticAvailabilityReport` reason into a sentence a person can act on. */
+fun auraUnavailableReason(entry: AnalyticAvailabilityReport?): String = when {
+    entry == null -> "This metric is not part of the current core build."
+    entry.available -> ""
+    entry.reason == "algorithm_not_admitted" ->
+        "Not published yet — the calculation has no reference we can stand behind."
+    entry.reason == "missing_streams" && entry.missingStreams.isNotEmpty() ->
+        "Waiting on ${auraStreamNames(entry.missingStreams)} from your strap."
+    else -> "No data yet."
+}
+
+private fun auraStreamNames(streams: List<String>): String {
+    val friendly = streams.map { stream ->
+        when (stream) {
+            "rrinterval" -> "beat intervals"
+            "heartrate" -> "heart rate"
+            "skintemp" -> "skin temperature"
+            "respraw" -> "respiration"
+            "sleepstateraw" -> "sleep state"
+            else -> stream.replace('_', ' ')
+        }
+    }
+    return when (friendly.size) {
+        0 -> "more data"
+        1 -> friendly[0]
+        else -> friendly.dropLast(1).joinToString(", ") + " and " + friendly.last()
+    }
+}
+
+/**
+ * The honest empty state for one metric: its name, and why the core has nothing to show. Used
+ * wherever a value would otherwise be blank, so an absence is always explained.
+ */
+@Composable
+fun AuraUnavailableCard(title: String, entry: AnalyticAvailabilityReport?) {
+    val p = Aura.palette
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Aura.tileRadius))
+            .background(p.card)
+            .border(1.dp, p.hairline, RoundedCornerShape(Aura.tileRadius))
+            .padding(Aura.tilePadding)
+            .semantics {
+                contentDescription = "$title unavailable. ${auraUnavailableReason(entry)}"
+            },
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(title.uppercase(), style = AuraType.caption, color = p.ink.copy(alpha = 0.55f))
+        Text(auraUnavailableReason(entry), style = AuraType.sub, color = p.ink.copy(alpha = 0.75f))
     }
 }

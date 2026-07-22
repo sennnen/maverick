@@ -37,7 +37,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sennnen.mav.analytics.RestScorer
 import com.sennnen.mav.ui.AppViewModel
 import java.time.LocalDate
 import java.time.LocalTime
@@ -67,8 +66,9 @@ fun AuraTodayScreen(
     val anchor = auraAnchorDay(days)
     val vitalsDay = auraLastVitalsDay(days, anchor)
 
-    // Rest = the imported sleep_performance for the anchor day when present,
-    // else the on-device composite (RestScorer) — mirrors the widget contract.
+    // Rest is the imported sleep_performance for the anchor day. There is no local fallback: a
+    // second implementation of a metric is a second answer, and the unavailable card says why the
+    // core has none (ADR-024).
     var restPct by remember { mutableStateOf<Double?>(null) }
     LaunchedEffect(days) {
         val series = runCatching {
@@ -78,7 +78,6 @@ fun AuraTodayScreen(
         restPct = anchor?.let { a ->
             byDay[a.day]
                 ?: (if (a.day == LocalDate.now().toString()) series.lastOrNull()?.value else null)
-                ?: RestScorer.restFromDaily(a)
         }
     }
 

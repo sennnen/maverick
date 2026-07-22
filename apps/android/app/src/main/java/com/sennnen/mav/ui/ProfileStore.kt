@@ -2,7 +2,6 @@ package com.sennnen.mav.ui
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.sennnen.mav.analytics.Zones
 
 /**
  * The user's body profile — age / sex / weight / height plus an optional manual
@@ -91,8 +90,8 @@ class ProfileStore(private val prefs: SharedPreferences) {
      *  null when 0 (auto-fit), the positive value otherwise. */
     val stepsManualOverride: Double? get() = stepsManualCoefficient.takeIf { it > 0 }
 
-    /** The auto (Tanaka) HR-max for the current age. */
-    val hrMaxAuto: Int get() = Zones.hrMaxTanaka(age)
+    /** The auto (Tanaka) HR-max for the current age, from the core's one implementation. */
+    val hrMaxAuto: Int get() = AuraZoneMath.tanakaMaxHr(age)
 
     /** Effective HR-max: the manual override if set, else the Tanaka estimate. */
     val hrMax: Int get() = if (hrMaxOverride > 0) hrMaxOverride else hrMaxAuto

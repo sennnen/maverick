@@ -1,37 +1,12 @@
-package com.sennnen.mav.analytics
+package com.sennnen.mav.ui
 
 /*
- * AnalyticsModels.kt — shared on-device analytics value types.
+ * Presentation value types the sleep and graph screens draw with. They arrived alongside the
+ * on-device scorers and are not analytics: they carry no calculation, and the numbers that fill
+ * them come from the core.
  *
- * Faithful Kotlin port of the shared model types that the StrandAnalytics Swift
- * package defines and shares across its analyzers:
- *   - StrandAnalytics.swift  → [StrandAnalytics] version marker
- *   - WorkoutDetector.swift  → [UserProfile], [ExerciseSession], [ActivityPoint]
- *   - SleepStager.swift      → [StageSegment], [DetectedSleep], [HypnogramMetrics]
- *   - Baselines.swift        → [MetricCfg], [BaselineStatus], [BaselineState], [Deviation]
- *   - AnalyticsEngine.swift  → [ProfileBaselines], [DayResult]
- *
- * Naming notes (clash avoidance):
- *   - The analytics-internal detected-sleep type is [DetectedSleep] so it does NOT
- *     clash with the Room entity com.sennnen.mav.data.SleepSession.
- *   - HR-zone display types ([HrZone]/[HrZoneSet]/[TimeInZone]) live in HrZones.kt.
- *   - HRV result type ([HrvAnalyzer.HrvResult]) lives in HrvAnalyzer.kt.
- *
- * All `ts` / `start` / `end` are wall-clock unix SECONDS (Long) to match the
- * com.sennnen.mav.data layer; the Swift source uses Int seconds.
- *
- * All derived intensity / energy / sleep-stage outputs are APPROXIMATE and not
- * medical advice (see the per-analyzer Swift headers).
+ * Every `ts` / `start` / `end` is wall-clock unix SECONDS, matching the com.sennnen.mav.data layer.
  */
-
-/** On-device analytics namespace marker. Mirrors Swift `StrandAnalytics`. */
-object StrandAnalytics {
-    const val VERSION: String = "0.1.0"
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// UserProfile (WorkoutDetector.swift)
-// ─────────────────────────────────────────────────────────────────────────────
 
 /** User profile for HRmax + calorie estimation. Mirrors Swift `UserProfile`. */
 data class UserProfile(
@@ -53,10 +28,6 @@ data class UserProfile(
      */
     val waistCm: Double = 0.0,
 )
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Sleep staging output shapes (SleepStager.swift)
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * A contiguous sleep-stage segment. Times are wall-clock unix seconds.

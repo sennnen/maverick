@@ -45,9 +45,7 @@ final class MavStore: ObservableObject {
     return RuntimeConfig(
       databasePath: databaseURL().path,
       timezoneId: TimeZone.current.identifier,
-      transportCapacity: 256,
-      appVersion: "0.1.0",
-      appBuild: "1"
+      appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
     )
   }
 }

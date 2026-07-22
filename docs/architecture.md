@@ -122,10 +122,16 @@ no DNS, HTTP, filesystem, or platform API.
 The connector store depends only on runtime inspection/trust, the ABI records those reports expose,
 and `mav-model` errors. It owns a separate forward schema inside the install database; it cannot
 depend on engine, native transport, analytics, a device crate, or the evidence store.
+Engine depends on the analytic stage crates — `mav-feature` and `mav-analytic` — because the spine
+is the thing that runs them: samples out of the store, primitives, negotiated capabilities, admitted
+values, one `DailySnapshot` per local day (ADR-024). The stage crates stay pure and reach nothing;
+the direction is one way, as it is everywhere else here.
+
 Engine depends on runtime; runtime never calls engine. Engine also depends on `mav-obs`, because
 the `Tap` boundary is where the pipeline is observed and the pipeline is what engine runs; a tap is
 passive and can change neither the data nor the call order. Loadable connector source lives only in
-`sennnen/maverick-connectors` and compiles against the public SDK. FFI reaches ABI, runtime, and
+`sennnen/maverick-connectors` and compiles against the public SDK. FFI reaches ABI, runtime,
+`mav-analytic` (for the availability vocabulary it flattens), and the
 connector store only to translate frozen records, open verified sessions, and serialize all
 mutation. FFI and replay have no connector implementation dependency.
 

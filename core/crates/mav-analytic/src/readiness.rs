@@ -5,6 +5,7 @@
 //! RMSSD per UTC day, a 7-night baseline against a 30/60-night normal band (smallest-worthwhile-
 //! change, k = 0.5), and a tier. Returns `None` (calibrating) below `MIN_NIGHTS` valid nights.
 //! Wellness estimate, never medical.
+use serde::{Deserialize, Serialize};
 
 use crate::stats::{least_squares_slope, mean, sample_sd};
 use std::collections::BTreeMap;
@@ -36,7 +37,8 @@ const RR_MAX_MS: u16 = 2000;
 const MAX_BEAT_DELTA_MS: f64 = 200.0;
 
 /// Where the short baseline sits vs the personal normal band.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ReadinessTier {
     Primed,
     Normal,
@@ -45,7 +47,7 @@ pub enum ReadinessTier {
 
 /// A readiness reading. The `*_ms` fields are back in milliseconds (exp of the log-domain the
 /// engine works in). `overreaching_watch` is informational and never changes the tier.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct HrvReadinessResult {
     pub tier: ReadinessTier,
     pub baseline7_ms: f64,

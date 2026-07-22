@@ -643,14 +643,17 @@ dependencies = [
 name = "mav-engine"
 version = "0.1.0"
 dependencies = [
+ "mav-analytic",
  "mav-connector-abi",
  "mav-connector-runtime",
+ "mav-feature",
  "mav-model",
  "mav-obs",
  "mav-sqi",
  "mav-store",
  "mav-timeline",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -666,6 +669,7 @@ name = "mav-ffi"
 version = "0.1.0"
 dependencies = [
  "ed25519-dalek",
+ "mav-analytic",
  "mav-connector-abi",
  "mav-connector-runtime",
  "mav-connector-store",

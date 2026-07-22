@@ -36,9 +36,7 @@ fn runtime() -> (std::sync::Arc<MavRuntime>, std::path::PathBuf) {
     let runtime = MavRuntime::new(RuntimeConfig {
         database_path: path.to_string_lossy().into_owned(),
         timezone_id: "Europe/London".to_owned(),
-        transport_capacity: 16,
         app_version: "0.1.0".to_owned(),
-        app_build: "test".to_owned(),
     })
     .expect("runtime");
     (runtime, path)
@@ -1004,5 +1002,120 @@ fn malformed_public_key_maps_to_a_safe_structured_error() {
         "connector publisher public key must be exactly 32 bytes"
     );
     assert!(!safe_message.contains(path.to_string_lossy().as_ref()));
+    let _ = std::fs::remove_file(path);
+}
+
+/// The analytic spine over the boundary. The hash is the parity contract: both platforms must read
+/// this exact string from this exact fixture day, and a divergence means a binding is lying rather
+/// than a metric differing.
+#[test]
+fn the_daily_snapshot_crosses_the_boundary_with_a_stable_hash() {
+    let (runtime, path) = runtime();
+    let device = DeviceId::new(11);
+    let midnight_ns = 1_752_624_000i64 * 1_000_000_000;
+
+    {
+        let store = mav_engine::Store::open(&path).expect("seed store");
+        for minute in 0..30i64 {
+            let at = midnight_ns + minute * 60 * 1_000_000_000;
+            let write = |kind, value, seq, when: i64| {
+                store
+                    .insert_sample(
+                        device,
+                        &Sample {
+                            kind,
+                            device_time: DeviceTime::from_nanos(when),
+                            wall_time: Some(WallTime::from_nanos(when)),
+                            seq,
+                            value,
+                            quality: Quality::scored(1.0),
+                            provenance: MetadataId::new(1),
+                        },
+                    )
+                    .expect("seed sample");
+            };
+            write(
+                StreamKind::HeartRate,
+                RawValue::U8(58 + (minute % 5) as u8),
+                minute as u16,
+                at,
+            );
+            for beat in 0..4i64 {
+                let interval = if beat % 2 == 0 { 900u16 } else { 950 };
+                write(
+                    StreamKind::RrInterval,
+                    RawValue::U16(interval),
+                    (minute * 4 + beat) as u16,
+                    at + beat * 1_000_000_000,
+                );
+            }
+        }
+    }
+
+    runtime
+        .set_timezone_spans(
+            "UTC".to_owned(),
+            vec![mav_ffi::TimezoneSpan {
+                start_unix_seconds: i64::MIN / 2,
+                offset_seconds: 0,
+            }],
+        )
+        .expect("set spans");
+
+    let noon_ms = (midnight_ns / 1_000_000) + 12 * 3_600_000;
+    let snapshot = runtime
+        .daily_snapshot(device.get(), noon_ms)
+        .expect("daily snapshot");
+
+    assert_eq!(snapshot.day, "2025-07-16");
+    assert_eq!(snapshot.hr_sample_count, 30);
+    assert_eq!(snapshot.mean_bpm, Some(60.0));
+    let hrv = snapshot
+        .hrv
+        .as_ref()
+        .expect("a day of intervals has variability");
+    assert_eq!(hrv.rmssd_ms, 50.0);
+    assert_eq!(hrv.interval_count, 120);
+    assert_eq!(
+        hrv.label, "pulse_rate_variability",
+        "optical intervals must never be labelled HRV"
+    );
+    assert_eq!(
+        snapshot.snapshot_hash, "a220b57a8d4690b0",
+        "the cross-platform parity hash changed; if an algorithm moved, repin here and on both apps"
+    );
+
+    // Availability is part of the contract: unavailable analytics carry the core's reason.
+    let recovery = snapshot
+        .availability
+        .iter()
+        .find(|entry| entry.analytic == "recovery")
+        .expect("recovery is a known analytic");
+    assert!(!recovery.available);
+    assert_eq!(recovery.reason.as_deref(), Some("algorithm_not_admitted"));
+
+    // A zone five hours behind moves the whole window into the previous local day, and the day
+    // that had everything now honestly reports nothing.
+    runtime
+        .set_timezone_spans(
+            "America/New_York".to_owned(),
+            vec![mav_ffi::TimezoneSpan {
+                start_unix_seconds: i64::MIN / 2,
+                offset_seconds: -5 * 3_600,
+            }],
+        )
+        .expect("set spans");
+    let shifted = runtime
+        .daily_snapshot(device.get(), noon_ms)
+        .expect("shifted snapshot");
+    assert_eq!(shifted.day, "2025-07-16");
+    assert_eq!(shifted.hr_sample_count, 0);
+    assert!(shifted.hrv.is_none());
+
+    // An empty span list is refused rather than silently becoming UTC.
+    assert!(runtime
+        .set_timezone_spans("UTC".to_owned(), Vec::new())
+        .is_err());
+
     let _ = std::fs::remove_file(path);
 }

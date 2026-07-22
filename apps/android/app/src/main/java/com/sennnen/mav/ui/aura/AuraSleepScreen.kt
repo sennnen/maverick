@@ -33,8 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sennnen.mav.analytics.RestScorer
-import com.sennnen.mav.analytics.StageSegment
+import com.sennnen.mav.ui.StageSegment
 import com.sennnen.mav.data.SleepSession
 import com.sennnen.mav.ui.AppViewModel
 import com.sennnen.mav.ui.parsePersistedSegments
@@ -73,9 +72,9 @@ fun AuraSleepScreen(vm: AppViewModel, onOpenAlarm: () -> Unit) {
         }.getOrDefault(emptyList()).associate { it.day to it.value }
 
         val perf = series("sleep_performance")
+        // No local composite fallback; an absent value is explained by the availability list.
         restPct = perf[a.day]
             ?: (if (a.day == java.time.LocalDate.now().toString()) perf.entries.lastOrNull()?.value else null)
-            ?: RestScorer.restFromDaily(a)
         figures = AuraSleepFigures(
             needMin = series("sleep_need_min")[a.day],
             debtMin = series("sleep_debt_min")[a.day],

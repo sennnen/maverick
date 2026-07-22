@@ -59,7 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sennnen.mav.analytics.StageSegment
+import com.sennnen.mav.ui.StageSegment
 import kotlinx.coroutines.delay
 import java.text.DateFormat
 import java.time.LocalDate

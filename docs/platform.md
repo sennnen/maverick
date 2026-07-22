@@ -344,6 +344,16 @@ Native code may not:
 The four hub slots exist even when their analytics do not. Their state is one of value, collecting,
 unavailable, or failed. That state comes from the core contract.
 
+### Unavailable analytics
+
+`AuraUnavailableCard` — one component per platform, same wording — is how an absent metric is shown.
+It takes the core's availability entry and renders the reason: what stream is missing, or that the
+algorithm is not admitted. A screen never leaves an analytic blank and never substitutes a number it
+computed for itself.
+
+Zone math and the Tanaka HR-max ceiling come from the core over FFI (`heart_rate_zones`,
+`heart_rate_zone_for`). The Kotlin ladder that used to duplicate them is gone.
+
 ### Design tokens
 
 The Aura palette, spacing, radii, and type-scale sizes live once, in `tokens/aura.json`.

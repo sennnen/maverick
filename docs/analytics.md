@@ -84,6 +84,27 @@ Timezone offsets come from the platforms as explicit spans over FFI, into the ex
 `Timezone::new(id, spans)`. Rust takes no tzdata dependency: the phone already has a correct and
 updated zone database, and it is the only place the user's zone is genuinely known.
 
+### Scorer disposition
+
+The Android app carried four on-device scorers. Their fate, decided in the AS-P4 audit:
+
+| Scorer | Disposition | Why |
+|---|---|---|
+| `Hrv.rmssd` | **deleted** | `mav-analytic::hrv::time_domain` is the same formula with fixtures. |
+| `Zones` / `hrMaxTanaka` | **deleted, replaced by FFI** | `mav-analytic::hr_zones` already held the Tanaka ceiling and the same %HRmax ladder. Kotlin now calls it. |
+| `RestScorer` | **unavailable** (`SleepPerformance`) | A sleep composite needs staged sleep. No admitted analytic produces one yet; M4 is where that happens. |
+| `IllnessSignalEngine` | **unavailable** (`IllnessRisk`) | Needs multi-day baselines of resting HR, skin temperature, respiration, and variability. The spine builds none of them yet. |
+| `CyclePhaseEngine` | **unavailable** (`CyclePhase`) | Needs a nightly skin-temperature series over a cycle. Same gap, longer window. |
+| `IllnessWatch` | **deleted** | An earlier, blunter version of the same idea, superseded by the `IllnessRisk` capability. |
+| `RouteMath` | **retained** | Route polyline decoding for the workout map. Not a scorer. |
+
+The three unavailable entries are declared in `mav-analytic::capability` with the streams they need,
+so the apps render the core's reason rather than a blank card or a locally computed number.
+
+None of the deleted scorers was reachable: `AppViewModel.days()` returned an empty list and the
+signals flow was never published, so every one of them was already computing over nothing. Deleting
+them removed no working feature — it removed the possibility of a second answer appearing later.
+
 ## The ported algorithm library (WHOOP-P6/P8)
 
 `mav-analytic` also carries a library of brand-neutral physiological algorithms imported from

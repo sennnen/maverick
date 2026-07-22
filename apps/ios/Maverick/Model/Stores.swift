@@ -36,8 +36,9 @@ final class AppModel: ObservableObject {
   @Published var bpm: Int?
   @Published var activeWorkout: ActiveWorkout?
   @Published var strengthSession: StrengthSession?
-  @Published var illnessSignal: IllnessSignalEngine.Result?
-  @Published var cyclePhase: CyclePhaseEngine.Result?
+  /// Today's analytics as the shared core computed them, with the availability list that says why
+  /// anything absent is absent. The only source of an analytic number in this app.
+  @Published var dailySnapshot: DailySnapshotReport?
   /// The admitted session PRV read model, when the core computed one. Never presented as HRV.
   @Published var prv: MavPrv?
   @Published var prvUnavailableReason: String?

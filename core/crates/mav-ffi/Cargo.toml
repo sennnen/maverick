@@ -12,18 +12,19 @@ crate-type = ["lib", "cdylib", "staticlib"]
 [dependencies]
 mav-model = { workspace = true }
 mav-obs = { workspace = true }
+mav-analytic = { workspace = true }
 mav-engine = { workspace = true }
 mav-connector-abi = { workspace = true }
 mav-connector-runtime = { workspace = true }
 mav-connector-store = { workspace = true }
 uniffi = { version = "0.28" }
 thiserror = { workspace = true }
+serde_json = { workspace = true }
 
 [dev-dependencies]
 mav-sqi = { workspace = true }
 ed25519-dalek = { workspace = true }
 sha2 = { workspace = true }
-serde_json = { workspace = true }
 wat = "=1.245.1"
 
 [features]

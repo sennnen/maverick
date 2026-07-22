@@ -69,7 +69,14 @@ table and recomputing produces identical rows; a cache hit short-circuits recomp
 
 **Exit:** the full repo gate.
 
-**Status: not started.**
+**Status: done.** `mav-engine/src/spine.rs` reads samples, buckets them by `LocalDay` through the
+platform-supplied `Timezone`, runs `mav-feature::hr_summary` and `mav-analytic::time_domain`,
+negotiates availability from the streams the day actually holds, and persists into the new
+`daily_snapshot` table (migration v2, algorithm versions stamped). The recompute island is live:
+`Timezone`, `LocalDay`, `AffectedDays`, and `RecomputeCache` all have callers. Seven tests pin a
+golden day, prove drop-and-recompute is byte-identical, prove a cache hit reads no samples, and prove
+the supplied offset decides which day a reading belongs to. Optical intervals are labelled
+`pulse_rate_variability`, never HRV.
 
 ---
 
@@ -94,7 +101,13 @@ the boundary; both platform test suites assert the same hash.
 
 **Exit:** the full repo gate plus both platform test suites.
 
-**Status: not started.**
+**Status: done.** `daily_snapshot(device, wall_ms)`, `analytic_availability(...)`,
+`set_timezone_spans(id, spans)`, plus `heart_rate_zones`/`heart_rate_zone_for` from AS-P7.
+`RuntimeConfig` lost `transport_capacity` and `app_build` in a coordinated change with both apps;
+`timezone_id` stays as the ADR-024 label and `app_version` now stamps the report bundle. The FFI
+test pins the parity hash `a220b57a8d4690b0` over a fixture day, asserts the PRV label, asserts
+`recovery` reports `algorithm_not_admitted`, and asserts an empty span list is refused rather than
+silently treated as UTC.
 
 ---
 
@@ -120,7 +133,16 @@ stub, a capability test asserting the exact `UnavailableReason`.
 
 **Exit:** the full repo gate.
 
-**Status: not started.**
+**Status: done.** Disposition table in `docs/analytics.md`. **The audit's finding changed the
+packet:** none of the four scorers was reachable — `AppViewModel.days()` returned an empty list and
+the signals flow was never published — so every one was computing over nothing. Deletion removed no
+working feature. `Hrv.rmssd` and `IllnessWatch` were duplicates and went; `Zones`/`hrMaxTanaka`
+became FFI calls into `mav-analytic::hr_zones`; `RestScorer`, `IllnessSignalEngine`, and
+`CyclePhaseEngine` became the declared capabilities `SleepPerformance`, `IllnessRisk`, and
+`CyclePhase`, each carrying the streams it needs so the reason shown is true. A second correction:
+`AnalyticsModels.kt` and the iOS shims held *presentation* types (`StageSegment`, `UserProfile`,
+`DetectedSleep`, `HypnogramMetrics`) mixed in with the scorers — those moved to `ui/`, they were not
+deleted.
 
 ---
 
@@ -144,7 +166,13 @@ rendering; the grep gate scripted into the packet's exit.
 
 **Exit:** Android test suite green; the grep gate clean; the app builds from a clean checkout.
 
-**Status: not started.**
+**Status: done, compiled and tested.** Six Kotlin files deleted; `RouteMath.kt` retained. The four
+call sites now read `vm.dailySnapshot`; the two `RestScorer` fallbacks are gone, because a local
+fallback for a core metric is the violation, not a convenience. The Signals section renders
+`AuraUnavailableCard` for `illnessrisk` and `cyclephase`. `AndroidConnectorManager` publishes the
+platform's offset spans on runtime open and exposes `dailySnapshot`. Grep gate clean (the surviving
+`setIllnessWatch` is a user preference, not the engine). `:app:compileDebugKotlin` and
+`:app:testDebugUnitTest` both green under JDK 17.
 
 ---
 
@@ -164,7 +192,16 @@ AS-P3.
 
 **Exit:** iOS test suite green; the cross-platform hash fixture matches.
 
-**Status: not started.**
+**Status: written, not compiled — no Xcode on this machine.** The mirror is complete:
+`AnalyticsShims.swift` keeps only `StageSegment`, `AppModel` publishes `dailySnapshot` in place of
+the two engine results, the Signals section renders the new `AuraUnavailableCard` (same wording as
+Android's, accessibility label included), `MavStore.runtimeConfig()` matches the trimmed
+`RuntimeConfig`, and `ConnectorRuntimeWorker` gained `publishTimezoneSpans` and `dailySnapshot`.
+
+Every modified file passes `swiftc -parse`, which is syntax only. **This machine has Command Line
+Tools, not Xcode.app, so there is no iOS SDK and neither type-checking nor the test suite could
+run.** The next session on a machine with Xcode must build and run `MaverickTests` before this
+packet is called done, and assert the AS-P3 parity hash from the iOS side.
 
 ---
 
@@ -188,7 +225,11 @@ exposure exists.
 
 **Exit:** the full repo gate plus both platform suites; grep gates for the deleted types.
 
-**Status: not started.**
+**Status: half done.** Zone math is exposed (`heart_rate_zones`, `heart_rate_zone_for`) and the
+Kotlin `Zones` object is deleted; `AuraZoneMath` defers to the core. The `LocalDay` half is not
+done — the platform `LogicalDay` implementations and `WorkoutZones.kt`'s percentage parsing are
+still local, and `WorkoutZones` turns out to parse *imported* zone JSON rather than compute zones, so
+it is not the duplicate the packet assumed. Both want their own packet against real imported data.
 
 ---
 

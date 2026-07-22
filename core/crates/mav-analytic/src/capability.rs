@@ -9,6 +9,14 @@ use std::collections::HashSet;
 pub enum AnalyticId {
     TimeDomainHrv,
     Recovery,
+    /// A sleep-quality composite. Needs staged sleep, which no admitted analytic produces yet.
+    SleepPerformance,
+    /// The multi-signal pre-symptomatic pattern: resting HR, skin temperature, variability, and
+    /// respiration moving together against the user's own baseline.
+    IllnessRisk,
+    /// Menstrual-cycle phase awareness from the nightly skin-temperature series. Awareness only,
+    /// never contraception, fertility prediction, or a diagnosis.
+    CyclePhase,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -27,6 +35,30 @@ pub const ANALYTICS: &[AnalyticDescriptor] = &[
     AnalyticDescriptor {
         id: AnalyticId::Recovery,
         required_streams: &[StreamKind::RrInterval],
+        admitted: false,
+    },
+    AnalyticDescriptor {
+        id: AnalyticId::SleepPerformance,
+        required_streams: &[StreamKind::SleepStateRaw, StreamKind::HeartRate],
+        admitted: false,
+    },
+    AnalyticDescriptor {
+        id: AnalyticId::IllnessRisk,
+        required_streams: &[
+            StreamKind::HeartRate,
+            StreamKind::RrInterval,
+            StreamKind::SkinTemp,
+            StreamKind::RespRaw,
+        ],
+        admitted: false,
+    },
+    AnalyticDescriptor {
+        id: AnalyticId::CyclePhase,
+        required_streams: &[
+            StreamKind::SkinTemp,
+            StreamKind::HeartRate,
+            StreamKind::RrInterval,
+        ],
         admitted: false,
     },
 ];

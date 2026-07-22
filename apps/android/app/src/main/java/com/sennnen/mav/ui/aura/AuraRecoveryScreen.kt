@@ -41,8 +41,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sennnen.mav.analytics.CyclePhaseEngine
-import com.sennnen.mav.analytics.IllnessSignalEngine
 import com.sennnen.mav.data.DailyMetric
 import com.sennnen.mav.ui.AppViewModel
 import java.util.Locale
@@ -75,7 +73,7 @@ private data class AuraVital(
 fun AuraRecoveryScreen(vm: AppViewModel) {
     val p = Aura.palette
     val days by vm.recentDays.collectAsStateWithLifecycle()
-    val signals by vm.v5Signals.collectAsStateWithLifecycle()
+    val snapshot by vm.dailySnapshot.collectAsStateWithLifecycle()
     val recoveryReason = "Recovery is unavailable until the core admits a stored read model."
 
     val anchor = auraAnchorDay(days)
@@ -186,20 +184,18 @@ fun AuraRecoveryScreen(vm: AppViewModel) {
             }
 
             // MARK: Signals
-            val illness = signals?.illness
-            val cycle = signals?.cycle
-            val showIllness = illness != null && illness.level != IllnessSignalEngine.Level.QUIET
-            val showCycle = cycle != null &&
-                cycle.phase != CyclePhaseEngine.Phase.UNKNOWN &&
-                cycle.phase != CyclePhaseEngine.Phase.LEARNING
-            if (showIllness || showCycle) {
-                AuraEditableCard("signals", hiddenCSV, setHiddenCSV, editing) {
-                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        AuraSectionHeader(title = "Signals")
-                        Column(verticalArrangement = Arrangement.spacedBy(Aura.cardSpacing)) {
-                            if (showIllness) IllnessCard(illness!!)
-                            if (showCycle) CycleCard(cycle!!)
-                        }
+            //
+            // Illness and cycle awareness are declared analytics the core does not yet serve. The
+            // card states which, and why, rather than disappearing or showing a number this app
+            // computed for itself — one metric, one implementation (ADR-024).
+            val availability = snapshot?.availability.orEmpty()
+            fun entry(id: String) = availability.firstOrNull { it.analytic == id }
+            AuraEditableCard("signals", hiddenCSV, setHiddenCSV, editing) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    AuraSectionHeader(title = "Signals")
+                    Column(verticalArrangement = Arrangement.spacedBy(Aura.cardSpacing)) {
+                        AuraUnavailableCard("Heads-up", entry("illnessrisk"))
+                        AuraUnavailableCard("Cycle phase", entry("cyclephase"))
                     }
                 }
             }
@@ -374,76 +370,3 @@ private fun VitalRow(v: AuraVital, onClick: () -> Unit) {
     }
 }
 
-@Composable
-private fun IllnessCard(r: IllnessSignalEngine.Result) {
-    val p = Aura.palette
-    val (title, body, kind) = when (r.level) {
-        IllnessSignalEngine.Level.RAISED -> Triple(
-            "Heads up", "Several vitals are running away from baseline. Consider taking it easy.",
-            AuraChipKind.NEGATIVE,
-        )
-        IllnessSignalEngine.Level.MILD -> Triple(
-            "Watching", "Some vitals are slightly off baseline. Nothing conclusive yet.",
-            AuraChipKind.CAUTION,
-        )
-        IllnessSignalEngine.Level.SUPPRESSED -> Triple(
-            "Explained shift", "Vitals are off baseline, but your journal explains it.",
-            AuraChipKind.NEUTRAL,
-        )
-        IllnessSignalEngine.Level.ALREADY_UNWELL -> Triple(
-            "Rest up", "You logged feeling unwell, so recovery weighting is adjusted.",
-            AuraChipKind.CAUTION,
-        )
-        IllnessSignalEngine.Level.QUIET -> Triple("Quiet", "", AuraChipKind.NEUTRAL)
-    }
-    val tint = when (kind) {
-        AuraChipKind.NEGATIVE -> p.bad
-        AuraChipKind.CAUTION -> p.fair
-        AuraChipKind.POSITIVE -> p.good
-        AuraChipKind.NEUTRAL -> p.ink.copy(alpha = 0.7f)
-    }
-    AuraDarkCard {
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.Top) {
-            Icon(
-                Icons.Filled.MonitorHeart, contentDescription = null,
-                tint = tint, modifier = Modifier.width(26.dp).size(20.dp),
-            )
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(title, style = AuraType.label, color = p.ink.copy(alpha = 0.92f))
-                Text(body, style = AuraType.sub, color = p.ink.copy(alpha = 0.7f))
-                if (r.firedSignals.isNotEmpty()) {
-                    Text(
-                        r.firedSignals.joinToString(" · "),
-                        style = AuraType.caption, color = p.ink.copy(alpha = 0.5f),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CycleCard(c: CyclePhaseEngine.Result) {
-    val p = Aura.palette
-    val phase = when (c.phase) {
-        CyclePhaseEngine.Phase.FOLLICULAR -> "Follicular phase"
-        CyclePhaseEngine.Phase.PERI_OVULATORY -> "Peri-ovulatory"
-        CyclePhaseEngine.Phase.LUTEAL -> "Luteal phase"
-        else -> ""
-    }
-    AuraDarkCard {
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.Top) {
-            Icon(
-                Icons.Outlined.Circle, contentDescription = null,
-                tint = AuraFamily.EFFORT.glow, modifier = Modifier.width(26.dp).size(20.dp),
-            )
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(phase, style = AuraType.label, color = p.ink.copy(alpha = 0.92f))
-                Text(
-                    "Estimated from your overnight temperature rhythm. Baselines adapt with your cycle.",
-                    style = AuraType.sub, color = p.ink.copy(alpha = 0.7f),
-                )
-            }
-        }
-    }
-}

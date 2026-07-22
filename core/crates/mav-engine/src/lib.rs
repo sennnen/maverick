@@ -4,6 +4,7 @@
 
 pub mod connector_host;
 pub mod recompute;
+pub mod spine;
 
 pub use connector_host::{
     ApplyOutcome, ConnectorHost, ConnectorHostConfig, ConnectorLifecycleSnapshot,
@@ -11,3 +12,4 @@ pub use connector_host::{
 };
 pub use mav_store::Store;
 pub use recompute::{AffectedDays, CacheKey, LocalDay, OffsetSpan, RecomputeCache, Timezone};
+pub use spine::{AlgorithmStamp, DailySnapshot, Spine};
