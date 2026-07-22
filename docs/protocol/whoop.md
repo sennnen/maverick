@@ -661,6 +661,12 @@ the only MG-only behaviour at the BLE level. [SERIES] The hardware behind the by
 because every decoded field traces to one of these: an Ambiq Apollo4 Blue MCU, a Maxim MAX86176
 optical front-end, a TDK ICM45686 six-axis IMU, and an ams AS6221 skin-temperature sensor. [SERIES]
 
+**Hardware-verified from our own MG (firmware 50.33.2.0):** the strap answers the gen5 hello with
+`MGB0261172` and its firmware quad, so the identity path is confirmed. Setting
+`enable_raw_data_w_ecg` and sending `START_RAW_DATA` produced **no type-43 frames and no response at
+all** — with the strap off the wrist, which is very likely the reason. The live investigation and
+its next steps live in `docs/plans/active/ecg-discovery.md`. [HW]
+
 None of the five sources has decoded the ECG waveform. It is not in any mapped record, and no source
 has found the command or the record type that carries it. So the honest state is: **the MG has ECG
 hardware, and reading its waveform over Bluetooth is unsolved as far as we know.** Finding it will

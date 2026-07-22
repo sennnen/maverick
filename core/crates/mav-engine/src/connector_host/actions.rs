@@ -68,9 +68,11 @@ impl ConnectorHost {
             }
             ActionBody::EmitSamples { batch_id, samples } => {
                 let accounting = self.commit_samples(batch_id, &samples, wall_time_ms)?;
-                if accounting.duplicate > 0 {
-                    // Not an error, but never silent: a repeated historical burst is expected and a
-                    // sample that vanishes without being counted here is not.
+                // Not an error, but never silent: a repeated historical burst is expected and a
+                // sample that vanishes without being counted here is not. Journalled on a
+                // logarithmic ladder — the fact survives, the flood does not, and the running total
+                // is always exact on the lifecycle snapshot.
+                if accounting.duplicate > 0 && self.duplicates_worth_journalling() {
                     self.record_duplicates(&accounting, wall_time_ms)?;
                 }
                 // The acknowledgement is what the connector handed over. It means received and
@@ -83,10 +85,24 @@ impl ConnectorHost {
                 })?;
                 followups.push(EventBody::SamplesCommitted { batch_id, count });
             }
-            ActionBody::EmitDiagnostic { code, .. } => {
+            ActionBody::EmitDiagnostic {
+                level,
+                code,
+                message,
+            } => {
+                // The message is the diagnostic. Recording only its code threw away everything the
+                // connector actually said — an identity readout, a console line, the bytes of a
+                // packet nobody has decoded — and left a journal that proves a diagnostic happened
+                // and nothing about what it was.
                 let diagnostic = error(
-                    codes::CONNECTOR_HOST_ACTION_INVALID,
-                    "connector emitted a diagnostic",
+                    match level {
+                        DiagnosticLevel::Error => codes::CONNECTOR_HOST_DIAGNOSTIC_ERROR,
+                        DiagnosticLevel::Warning => codes::CONNECTOR_HOST_DIAGNOSTIC_WARNING,
+                        DiagnosticLevel::Info | DiagnosticLevel::Debug => {
+                            codes::CONNECTOR_HOST_DIAGNOSTIC_INFO
+                        }
+                    },
+                    message,
                 )
                 .context(code);
                 self.store.record_error(

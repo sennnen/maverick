@@ -53,12 +53,13 @@ internal object AndroidConnectorTrust {
             )
         }
         if (BuildConfig.DEBUG) {
-            // Local dev-loop key: original test signer's private key isn't recoverable on this
-            // machine. Swapped to a throwaway Ed25519 keypair generated for this session so
-            // freshly rebuilt whoop5 test artifacts can be sideloaded and verified again. Not a
-            // production/distribution key.
+            // Local dev-loop key. The previous session's private half was not recoverable either,
+            // so this is a fresh throwaway Ed25519 keypair, again for sideloading locally rebuilt
+            // whoop5 artifacts — currently the ECG discovery probe. DEBUG-only and DEVELOPMENT
+            // scope, which every production policy refuses (`allow_development: false`). Not a
+            // distribution key, and no release artifact is signed with it.
             val livePublicKey =
-                "04797a44551f1f41f977cae6227c867ec42dba22b4088704505aff7bfa287e4b".decodeHex()
+                "1fe5890ef22c2c3ffcc9e32ba136cd9c8b24faf5dbf0e85d6e82bde54f513143".decodeHex()
             if (livePublicKey?.size == 32) {
                 keys += ConnectorPublisherKey(
                     id = "maverick-whoop-live-test",

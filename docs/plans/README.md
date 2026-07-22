@@ -24,6 +24,7 @@ Milestones are gated by exit criteria, not dates. The full table with scope and 
 | AS | Analytic spine | DailySnapshot pipeline over FFI, Kotlin analytics deletion, capability negotiation live, platform dedup | [active/analytic-spine.md](active/analytic-spine.md) |
 | G | Gardening | Docs truth, dead directories and edges, parking mav-frame/mav-codec, store read-path consolidation | [active/gardening.md](active/gardening.md) |
 | DT | Design tokens | One Aura tokens file generating Swift and Kotlin theme constants with a CI drift check | [active/design-tokens.md](active/design-tokens.md) |
+| ECG | ECG discovery | Finding the MG's undecoded ECG waveform on the wire: the raw-data flag, packet type 43, and the probe build | [active/ecg-discovery.md](active/ecg-discovery.md) |
 
 One series of packets has no plan file. The `WHOOP-P*` tags in `mav-analytic` source comments —
 `WHOOP-P5`, `WHOOP-P6`, `WHOOP-P8` — name the analytics-porting work that admitted HR zones, VO2max,

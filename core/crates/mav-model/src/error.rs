@@ -154,6 +154,11 @@ pub mod codes {
     pub const CONNECTOR_REGISTRY_ROTATION_INVALID: u16 = 11_058;
     pub const CONNECTOR_REGISTRY_ARTIFACT_MISMATCH: u16 = 11_059;
     pub const CONNECTOR_REGISTRY_UPDATE_REJECTED: u16 = 11_060;
+    /// A connector diagnostic, carried through at the level the connector chose so a journal
+    /// reader can separate a firmware console line from a real failure.
+    pub const CONNECTOR_HOST_DIAGNOSTIC_INFO: u16 = 11_063;
+    pub const CONNECTOR_HOST_DIAGNOSTIC_WARNING: u16 = 11_064;
+    pub const CONNECTOR_HOST_DIAGNOSTIC_ERROR: u16 = 11_065;
     /// The guest reported that building its snapshot failed. Distinct from a legally empty
     /// snapshot, which packs to zero; without the distinction a failed snapshot became empty state.
     pub const CONNECTOR_RUNTIME_SNAPSHOT_FAILED: u16 = 11_062;
@@ -364,6 +369,18 @@ pub mod codes {
         (
             CONNECTOR_RUNTIME_SNAPSHOT_FAILED,
             "CONNECTOR_RUNTIME_SNAPSHOT_FAILED",
+        ),
+        (
+            CONNECTOR_HOST_DIAGNOSTIC_INFO,
+            "CONNECTOR_HOST_DIAGNOSTIC_INFO",
+        ),
+        (
+            CONNECTOR_HOST_DIAGNOSTIC_WARNING,
+            "CONNECTOR_HOST_DIAGNOSTIC_WARNING",
+        ),
+        (
+            CONNECTOR_HOST_DIAGNOSTIC_ERROR,
+            "CONNECTOR_HOST_DIAGNOSTIC_ERROR",
         ),
         (
             CONNECTOR_INSTALL_APPROVAL_INVALID,

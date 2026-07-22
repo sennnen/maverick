@@ -123,6 +123,17 @@ impl ConnectorHost {
         self.clock_map = anchor_from(device, capture);
     }
 
+    /// True when the duplicate total has at least doubled since the last journal entry.
+    pub(super) fn duplicates_worth_journalling(&mut self) -> bool {
+        let total = self.samples_duplicate;
+        if total >= self.duplicates_journalled_at.saturating_mul(2).max(1) {
+            self.duplicates_journalled_at = total;
+            true
+        } else {
+            false
+        }
+    }
+
     pub(super) fn record_duplicates(
         &self,
         accounting: &CommitAccounting,
@@ -132,8 +143,12 @@ impl ConnectorHost {
             &error(
                 codes::CONNECTOR_HOST_SAMPLE_DUPLICATE,
                 format!(
-                    "{} of {} emitted samples were already held ({} persisted)",
-                    accounting.duplicate, accounting.emitted, accounting.persisted
+                    "{} of {} emitted samples were already held ({} persisted); \
+                     {} duplicates this session",
+                    accounting.duplicate,
+                    accounting.emitted,
+                    accounting.persisted,
+                    self.samples_duplicate
                 ),
             ),
             wall_time_ms.unwrap_or_default().saturating_mul(1_000_000),

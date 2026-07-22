@@ -1,8 +1,8 @@
 use mav_connector_abi::{
     ActionBatch, ActionBody, BatchId, CancelReason, CancellationGeneration, CharacteristicDecl,
     CharacteristicProperty, ConnectorAction, ConnectorEvent, ConnectorId, ConnectorLifecycle,
-    EventBody, EventSequence, Manifest, OperationId, TransportCapability, Validate, WireSample,
-    MAX_STATE_BYTES,
+    DiagnosticLevel, EventBody, EventSequence, Manifest, OperationId, TransportCapability,
+    Validate, WireSample, MAX_STATE_BYTES,
 };
 use mav_connector_runtime::{Artifact, ConnectorInstance, LimitProfile};
 use mav_model::error::{codes, MavError, Result};
@@ -186,6 +186,10 @@ pub struct ConnectorHost {
     trace_hash: u64,
     samples_persisted: u64,
     samples_duplicate: u64,
+    /// The duplicate total at the last journal entry. A backfill repeats by design and journalling
+    /// every commit buries everything else — a real capture wrote 495 duplicate notices in a
+    /// 500-row window. One entry per order of magnitude keeps the fact and drops the noise.
+    duplicates_journalled_at: u64,
 }
 
 mod actions;
@@ -259,6 +263,7 @@ impl ConnectorHost {
             trace_hash: 0xcbf2_9ce4_8422_2325,
             samples_persisted: 0,
             samples_duplicate: 0,
+            duplicates_journalled_at: 0,
         })
     }
 
