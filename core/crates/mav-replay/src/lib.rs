@@ -83,28 +83,23 @@ mod tests {
     use super::*;
     use std::path::PathBuf;
 
-    fn fixture(name: &str) -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../fixtures/connectors")
-            .join(name)
-    }
-
     #[test]
     fn both_packaged_connectors_replay_through_wasm_only() {
-        for (name, key, connector_id) in [
-            (
-                "whoop4_v1.mavconn",
-                "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd",
-                "dev.maverick.whoop4",
-            ),
-            (
-                "whoop5_v1.mavconn",
-                "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd",
-                "dev.maverick.whoop5",
-            ),
-        ] {
-            let replay = replay_file(&fixture(name), decode_public_key(key).unwrap()).unwrap();
-            assert_eq!(replay.connector_id, connector_id);
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../fixtures/connectors");
+        let mut artifacts: Vec<_> = std::fs::read_dir(dir)
+            .unwrap()
+            .filter_map(|entry| {
+                let path = entry.ok()?.path();
+                (path.extension()? == "mavconn").then_some(path)
+            })
+            .collect();
+        artifacts.sort();
+        assert!(!artifacts.is_empty(), "no packaged artifacts to replay");
+        // The replay engine names no device: it exercises whatever the fixture directory carries.
+        let key = "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd";
+        for artifact in artifacts {
+            let replay = replay_file(&artifact, decode_public_key(key).unwrap()).unwrap();
+            assert!(!replay.connector_id.is_empty());
             assert!(!replay.fixtures.is_empty());
             assert!(replay.fixtures.iter().all(|fixture| fixture.events_run > 0));
         }

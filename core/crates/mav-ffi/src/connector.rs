@@ -122,6 +122,15 @@ pub struct ConnectorRegistrySnapshot {
     pub checkpoint: ConnectorRegistryCheckpoint,
 }
 
+/// One device family the manifest declares: how the connector recognises its hardware. The host
+/// echoes these back rather than knowing any device itself.
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct ConnectorDeviceFamily {
+    pub id: String,
+    pub name_prefixes: Vec<String>,
+    pub service_uuids: Vec<String>,
+}
+
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ConnectorInspection {
     pub artifact_digest: Vec<u8>,
@@ -133,6 +142,7 @@ pub struct ConnectorInspection {
     pub publisher_key_id: String,
     pub capabilities: Vec<String>,
     pub permissions: Vec<String>,
+    pub device_families: Vec<ConnectorDeviceFamily>,
     pub state_schema: u32,
     pub fixture_count: u32,
     pub source: ConnectorSourceMetadata,
@@ -213,6 +223,19 @@ pub struct ConnectorLifecycleReport {
     pub outstanding_operations: u32,
     pub state_revision: u64,
     pub trace_hash: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct ConnectorTelemetrySnapshot {
+    pub connector_id: String,
+    pub lifecycle: ConnectorLifecycleState,
+    pub session_id: u64,
+    pub cancellation_generation: u64,
+    pub device_id: u64,
+    pub heart_rate_bpm: Option<u16>,
+    pub battery_percent: Option<u8>,
+    pub on_wrist: Option<bool>,
+    pub last_sample_wall_time_ms: Option<i64>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]

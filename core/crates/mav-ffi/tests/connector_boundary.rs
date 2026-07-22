@@ -1,4 +1,4 @@
-#![allow(clippy::expect_used, clippy::unwrap_used)]
+#![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic)]
 
 use ed25519_dalek::{Signer, SigningKey};
 use mav_ffi::{
@@ -9,6 +9,10 @@ use mav_ffi::{
     ConnectorTransportRequest, ConnectorTrustPolicy, ConnectorTrustRevocations,
     InstalledConnectorRecord, MavRuntime, RuntimeConfig,
 };
+use mav_model::ids::{DeviceId, MetadataId};
+use mav_model::raw::RawValue;
+use mav_model::stream::{Quality, Sample, StreamKind};
+use mav_model::time::{DeviceTime, WallTime};
 use sha2::{Digest, Sha256};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -107,7 +111,7 @@ fn packaged_trust(public_key_hex: &str) -> (ConnectorTrustPolicy, ConnectorTrust
             allow_third_party: false,
             allow_development: true,
             keys: vec![ConnectorPublisherKey {
-                id: "maverick-whoop-test".to_owned(),
+                id: PUBLISHER_KEY_ID.to_owned(),
                 public_key,
                 scope: ConnectorKeyScope::Development,
                 valid_from_ms: 0,
@@ -126,13 +130,31 @@ fn packaged_trust(public_key_hex: &str) -> (ConnectorTrustPolicy, ConnectorTrust
     )
 }
 
-fn packaged_artifact(name: &str) -> Vec<u8> {
-    std::fs::read(
-        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../fixtures/connectors")
-            .join(name),
-    )
-    .unwrap()
+/// The development publisher identity the packaged fixtures are signed under.
+const PUBLISHER_KEY_ID: &str = "maverick-whoop-test";
+const PUBLISHER_PUBLIC_KEY: &str =
+    "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd";
+
+fn packaged_dir() -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../fixtures/connectors")
+}
+
+/// Every packaged artifact the fixture directory carries, discovered rather than named, so the
+/// host never encodes which devices exist.
+fn packaged_artifacts() -> Vec<Vec<u8>> {
+    let mut names: Vec<_> = std::fs::read_dir(packaged_dir())
+        .unwrap()
+        .filter_map(|entry| {
+            let path = entry.ok()?.path();
+            (path.extension()? == "mavconn").then_some(path)
+        })
+        .collect();
+    names.sort();
+    assert!(!names.is_empty(), "no packaged artifacts to exercise");
+    names
+        .into_iter()
+        .map(|p| std::fs::read(p).unwrap())
+        .collect()
 }
 
 #[test]
@@ -238,25 +260,25 @@ fn signed_registry_ingestion_and_artifact_binding_cross_ffi() {
 
 #[test]
 fn runtime_starts_empty_and_each_packaged_connector_enables_only_after_install() {
-    for (artifact_name, connector_id, public_key) in [
-        (
-            "whoop4_v1.mavconn",
-            "dev.maverick.whoop4",
-            "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd",
-        ),
-        (
-            "whoop5_v1.mavconn",
-            "dev.maverick.whoop5",
-            "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd",
-        ),
-    ] {
+    for bytes in packaged_artifacts() {
         let (runtime, path) = runtime();
         assert!(runtime.list_installed_connectors().unwrap().is_empty());
-        let (policy, revocations) = packaged_trust(public_key);
+        let (policy, revocations) = packaged_trust(PUBLISHER_PUBLIC_KEY);
+        let connector_id = runtime
+            .inspect_connector_bytes(
+                bytes.clone(),
+                source(),
+                policy.clone(),
+                revocations.clone(),
+                1,
+                1_000,
+            )
+            .unwrap()
+            .connector_id;
         let missing = runtime
             .open_connector_session(
                 ConnectorSessionConfig {
-                    connector_id: connector_id.to_owned(),
+                    connector_id: connector_id.clone(),
                     session_id: 1,
                     device_id: 1,
                     transport_capacity: 16,
@@ -269,7 +291,6 @@ fn runtime_starts_empty_and_each_packaged_connector_enables_only_after_install()
         let mav_ffi::FfiError::Core { code, .. } = missing;
         assert_eq!(code, mav_model::error::codes::CONNECTOR_INSTALL_NOT_FOUND);
 
-        let bytes = packaged_artifact(artifact_name);
         let inspection = runtime
             .inspect_connector_bytes(
                 bytes.clone(),
@@ -311,14 +332,210 @@ fn runtime_starts_empty_and_each_packaged_connector_enables_only_after_install()
     }
 }
 
+/// The host names no device. Everything this test needs to impersonate the hardware — the service
+/// to advertise and the name to advertise it under — is read back out of the artifact's own
+/// manifest, so the same test drives any packaged connector.
+#[test]
+fn subscription_actions_carry_real_gatt_addresses() {
+    for bytes in packaged_artifacts() {
+        drive_one_packaged_connector(bytes);
+    }
+}
+
+fn drive_one_packaged_connector(bytes: Vec<u8>) {
+    let (runtime, path) = runtime();
+    let (policy, revocations) = packaged_trust(PUBLISHER_PUBLIC_KEY);
+    let inspection = runtime
+        .inspect_connector_bytes(
+            bytes.clone(),
+            source(),
+            policy.clone(),
+            revocations.clone(),
+            1,
+            1_000,
+        )
+        .expect("inspect");
+    runtime
+        .install_connector_bytes(
+            ConnectorInstallRequest {
+                bytes,
+                source: source(),
+                approval_token: inspection.approval_token,
+                activate: true,
+                now_ms: 2,
+            },
+            policy.clone(),
+            revocations.clone(),
+        )
+        .expect("install");
+    let family = inspection
+        .device_families
+        .first()
+        .expect("manifest declares a device family")
+        .clone();
+    let advertised_service = family
+        .service_uuids
+        .first()
+        .expect("device family declares a service")
+        .clone();
+    let advertised_name = family
+        .name_prefixes
+        .iter()
+        .min_by_key(|prefix| prefix.len())
+        .expect("device family declares a name prefix")
+        .clone();
+    let connector_id = inspection.connector_id.clone();
+    runtime
+        .open_connector_session(
+            ConnectorSessionConfig {
+                connector_id,
+                session_id: 7,
+                device_id: 1,
+                transport_capacity: 32,
+                now_ms: 3,
+            },
+            policy,
+            revocations,
+        )
+        .expect("open");
+    runtime.drain_connector_actions(32).expect("start scan");
+
+    // Drive by what the connector asks for, not by a fixed script: pairing is a generation-specific
+    // step and the host must not assume it. Every reply is echoed from the connector's own request.
+    let mut pending = vec![
+        ConnectorTransportEvent::Connected { mtu: 247 },
+        ConnectorTransportEvent::Advertisement {
+            address: "device".to_owned(),
+            rssi: -30,
+            service_uuids: vec![advertised_service.clone()],
+            manufacturer_data: Vec::new(),
+            name: Some(advertised_name.clone()),
+        },
+    ];
+    let mut subscriptions = Vec::new();
+    while let Some(event) = pending.pop() {
+        runtime
+            .apply_connector_event(event, Some(4))
+            .expect("apply transport event");
+        for action in runtime.drain_connector_actions(32).expect("drain setup") {
+            match action.request {
+                ConnectorTransportRequest::EnsurePaired => {
+                    pending.push(ConnectorTransportEvent::PairingResult {
+                        success: true,
+                        error_code: None,
+                    });
+                }
+                ConnectorTransportRequest::DiscoverServices => {
+                    pending.push(ConnectorTransportEvent::ServicesDiscovered {
+                        service_uuids: vec![advertised_service.clone(), "180d".to_owned()],
+                    });
+                }
+                request @ ConnectorTransportRequest::Subscribe { .. } => {
+                    subscriptions.push(request);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    assert!(
+        !subscriptions.is_empty(),
+        "connector subscribed to nothing after discovery"
+    );
+    assert!(subscriptions.iter().all(|request| match request {
+        ConnectorTransportRequest::Subscribe {
+            service_uuid,
+            characteristic_uuid,
+            ..
+        } => !service_uuid.is_empty() && !characteristic_uuid.is_empty(),
+        _ => false,
+    }));
+    for request in subscriptions {
+        let ConnectorTransportRequest::Subscribe {
+            characteristic_id, ..
+        } = request
+        else {
+            panic!("expected subscribe action");
+        };
+        runtime
+            .apply_connector_event(
+                ConnectorTransportEvent::Subscribed { characteristic_id },
+                Some(5),
+            )
+            .expect("every subscription callback is valid");
+    }
+    assert_eq!(
+        runtime.connector_telemetry().expect("telemetry").lifecycle,
+        ConnectorLifecycleState::Configuring
+    );
+    let mut configured_writes = 0;
+    for sequence in 0..16 {
+        let actions = runtime
+            .drain_connector_actions(32)
+            .expect("configuration actions");
+        let writes: Vec<_> = actions
+            .into_iter()
+            .filter_map(|action| match action.request {
+                ConnectorTransportRequest::Write {
+                    characteristic_id, ..
+                } => Some((action.operation_id, characteristic_id)),
+                _ => None,
+            })
+            .collect();
+        if writes.is_empty() {
+            break;
+        }
+        for (operation_id, characteristic_id) in writes {
+            configured_writes += 1;
+            runtime
+                .apply_connector_event(
+                    ConnectorTransportEvent::WriteResult {
+                        operation_id,
+                        characteristic_id,
+                    },
+                    Some(10 + sequence),
+                )
+                .expect("configuration write callback is valid");
+        }
+    }
+    // How many writes a connector's configuration takes is its own business; the host contract is
+    // that every write callback is delivered and the connector then reports Streaming.
+    assert!(
+        configured_writes >= 1,
+        "connector issued no configuration write"
+    );
+    assert_eq!(
+        runtime.connector_telemetry().expect("telemetry").lifecycle,
+        ConnectorLifecycleState::Streaming
+    );
+    runtime
+        .cancel_connector_session(ConnectorCancelReason::User, Some(6))
+        .expect("user disconnect accepts connector cleanup actions");
+    let disconnect_actions = runtime
+        .drain_connector_actions(32)
+        .expect("disconnect actions");
+    assert!(disconnect_actions
+        .iter()
+        .any(|action| matches!(action.request, ConnectorTransportRequest::Disconnect)));
+    runtime
+        .apply_connector_event(
+            ConnectorTransportEvent::Disconnected { reason_code: 0 },
+            Some(7),
+        )
+        .expect("native disconnect completes lifecycle");
+    assert_eq!(
+        runtime.connector_telemetry().expect("telemetry").lifecycle,
+        ConnectorLifecycleState::Disconnected
+    );
+    let _ = std::fs::remove_file(path);
+}
+
 #[test]
 fn packaged_connectors_share_one_publisher_identity_and_trust_policy() {
     let (runtime, path) = runtime();
-    let (policy, revocations) =
-        packaged_trust("dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd");
+    let (policy, revocations) = packaged_trust(PUBLISHER_PUBLIC_KEY);
 
-    for artifact_name in ["whoop4_v1.mavconn", "whoop5_v1.mavconn"] {
-        let bytes = packaged_artifact(artifact_name);
+    for bytes in packaged_artifacts() {
         let inspection = runtime
             .inspect_connector_bytes(
                 bytes.clone(),
@@ -345,6 +562,83 @@ fn packaged_connectors_share_one_publisher_identity_and_trust_policy() {
     }
 
     assert_eq!(runtime.list_installed_connectors().unwrap().len(), 2);
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn active_session_exposes_exact_persisted_connector_telemetry() {
+    let (runtime, path) = runtime();
+    let (policy, revocations) = trust(1);
+    let bytes = common::signed_artifact("1.0.0", 1, true);
+    let inspection = runtime
+        .inspect_connector_bytes(
+            bytes.clone(),
+            source(),
+            policy.clone(),
+            revocations.clone(),
+            2,
+            1_000,
+        )
+        .expect("inspect connector");
+    runtime
+        .install_connector_bytes(
+            ConnectorInstallRequest {
+                bytes,
+                source: source(),
+                approval_token: inspection.approval_token,
+                activate: true,
+                now_ms: 3,
+            },
+            policy.clone(),
+            revocations.clone(),
+        )
+        .expect("install connector");
+    runtime
+        .open_connector_session(
+            ConnectorSessionConfig {
+                connector_id: CONNECTOR.to_owned(),
+                session_id: 41,
+                device_id: 7,
+                transport_capacity: 16,
+                now_ms: 4,
+            },
+            policy,
+            revocations,
+        )
+        .expect("open session");
+
+    let store = mav_engine::Store::open(&path).expect("open evidence store");
+    for (kind, value, sequence) in [
+        (StreamKind::HeartRate, RawValue::U8(73), 1),
+        (StreamKind::BatterySoc, RawValue::Converted(82.0), 2),
+        (StreamKind::WristState, RawValue::U8(1), 3),
+    ] {
+        store
+            .insert_sample(
+                DeviceId::new(7),
+                &Sample {
+                    kind,
+                    device_time: DeviceTime::from_nanos(sequence * 1_000_000),
+                    wall_time: Some(WallTime::from_nanos(1_700_000_000_123_000_000)),
+                    seq: sequence as u16,
+                    value,
+                    quality: Quality::exact(),
+                    provenance: MetadataId::new(9),
+                },
+            )
+            .expect("persist sample");
+    }
+
+    let telemetry = runtime
+        .connector_telemetry()
+        .expect("read connector telemetry");
+    assert_eq!(telemetry.connector_id, CONNECTOR);
+    assert_eq!(telemetry.device_id, 7);
+    assert_eq!(telemetry.session_id, 41);
+    assert_eq!(telemetry.heart_rate_bpm, Some(73));
+    assert_eq!(telemetry.battery_percent, Some(82));
+    assert_eq!(telemetry.on_wrist, Some(true));
+    assert_eq!(telemetry.last_sample_wall_time_ms, Some(1_700_000_000_123));
     let _ = std::fs::remove_file(path);
 }
 

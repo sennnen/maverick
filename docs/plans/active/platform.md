@@ -407,6 +407,32 @@ signing, IPA export, manifests, and install verification remain pending.
 
 ---
 
+## Packet PL-P11: Close connector-to-UI integration on physical devices
+
+**Owns:** connector-facing UniFFI telemetry, Android/iOS connector managers and management screens,
+development trust/registry configuration, native tests, platform docs, and this plan entry.
+
+**Must not touch:** connector protocol source, signed artifact bytes, analytics formulas, frozen
+`mav-model` types, or visual theming beyond clear functional state.
+
+**Contract:** Both development apps trust the one published test publisher key, discover exact
+digest-addressed artifacts through the signed test registry, and expose one-tap WHOOP 4/5 import.
+Install, approval, activation, scan, pair, connect, disconnect, restoration, transport failure,
+lifecycle, latest HR, battery, and wrist state reach UI through generic records only. Release trust
+remains separately configurable; no private key or connector byte is bundled into either app.
+
+**Tests first:** one Rust test proves an active connector session returns exact persisted telemetry;
+Android and Swift tests pin publisher/registry public configuration and lifecycle-to-presentation
+mapping; platform screens consume registry and live state rather than static copy.
+
+**Exit:** full Rust gates and Android unit/lint/debug build pass; Swift parses; signed registry and
+both artifact URLs resolve with exact size/SHA-256; debug APK installs and launches on attached
+Pixel 7 with Bluetooth permissions granted.
+
+**Status: in progress.**
+
+---
+
 ## Execution order
 
 The safe order is:

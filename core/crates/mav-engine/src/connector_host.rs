@@ -258,11 +258,16 @@ impl ConnectorHost {
         self.outstanding.clear();
         self.pending_timers.clear();
         self.staged_state.clear();
-        self.lifecycle = match reason {
-            CancelReason::Suspend => ConnectorLifecycle::Suspending,
-            _ => ConnectorLifecycle::Disconnected,
-        };
-        self.dispatch(EventBody::Cancel { reason }, wall_time_ms, false, 0)
+        self.lifecycle = ConnectorLifecycle::Suspending;
+        self.dispatch(EventBody::Cancel { reason }, wall_time_ms, false, 0)?;
+        if !self
+            .actions
+            .iter()
+            .any(|action| matches!(action.body, ConnectorTransportRequest::Disconnect))
+        {
+            self.lifecycle = ConnectorLifecycle::Disconnected;
+        }
+        Ok(())
     }
 
     pub fn terminate(&mut self, reason: CancelReason, wall_time_ms: Option<i64>) -> Result<()> {
@@ -294,6 +299,14 @@ impl ConnectorHost {
             state_revision: self.state_revision,
             trace_hash: format!("{:016x}", self.trace_hash),
         }
+    }
+
+    pub fn connector_id(&self) -> &str {
+        self.connector_id.as_str()
+    }
+
+    pub const fn device_id(&self) -> u64 {
+        self.config.device_id
     }
 
     pub fn snapshot_state(&mut self) -> Result<Vec<u8>> {
@@ -598,6 +611,15 @@ impl ConnectorHost {
                         | ConnectorLifecycle::Streaming
                         | ConnectorLifecycle::Historical
                 ) => {}
+            ActionBody::SetTimer { .. } | ActionBody::CancelTimer { .. } => {}
+            ActionBody::DeclareCapabilities { .. }
+                if matches!(
+                    lifecycle,
+                    ConnectorLifecycle::Configuring | ConnectorLifecycle::Streaming
+                ) =>
+            {
+                *lifecycle = ConnectorLifecycle::Streaming;
+            }
             ActionBody::Disconnect
                 if !matches!(
                     lifecycle,
@@ -664,7 +686,9 @@ impl ConnectorHost {
                     wall_time_ms.unwrap_or_default().saturating_mul(1_000_000),
                 )?;
             }
-            ActionBody::DeclareCapabilities { .. } => {}
+            ActionBody::DeclareCapabilities { .. } => {
+                self.lifecycle = ConnectorLifecycle::Streaming;
+            }
             ActionBody::CompleteOperation {
                 operation_id: completed,
             } => {
@@ -797,10 +821,12 @@ impl ConnectorHost {
                 true
             }
             EventBody::Subscribed { characteristic_id }
-                if self.lifecycle == ConnectorLifecycle::Configuring =>
+                if matches!(
+                    self.lifecycle,
+                    ConnectorLifecycle::Configuring | ConnectorLifecycle::Streaming
+                ) =>
             {
                 self.characteristic(characteristic_id)?;
-                self.lifecycle = ConnectorLifecycle::Streaming;
                 true
             }
             EventBody::Unsubscribed { characteristic_id }
@@ -816,7 +842,9 @@ impl ConnectorHost {
                 characteristic_id, ..
             } if matches!(
                 self.lifecycle,
-                ConnectorLifecycle::Streaming | ConnectorLifecycle::Historical
+                ConnectorLifecycle::Configuring
+                    | ConnectorLifecycle::Streaming
+                    | ConnectorLifecycle::Historical
             ) =>
             {
                 self.characteristic(characteristic_id)?;
@@ -865,13 +893,23 @@ impl ConnectorHost {
                 self.lifecycle = ConnectorLifecycle::Disconnected;
                 true
             }
-            EventBody::ScanStopped { .. } if self.lifecycle == ConnectorLifecycle::Scanning => true,
+            EventBody::ScanStopped { .. }
+                if matches!(
+                    self.lifecycle,
+                    ConnectorLifecycle::Scanning | ConnectorLifecycle::Connecting
+                ) =>
+            {
+                true
+            }
             EventBody::MtuChanged { .. }
                 if matches!(
                     self.lifecycle,
                     ConnectorLifecycle::Connecting
+                        | ConnectorLifecycle::Pairing
+                        | ConnectorLifecycle::Discovering
                         | ConnectorLifecycle::Configuring
                         | ConnectorLifecycle::Streaming
+                        | ConnectorLifecycle::Historical
                 ) =>
             {
                 true
@@ -1460,7 +1498,13 @@ mod tests {
                         characteristic_id: "data".to_owned(),
                     },
                 )]),
-                empty(),
+                batch(vec![action(
+                    7,
+                    7,
+                    ActionBody::DeclareCapabilities {
+                        streams: vec!["heart-rate".to_owned()],
+                    },
+                )]),
                 empty(),
             ],
             16,
@@ -1515,7 +1559,7 @@ mod tests {
             host.lifecycle_snapshot().lifecycle,
             ConnectorLifecycle::Disconnected
         );
-        assert_eq!(host.lifecycle_snapshot().trace_hash, "09b6ce81d8da683f");
+        assert_eq!(host.lifecycle_snapshot().trace_hash, "803108d42f3ddcf5");
     }
 
     #[test]

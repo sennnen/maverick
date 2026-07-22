@@ -13,6 +13,8 @@ mod connector;
 pub use connector::*;
 
 use mav_model::error::MavError;
+use mav_model::ids::DeviceId;
+use mav_model::stream::{Sample, StreamKind};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 uniffi::setup_scaffolding!();
@@ -106,6 +108,17 @@ impl MavRuntime {
                 mav_connector_abi::Permission::Ble => "Bluetooth device access".to_owned(),
             })
             .collect();
+        let device_families = approval
+            .report
+            .manifest
+            .device_families
+            .iter()
+            .map(|family| connector::ConnectorDeviceFamily {
+                id: family.id.clone(),
+                name_prefixes: family.name_prefixes.clone(),
+                service_uuids: family.service_uuids.clone(),
+            })
+            .collect();
         Ok(ConnectorInspection {
             artifact_digest: approval.report.artifact_digest.to_vec(),
             manifest_digest: approval.report.manifest_digest.to_vec(),
@@ -116,6 +129,7 @@ impl MavRuntime {
             publisher_key_id: approval.report.manifest.publisher_key_id,
             capabilities,
             permissions,
+            device_families,
             state_schema: approval.report.manifest.state_schema,
             fixture_count: approval.fixture_count,
             source: connector::source_to_ffi(approval.source),
@@ -374,6 +388,54 @@ impl MavRuntime {
         let host = session.as_ref().ok_or_else(no_connector_session)?;
         Ok(host.lifecycle_snapshot().into())
     }
+
+    pub fn connector_telemetry(&self) -> Result<ConnectorTelemetrySnapshot, FfiError> {
+        let session = self.connector_session_lock()?;
+        let host = session.as_ref().ok_or_else(no_connector_session)?;
+        let lifecycle = host.lifecycle_snapshot();
+        let connector_id = host.connector_id().to_owned();
+        let device_id = host.device_id();
+        drop(session);
+
+        let store = mav_engine::Store::open(std::path::Path::new(&self.database_path))?;
+        let device = DeviceId::new(device_id);
+        let heart_rate = store.latest_sample(device, StreamKind::HeartRate)?;
+        let battery = store.latest_sample(device, StreamKind::BatterySoc)?;
+        let wrist = store.latest_sample(device, StreamKind::WristState)?;
+        let last_sample_wall_time_ms = [&heart_rate, &battery, &wrist]
+            .into_iter()
+            .filter_map(|sample| sample.as_ref()?.wall_time)
+            .map(|time| time.as_nanos().div_euclid(1_000_000))
+            .max();
+
+        Ok(ConnectorTelemetrySnapshot {
+            connector_id,
+            lifecycle: ConnectorLifecycleReport::from(lifecycle.clone()).lifecycle,
+            session_id: lifecycle.session_id,
+            cancellation_generation: lifecycle.cancellation_generation,
+            device_id,
+            heart_rate_bpm: bounded_sample(&heart_rate, 1, 300).map(|value| value as u16),
+            battery_percent: bounded_sample(&battery, 0, 100).map(|value| value as u8),
+            on_wrist: bounded_sample(&wrist, 0, 1).map(|value| value == 1),
+            last_sample_wall_time_ms,
+        })
+    }
+}
+
+fn bounded_sample(
+    sample: &Option<Sample<mav_model::raw::RawValue>>,
+    minimum: u32,
+    maximum: u32,
+) -> Option<u32> {
+    let sample = sample.as_ref()?;
+    if sample.quality.reason.is_some() || sample.quality.score <= 0.0 {
+        return None;
+    }
+    let value = sample.value.as_f64();
+    if !value.is_finite() || value < f64::from(minimum) || value > f64::from(maximum) {
+        return None;
+    }
+    Some(value.round() as u32)
 }
 
 impl MavRuntime {
