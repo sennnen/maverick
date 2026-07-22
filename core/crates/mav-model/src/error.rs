@@ -154,6 +154,12 @@ pub mod codes {
     pub const CONNECTOR_REGISTRY_ROTATION_INVALID: u16 = 11_058;
     pub const CONNECTOR_REGISTRY_ARTIFACT_MISMATCH: u16 = 11_059;
     pub const CONNECTOR_REGISTRY_UPDATE_REJECTED: u16 = 11_060;
+    /// The guest reported that building its snapshot failed. Distinct from a legally empty
+    /// snapshot, which packs to zero; without the distinction a failed snapshot became empty state.
+    pub const CONNECTOR_RUNTIME_SNAPSHOT_FAILED: u16 = 11_062;
+    /// Emitted samples the pipeline already held. Expected on a historical replay; recorded so a
+    /// sample can never disappear between emission and storage without a number naming it.
+    pub const CONNECTOR_HOST_SAMPLE_DUPLICATE: u16 = 11_061;
 
     pub const INTERNAL_INVARIANT: u16 = 10_000;
 
@@ -350,6 +356,14 @@ pub mod codes {
         (
             CONNECTOR_HOST_OPERATION_DUPLICATE,
             "CONNECTOR_HOST_OPERATION_DUPLICATE",
+        ),
+        (
+            CONNECTOR_HOST_SAMPLE_DUPLICATE,
+            "CONNECTOR_HOST_SAMPLE_DUPLICATE",
+        ),
+        (
+            CONNECTOR_RUNTIME_SNAPSHOT_FAILED,
+            "CONNECTOR_RUNTIME_SNAPSHOT_FAILED",
         ),
         (
             CONNECTOR_INSTALL_APPROVAL_INVALID,

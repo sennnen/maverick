@@ -642,6 +642,102 @@ fn active_session_exposes_exact_persisted_connector_telemetry() {
     let _ = std::fs::remove_file(path);
 }
 
+/// The seam the earlier telemetry test could not see: that test wrote `Quality::exact()` samples
+/// straight into the store, so it passed while SQI was scoring every non-cardiac kind zero and the
+/// FFI was dropping every zero-scored sample. Here the samples go through `score_batch` first, so
+/// battery and wrist reach the app only if the scoring stage lets them.
+#[test]
+fn telemetry_survives_the_quality_stage_it_actually_passes_through() {
+    let (runtime, path) = runtime();
+    let (policy, revocations) = trust(1);
+    let bytes = common::signed_artifact("1.0.0", 1, true);
+    let inspection = runtime
+        .inspect_connector_bytes(
+            bytes.clone(),
+            source(),
+            policy.clone(),
+            revocations.clone(),
+            2,
+            1_000,
+        )
+        .expect("inspect connector");
+    runtime
+        .install_connector_bytes(
+            ConnectorInstallRequest {
+                bytes,
+                source: source(),
+                approval_token: inspection.approval_token,
+                activate: true,
+                now_ms: 3,
+            },
+            policy.clone(),
+            revocations.clone(),
+        )
+        .expect("install connector");
+    runtime
+        .open_connector_session(
+            ConnectorSessionConfig {
+                connector_id: CONNECTOR.to_owned(),
+                session_id: 41,
+                device_id: 7,
+                transport_capacity: 16,
+                now_ms: 4,
+            },
+            policy,
+            revocations,
+        )
+        .expect("open session");
+
+    let batch = mav_model::raw::RawSampleBatch {
+        device: DeviceId::new(7),
+        samples: vec![
+            mav_model::raw::RawSample {
+                kind: StreamKind::HeartRate,
+                device_time: DeviceTime::from_nanos(1_000_000),
+                seq: 1,
+                value: RawValue::U8(73),
+            },
+            mav_model::raw::RawSample {
+                kind: StreamKind::BatterySoc,
+                device_time: DeviceTime::from_nanos(2_000_000),
+                seq: 2,
+                value: RawValue::U8(82),
+            },
+            mav_model::raw::RawSample {
+                kind: StreamKind::WristState,
+                device_time: DeviceTime::from_nanos(3_000_000),
+                seq: 3,
+                value: RawValue::U8(1),
+            },
+        ],
+    };
+    let scored = mav_sqi::score_batch(&batch, MetadataId::new(9));
+    assert_eq!(scored.len(), 3);
+    let store = mav_engine::Store::open(&path).expect("open evidence store");
+    for mut sample in scored {
+        sample.wall_time = Some(WallTime::from_nanos(1_700_000_000_123_000_000));
+        store
+            .insert_sample(DeviceId::new(7), &sample)
+            .expect("persist sample");
+    }
+
+    let telemetry = runtime
+        .connector_telemetry()
+        .expect("read connector telemetry");
+    assert_eq!(telemetry.heart_rate_bpm, Some(73));
+    assert_eq!(
+        telemetry.battery_percent,
+        Some(82),
+        "a scored battery sample must reach the app"
+    );
+    assert_eq!(
+        telemetry.on_wrist,
+        Some(true),
+        "a scored wrist sample must reach the app"
+    );
+    let _ = std::fs::remove_file(path);
+}
+
 #[test]
 fn exact_bytes_inspect_install_list_and_stale_token_errors_round_trip() {
     let (runtime, path) = runtime();

@@ -33,8 +33,6 @@ maverick/
   skills/                 the four workflows below, each a SKILL.md that loads on demand
   core/crates/
     mav-model             the frozen types every other crate speaks in; changes need an ADR
-    mav-frame             CRC 8/16/32, the reassembler, the TypedReader
-    mav-codec             explicitly admitted open Bluetooth SIG profiles; no device manifests
     mav-timeline          ordering, dedup, clock correction, historical merge
     mav-sqi               signal quality, scored on raw signals before normalization
     mav-feature           primitive, derived, and aggregate features
@@ -44,7 +42,7 @@ maverick/
     mav-engine            orchestration: triggers, task graph, caching
     mav-ffi               the uniffi facade the apps bind to
     mav-replay            executes signed connector fixtures through the production Wasm runtime
-  core/connectors/        absent by design; device code lives in signed external artifacts
+  attic/                  complete crates parked when a boundary moved; see attic/README (ADR-025)
   connectors/             development-only fixtures; connector source/releases live in the
                           separate sennnen/maverick-connectors repo (ADR-017)
   fixtures/               golden fixtures, versioned; see fixtures/README for the naming rules

@@ -67,6 +67,23 @@ an availability result; it does not hardcode device-family checks.
 
 This is a deliberate refusal to fill missing science with product theatre.
 
+### The DailySnapshot
+
+Analytics reach the apps as one record per `LocalDay`, frozen in [ADR-024](adr/ADR-024.md): the HRV
+time-domain values, a readiness tier, recovery and strain each carrying their admission status, a
+sleep summary where a night exists, and an **availability list** — one entry per analytic, with an
+`UnavailableReason` for everything not served.
+
+The availability list is part of the contract, not a convenience. A card backed by an unavailable
+analytic renders the core's reason for it. It never renders a platform-computed substitute, which is
+the same rule as the honesty rules in [platform.md](platform.md) and the reason the Android Kotlin
+scorers are being deleted rather than kept beside the core: two implementations of a metric are two
+answers, and the second one is unaccountable.
+
+Timezone offsets come from the platforms as explicit spans over FFI, into the existing
+`Timezone::new(id, spans)`. Rust takes no tzdata dependency: the phone already has a correct and
+updated zone database, and it is the only place the user's zone is genuinely known.
+
 ## The ported algorithm library (WHOOP-P6/P8)
 
 `mav-analytic` also carries a library of brand-neutral physiological algorithms imported from

@@ -19,17 +19,15 @@ ALLOWED = {
     "mav-connector-store": {
         "mav-model", "mav-connector-abi", "mav-connector-runtime",
     },
-    "mav-frame": {"mav-model"},
     "mav-store": {"mav-model"},
-    "mav-obs": {"mav-model", "mav-store"},
-    "mav-codec": {"mav-model"},
+    "mav-obs": {"mav-model"},
     "mav-timeline": {"mav-model"},
     "mav-sqi": {"mav-model"},
     "mav-feature": {"mav-model"},
     "mav-analytic": {"mav-model", "mav-feature"},
     "mav-engine": {
         "mav-model", "mav-connector-abi", "mav-connector-runtime", "mav-timeline",
-        "mav-sqi", "mav-store",
+        "mav-sqi", "mav-store", "mav-obs",
     },
     "mav-ffi": {
         "mav-model", "mav-obs", "mav-engine", "mav-connector-abi",

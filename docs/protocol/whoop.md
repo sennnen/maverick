@@ -78,6 +78,14 @@ and `…0007` is a debug menu. [ONE, Rust repo]
 On gen5 the notify characteristics carry, in order, command responses (`…0003`), events (`…0004`),
 fragmented data (`…0005`), and a fourth channel new in the 5.0 (`…0007`). [JUDES]
 
+That fourth channel is the **firmware console**, not a second data stream: the strap narrates
+history-sync progress, RTC complaints, and the persistent-config table over it as text behind a
+ten-byte record header. The connector decodes it to printable ASCII and emits a diagnostic, never a
+sample. Routing it through the record decoder invents measurements out of log lines. [WRS]
+
+Every framed notify characteristic needs its own reassembly buffer: a notification boundary is an
+MTU artefact, frames cross several of them, and the strap packs short frames together. See ADR-020.
+
 The straps also expose standard GATT characteristics: Heart Rate `180D / 2A37`, Battery
 `180F / 2A19`, Battery Level Status `2BED`, and Device Information `180A`. [XVAL] Note the Battery
 Level Status UUID is `2BED`; one source's prose said `2BEB`, which is a documentation typo, and its
@@ -221,6 +229,12 @@ fuller key-exchange chain of 117 (start), 118 (send next), and 120 (set). R22 is
 capability (packet `0x10`), gated by capability rather than by any one opcode. [ONE each, and the
 two accounts are consistent with one another]
 
+The SET_CONFIG body is **41 bytes**: the `0x01` config prefix, the flag name NUL-padded to 32 bytes,
+the value, and seven trailing zeros. The value is an **ASCII digit** — `'1'` or `'2'`, not binary 1
+or 2 — and the sequence is **sixteen** flags, not ten. The six the connector was missing are
+`enable_r22_v4_packets`, `disable_pip_r26_packets`, `wear_detect_bias`, `ir_hw_switching`,
+`dorset_inhibit_wpt`, and `enable_sig12`. [WRS]
+
 There is one outright disagreement on high-frequency sync. Entering and exiting it is opcodes 85 / 86
 in the Rust repo and 96 / 97 in the Swift/Kotlin repo. [CONFLICT] This must be resolved on hardware;
 do not hardcode either guess without a fixture that proves it.
@@ -241,6 +255,16 @@ strap; a client cannot ask for it. And `0x19` (25), `FORCE_TRIM`, is the one tha
 up to the write head, irreversibly. The safe-trim invariant below is not optional discipline: the
 fourth source lost five hours of recording to a daemon that trimmed on an error path before
 `HISTORY_COMPLETE` had arrived.
+
+### The two-tier opcode policy
+
+`build_command` refuses two sets, and the distinction matters. **Destructive** — `25` FORCE_TRIM,
+`45` ENTER_BLE_DFU, and `142`/`143`/`144` — is never sent by any path: nothing a Maverick connector
+does needs a firmware trim or a DFU entry. **Gated** — `10`/`146` SET_CLOCK, `29` REBOOT,
+`32` POWER_CYCLE, `77` SET_ADVERTISING_NAME, `99` RESET_FUEL_GAUGE, `119` SET_DEVICE_CONFIG,
+`120` SET_CONFIG, `123` SELECT_WRIST — writes persistent device state; it is refused on the general
+builder and reachable only through a builder that names what it writes. The R22 unlock is the one
+gated opcode a connector legitimately sends, so `set_config` exists and nothing else does. [WRS]
 
 ### Outbound alarm and haptic commands
 
@@ -324,6 +348,19 @@ The standard `2A37` RR conversion is `raw * 1000 / 1024` milliseconds. [XVAL]
 direct percent byte. This is a genuine 4.0-versus-5.0 difference, not a decode ambiguity. [ONE,
 Swift/Kotlin repo]
 
+### The response status byte
+
+A `COMMAND_RESPONSE` body is `[0x24][origin_seq][to_opcode]…`. On gen5 the status code follows one
+reserved byte, so it is inner `[4]` — the sixth source calls the same byte "payload byte 1" because
+its payload window starts at inner `[3]`. `1` is success and `2` is pending. **Gen4 exposes no
+status on any fixed offset**; the connector reports the absence instead of reading whichever byte
+happens to sit there, and gen4 offload advances on any reply to `GET_DATA_RANGE`. [WRS]
+
+The synthetic four-byte vector that once pinned this read status at inner `[3]` and made every gen5
+response decode as `Unknown`, which held the historical-sync gate shut. It is replaced by a real
+captured `GET_DATA_RANGE` reply whose inner `[3]` is `0x04` and inner `[4]` is `0x01` — precisely
+the case the "pin offsets from a real capture" rule exists to catch. [WRS]
+
 ## Historical records
 
 Historical records are versioned by the **sequence byte** (inner `[1]`) — the "sequence or subtype
@@ -385,9 +422,11 @@ three `f32` from `body[33]` (accepted at `|g|` in `[0.5,1.5)`), the SpO2 red/IR 
 and respiration `body[73:75]`; `gen4_v5` (also v7/v9) — HR and the R-R block only; `gen4_v25` — the
 gravity triplet stored as `i16/16384` at `body[66]`/`body[68]`/`body[70]`. v24 and v25 are backed by
 real 4.0 goldens `[WRS]` (`fixtures/records/gen4_v24_v1.json`, `gen4_v25_v1.json`); v5 has no real
-capture and is pinned by an invariant round-trip test. The skin-temp raw register is admitted, but
-its absolute °C scale stays a deferred per-device learned anchor — the gen4 scale is in `[CONFLICT]`
-with no calibration golden (ADR-009), so no temperature is claimed. The `skin_contact`,
+capture and is pinned by an invariant round-trip test. The skin-temp raw register is admitted **as
+`skin-temp-raw` in counts** (ADR-026), not as `skin-temp` in degrees: its absolute °C scale stays a
+deferred per-device learned anchor — the gen4 scale is in `[CONFLICT]` with no calibration golden
+(ADR-009), so no temperature is claimed. Emitting it as degrees produced a fixture asserting 861 °C
+that passed for as long as the stream carried the wrong unit. The `skin_contact`,
 `signal_quality`, second gravity triplet, `ppg_*`, `ambient`, and LED-drive fields above stay
 unadmitted, and the 4.0 offload path is not yet exercised on our own hardware.
 
@@ -490,7 +529,10 @@ packet type), so the manifest offset for `body[N]` is `N + 3`.
   Plausibility roughly `[30, 220]` bpm.
 - **RR:** whole milliseconds from gen4 and history; `raw * 1000 / 1024` ms from the GATT
   characteristic. Valid roughly `[300, 2000]` ms, then a Malik / Lipponen–Tarvainen ±20% ectopic
-  filter before any HRV is computed. [XVAL]
+  filter before any HRV is computed. [XVAL] The **four-slot cap is a historical-record layout fact,
+  not a protocol one**: a realtime type-40 burst declares one interval per beat since the last
+  packet and is unbounded. Capping it there silently discards beats and biases every variability
+  metric computed downstream. [WRS]
 - **SpO2:** stored as raw ADC on the device. If it is computed, the ratio-of-ratios is
   `R = (AC_r / DC_r) / (AC_ir / DC_ir)` and `SpO2 = clamp(110 - 25R, 70, 100)`. Those constants are
   from a TI textbook and are uncalibrated. [PROV]

@@ -77,6 +77,48 @@ jobs:
       - uses: actions/checkout@v5
       - run: bash tools/check_docs.sh
       - run: python3 tools/check_deps.py
+      - name: design tokens are the single source
+        run: |
+          python3 tools/gen_design_tokens.py
+          git diff --exit-code -- apps/ios/Maverick/UI/AuraTokens.generated.swift \
+            apps/android/app/src/main/java/com/sennnen/mav/ui/aura/AuraTokens.generated.kt
+
+  vendored-connectors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: maverick
+      - name: read the pinned connectors ref
+        id: pin
+        run: |
+          sha=$(grep -v '^#' maverick/CONNECTORS_REF | tr -d '[:space:]')
+          test -n "$sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v5
+        with:
+          repository: sennnen/maverick-connectors
+          ref: ${{ steps.pin.outputs.sha }}
+          path: connectors
+      # The mirror image of the connectors repo's freshness job: every vendored .mavconn must be a
+      # SHA-256 the signed registry index actually names. Without this the fixtures can drift from
+      # the release they claim to be and every parity golden pins a build nobody can reproduce.
+      - name: vendored artifacts appear in the signed registry
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib, sys
+
+          signed = json.loads(pathlib.Path("connectors/registry/index-v1.json").read_text())
+          known = {entry["artifact_sha256"] for entry in signed["index"]["entries"]}
+          stale = []
+          for artifact in sorted(pathlib.Path("maverick/fixtures/connectors").glob("*.mavconn")):
+              digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+              if digest not in known:
+                  stale.append(f"{artifact.name}: {digest} is in no registry entry")
+          for line in stale:
+              print(f"vendored-connectors: {line}", file=sys.stderr)
+          sys.exit(1 if stale else 0)
+          PY
 
   package-ios:
     runs-on: macos-26

@@ -177,40 +177,13 @@ impl Store {
             )
             .map_err(|e| query_err("preparing sample read", &e))?;
         let rows = statement
-            .query_map(params![device.get() as i64, stream], |row| {
-                Ok((
-                    row.get::<_, i64>(0)?,
-                    row.get::<_, u16>(1)?,
-                    row.get::<_, String>(2)?,
-                    row.get::<_, Option<i64>>(3)?,
-                    row.get::<_, f64>(4)?,
-                    row.get::<_, Option<String>>(5)?,
-                    row.get::<_, i64>(6)?,
-                ))
-            })
+            .query_map(params![device.get() as i64, stream], sample_columns)
             .map_err(|e| query_err("reading samples", &e))?;
 
         let mut out = Vec::new();
         for row in rows {
-            let (device_time_ns, seq, value_json, wall_ns, score, reason_json, provenance) =
-                row.map_err(|e| query_err("reading a sample row", &e))?;
-            let value: RawValue = from_json(&value_json)?;
-            let reason: Option<RejectReason> = match reason_json {
-                Some(text) => Some(from_json(&text)?),
-                None => None,
-            };
-            out.push(Sample {
-                kind,
-                device_time: DeviceTime::from_nanos(device_time_ns),
-                wall_time: wall_ns.map(WallTime::from_nanos),
-                seq,
-                value,
-                quality: Quality {
-                    score: score as f32,
-                    reason,
-                },
-                provenance: MetadataId::new(provenance as u64),
-            });
+            let columns = row.map_err(|e| query_err("reading a sample row", &e))?;
+            out.push(row_to_sample(kind, columns)?);
         }
         Ok(out)
     }
@@ -232,41 +205,11 @@ impl Store {
                  FROM sample WHERE device_id = ?1 AND stream = ?2 \
                  ORDER BY device_time_ns DESC, seq DESC LIMIT 1",
                 params![device.get() as i64, stream],
-                |row| {
-                    Ok((
-                        row.get::<_, i64>(0)?,
-                        row.get::<_, u16>(1)?,
-                        row.get::<_, String>(2)?,
-                        row.get::<_, Option<i64>>(3)?,
-                        row.get::<_, f64>(4)?,
-                        row.get::<_, Option<String>>(5)?,
-                        row.get::<_, i64>(6)?,
-                    ))
-                },
+                sample_columns,
             )
             .optional()
             .map_err(|e| query_err("reading the latest sample", &e))?;
-        let Some((device_time_ns, seq, value_json, wall_ns, score, reason_json, provenance)) = row
-        else {
-            return Ok(None);
-        };
-        let value: RawValue = from_json(&value_json)?;
-        let reason: Option<RejectReason> = match reason_json {
-            Some(text) => Some(from_json(&text)?),
-            None => None,
-        };
-        Ok(Some(Sample {
-            kind,
-            device_time: DeviceTime::from_nanos(device_time_ns),
-            wall_time: wall_ns.map(WallTime::from_nanos),
-            seq,
-            value,
-            quality: Quality {
-                score: score as f32,
-                reason,
-            },
-            provenance: MetadataId::new(provenance as u64),
-        }))
+        row.map(|columns| row_to_sample(kind, columns)).transpose()
     }
 
     pub fn count_samples(&self, device: DeviceId, kind: StreamKind) -> Result<u64> {
@@ -410,6 +353,42 @@ impl Store {
         rows.collect::<rusqlite::Result<Vec<_>>>()
             .map_err(|e| query_err("collecting journal rows", &e))
     }
+}
+
+/// The seven sample columns, in the order every sample query selects them. Both read paths share
+/// one row shape so a schema change cannot be applied to one and missed in the other.
+type SampleColumns = (i64, u16, String, Option<i64>, f64, Option<String>, i64);
+
+fn sample_columns(row: &rusqlite::Row<'_>) -> rusqlite::Result<SampleColumns> {
+    Ok((
+        row.get(0)?,
+        row.get(1)?,
+        row.get(2)?,
+        row.get(3)?,
+        row.get(4)?,
+        row.get(5)?,
+        row.get(6)?,
+    ))
+}
+
+fn row_to_sample(kind: StreamKind, columns: SampleColumns) -> Result<Sample<RawValue>> {
+    let (device_time_ns, seq, value_json, wall_ns, score, reason_json, provenance) = columns;
+    let reason: Option<RejectReason> = match reason_json {
+        Some(text) => Some(from_json(&text)?),
+        None => None,
+    };
+    Ok(Sample {
+        kind,
+        device_time: DeviceTime::from_nanos(device_time_ns),
+        wall_time: wall_ns.map(WallTime::from_nanos),
+        seq,
+        value: from_json(&value_json)?,
+        quality: Quality {
+            score: score as f32,
+            reason,
+        },
+        provenance: MetadataId::new(provenance as u64),
+    })
 }
 
 fn to_json<T: Serialize>(value: &T) -> Result<String> {

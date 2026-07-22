@@ -20,6 +20,7 @@ uniffi = { version = "0.28" }
 thiserror = { workspace = true }
 
 [dev-dependencies]
+mav-sqi = { workspace = true }
 ed25519-dalek = { workspace = true }
 sha2 = { workspace = true }
 serde_json = { workspace = true }

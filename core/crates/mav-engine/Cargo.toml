@@ -10,6 +10,7 @@ publish.workspace = true
 mav-model = { workspace = true }
 mav-connector-abi = { workspace = true }
 mav-connector-runtime = { workspace = true }
+mav-obs = { workspace = true }
 mav-sqi = { workspace = true }
 mav-timeline = { workspace = true }
 mav-store = { workspace = true }

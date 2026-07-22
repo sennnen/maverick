@@ -112,6 +112,12 @@ impl ConnectorInstance {
         if packed == 0 {
             return Ok(Vec::new());
         }
+        if packed < 0 {
+            return Err(self.fail(error(
+                codes::CONNECTOR_RUNTIME_SNAPSHOT_FAILED,
+                "connector reported that building its snapshot failed",
+            )));
+        }
         let (pointer, length) = unpack_ptr_len(packed);
         if length as usize > self.profile.max_state_bytes {
             return Err(self.fail(error(

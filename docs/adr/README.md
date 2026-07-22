@@ -18,3 +18,10 @@
 - [ADR-016](ADR-016.md) — Device codec crates: WHOOP moves out of the core
 - [ADR-017](ADR-017.md) — Runtime-loaded WebAssembly connectors
 - [ADR-018](ADR-018.md) — Connector runtime errors own codes 11000–11999
+- [ADR-020](ADR-020.md) — Frame reassembly lives in the connector
+- [ADR-021](ADR-021.md) — Two layers of deduplication, one of them bounded
+- [ADR-022](ADR-022.md) — Clock correction is a mapping, applied per session
+- [ADR-023](ADR-023.md) — A snapshot failure is not an empty snapshot
+- [ADR-024](ADR-024.md) — The DailySnapshot contract
+- [ADR-025](ADR-025.md) — `mav-frame` and `mav-codec` are parked, not deleted
+- [ADR-026](ADR-026.md) — A raw stream kind for uncalibrated skin temperature

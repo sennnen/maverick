@@ -1,0 +1,68 @@
+{
+  "$comment": "The single source of the Aura theme. tools/gen_design_tokens.py generates the Swift and Kotlin constants from this file; CI regenerates and fails on a diff. Colours are RGB hex without alpha. Anything a platform genuinely owns - font families, the type ramp's weight names - stays in the hand-written theme file.",
+  "schema": "aura-tokens/v1",
+  "colors": {
+    "bg": { "dark": "000000", "light": "F5F4F1" },
+    "card": { "dark": "141416", "light": "EDECE8" },
+    "cardEdge": { "dark": "0B0B0C", "light": "F4F3F0" },
+    "ink": { "dark": "FFFFFF", "light": "0C0C0D" },
+    "accentInk": { "dark": "E7FE55", "light": "74731A" },
+    "good": { "dark": "3DE383", "light": "1F9E57" },
+    "fair": { "dark": "F5B840", "light": "C4841A" },
+    "bad": { "dark": "FF5A66", "light": "D83A44" }
+  },
+  "fixedColors": {
+    "$comment": "Starship is the one interactive hue and is the same in both schemes by design.",
+    "accent": "E7FE55"
+  },
+  "alphaColors": {
+    "hairline": { "dark": ["FFFFFF", 0.08], "light": ["0C0C0D", 0.1] },
+    "scrim": { "dark": ["000000", 0.28], "light": ["FFFFFF", 0.6] },
+    "grid": { "dark": ["FFFFFF", 0.07], "light": ["0C0C0D", 0.08] }
+  },
+  "families": {
+    "$comment": "Metric identity hues. glow is the luminous centre, edge the tint it blooms out of.",
+    "order": ["charge", "rest", "effort", "heart", "energy", "vitals"],
+    "charge": {
+      "glow": { "dark": "14C078", "light": "6FD3A2" },
+      "edge": { "dark": "05241A", "light": "DDF0E6" }
+    },
+    "rest": {
+      "glow": { "dark": "3E7BFF", "light": "8FB2FB" },
+      "edge": { "dark": "061634", "light": "E2EAFC" }
+    },
+    "effort": {
+      "glow": { "dark": "F52E9C", "light": "FB7EC2" },
+      "edge": { "dark": "2A0A1E", "light": "FCE2F0" }
+    },
+    "heart": {
+      "glow": { "dark": "F5476A", "light": "FB8194" },
+      "edge": { "dark": "2A0912", "light": "FCE4E8" }
+    },
+    "energy": {
+      "glow": { "dark": "E0A81E", "light": "F3CE5A" },
+      "edge": { "dark": "241C06", "light": "FAF0D8" }
+    },
+    "vitals": {
+      "glow": { "dark": "12AEBE", "light": "76D3DF" },
+      "edge": { "dark": "042426", "light": "DFF3F6" }
+    }
+  },
+  "spacing": {
+    "screenMargin": 20,
+    "cardSpacing": 12,
+    "sectionGap": 24,
+    "tilePadding": 20
+  },
+  "radii": {
+    "card": 32,
+    "tile": 28
+  },
+  "typeScale": {
+    "$comment": "Point sizes only. The family and weight for each role are platform-owned: Helvetica Neue on iOS, the platform sans on Android.",
+    "title": 19,
+    "label": 15,
+    "sub": 14,
+    "caption": 12
+  }
+}

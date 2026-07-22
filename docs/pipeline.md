@@ -81,10 +81,12 @@ SIG profile value.
 timestamps and raw (un-normalised, un-scored) values.
 
 Device-specific reassembly, decode, protocol state, and learned state execute inside a sandboxed
-`.mavconn`. `ConnectorHost` validates bounded `EmitSamples` against signed stream and unit
+`.mavconn`. Reassembly is the connector's own, one buffer per notify characteristic, because a
+notification boundary is an MTU artefact and a frame boundary is device knowledge (ADR-020); a
+partial frame never survives a reconnect. `ConnectorHost` validates bounded `EmitSamples` against
+signed stream and unit
 declarations, converts them into `RawSampleBatch`, then sends them through SQI, timeline,
-provenance, and storage. `mav-codec` contains only reviewed open Bluetooth SIG profile decoders; it
-has no manifest parser, device registry, or device layout DSL. Contract: [connectors.md](connectors.md).
+provenance, and storage. Contract: [connectors.md](connectors.md).
 
 Admission **may** read signed declarations and produce raw samples. It **may not**
 score signal quality, correct clocks, normalise units into calibrated physical values that hide the
@@ -104,6 +106,18 @@ reading is worth for a given metric. SQI **may** attach scores and reasons. It *
 sample; a sample scored zero is still a sample, and dropping it silently would violate the
 no-silent-drops rule below.
 
+Three groups of stream are scored differently, and the distinction is load-bearing. A **measured
+signal** — heart rate, RR — is gated on physiological plausibility. An **exact-on-wire readout** —
+a battery percentage, a wrist flag, a step counter, a device-stated code — is a number the strap
+asserted rather than one we inferred, so it carries `Quality::exact()` once its value is inside the
+range the reading can occupy; a value outside that range is rejected with a reason, because a
+battery cannot be at 140%. A **raw count** nobody has judged yet stays `Quality::unassessed`, which
+scores zero.
+
+That third default is the safe one, and it is why the boundary matters: the FFI drops samples
+scoring zero or below, so a readout left unassessed is a readout the app can never see, however
+faithfully a connector emitted it.
+
 ### 5. Timeline
 
 **In:** scored `Sample<T>` values, from realtime decode and from historical sync.
@@ -113,6 +127,40 @@ The timeline is where realtime and historical data become one canonical series. 
 removes duplicates, corrects clocks, and merges backfilled history with data already seen. It is
 governed by two hard rules that hold everywhere in Maverick and are stated again below: it never
 interpolates, and it never mutates a raw timestamp.
+
+#### Placement
+
+A plausible device timestamp is trusted directly. An implausible one is placed through the session's
+`ClockMap`, which shifts a whole segment by one learned offset and so preserves the gaps between
+samples; only when no correction covers the sample does the capture instant apply (ADR-022). All
+three cases are distinguishable, and the second and third carry
+`RejectReason::ImplausibleTimestamp`, because neither came from a clock worth trusting.
+
+The distinction matters because the fallback is destructive: a burst of samples ten seconds apart in
+device time, all placed at one capture instant, has had every interval inside it set to zero — and
+those intervals are what variability analysis reads.
+
+#### Commit accounting
+
+One `EmitSamples` batch produces three numbers, and conflating them is how a sample disappears
+without anyone noticing. **Emitted** is what the connector handed over. **Persisted** is what
+reached storage. **Duplicate** is what the timeline or the store recognised as already held.
+
+The ABI acknowledgement is the *emitted* count. Acknowledgement means received and safely handled,
+and a sample the pipeline already holds has been safely handled — a connector that had to re-emit
+whatever it was not acknowledged for would replay history forever. Duplicates are therefore normal,
+particularly during a backfill, but never silent: a commit that drops any is journalled under
+`CONNECTOR_HOST_SAMPLE_DUPLICATE`, and the session totals are on the lifecycle snapshot. A sample
+that is neither persisted nor counted as a duplicate has been lost, and the arithmetic says so.
+
+Provenance is written only for samples that actually persist. A provenance row for a deduplicated
+sample points at nothing and makes walk-back lie about what produced a value.
+
+Deduplication itself is two layers (ADR-021). The timeline's key set is a bounded window — the fast
+path — because one Timeline lives for a whole session and a multi-day backfill would otherwise hold
+a key for every sample ever banked. The store's natural key is the durable layer and the one that
+must be correct. A duplicate older than the window passes the timeline and stops at the store, which
+is why the store's insert outcome feeds the accounting above rather than being discarded.
 
 Deduplication carries an invariant that was learned the hard way in the prior codebases and is
 easy to get wrong. Two equal RR intervals in the same second are two distinct heartbeats, not one

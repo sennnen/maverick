@@ -57,28 +57,31 @@ data class AuraPalette(
     val grid: Color,
 )
 
-private val Starship = Color(0xFFE7FE55)
+private val Starship = hex(AuraTokens.accent)
 
 val AuraDarkPalette = AuraPalette(
     dark = true,
-    bg = hex(0x000000), card = hex(0x141416), cardEdge = hex(0x0B0B0C),
-    ink = hex(0xFFFFFF),
-    accent = Starship, accentInk = hex(0xE7FE55),
-    good = hex(0x3DE383), fair = hex(0xF5B840), bad = hex(0xFF5A66),
-    hairline = hexA(0xFFFFFF, 0.08f),
-    scrim = hexA(0x000000, 0.28f),
-    grid = hexA(0xFFFFFF, 0.07f),
+    bg = hex(AuraTokens.bgDark), card = hex(AuraTokens.cardDark),
+    cardEdge = hex(AuraTokens.cardEdgeDark),
+    ink = hex(AuraTokens.inkDark),
+    accent = Starship, accentInk = hex(AuraTokens.accentInkDark),
+    good = hex(AuraTokens.goodDark), fair = hex(AuraTokens.fairDark), bad = hex(AuraTokens.badDark),
+    hairline = hexA(AuraTokens.hairlineDark, AuraTokens.hairlineDarkAlpha),
+    scrim = hexA(AuraTokens.scrimDark, AuraTokens.scrimDarkAlpha),
+    grid = hexA(AuraTokens.gridDark, AuraTokens.gridDarkAlpha),
 )
 
 val AuraLightPalette = AuraPalette(
     dark = false,
-    bg = hex(0xF5F4F1), card = hex(0xEDECE8), cardEdge = hex(0xF4F3F0),
-    ink = hex(0x0C0C0D),
-    accent = Starship, accentInk = hex(0x74731A),
-    good = hex(0x1F9E57), fair = hex(0xC4841A), bad = hex(0xD83A44),
-    hairline = hexA(0x0C0C0D, 0.10f),
-    scrim = hexA(0xFFFFFF, 0.60f),
-    grid = hexA(0x0C0C0D, 0.08f),
+    bg = hex(AuraTokens.bgLight), card = hex(AuraTokens.cardLight),
+    cardEdge = hex(AuraTokens.cardEdgeLight),
+    ink = hex(AuraTokens.inkLight),
+    accent = Starship, accentInk = hex(AuraTokens.accentInkLight),
+    good = hex(AuraTokens.goodLight), fair = hex(AuraTokens.fairLight),
+    bad = hex(AuraTokens.badLight),
+    hairline = hexA(AuraTokens.hairlineLight, AuraTokens.hairlineLightAlpha),
+    scrim = hexA(AuraTokens.scrimLight, AuraTokens.scrimLightAlpha),
+    grid = hexA(AuraTokens.gridLight, AuraTokens.gridLightAlpha),
 )
 
 val LocalAuraPalette = staticCompositionLocalOf { AuraDarkPalette }
@@ -88,13 +91,13 @@ object Aura {
     val palette: AuraPalette
         @Composable @ReadOnlyComposable get() = LocalAuraPalette.current
 
-    val screenMargin: Dp = 20.dp
-    val cardSpacing: Dp = 12.dp
-    val sectionGap: Dp = 24.dp
-    val tilePadding: Dp = 20.dp
+    val screenMargin: Dp = AuraTokens.screenMargin
+    val cardSpacing: Dp = AuraTokens.cardSpacing
+    val sectionGap: Dp = AuraTokens.sectionGap
+    val tilePadding: Dp = AuraTokens.tilePadding
 
-    val cardRadius: Dp = 32.dp
-    val tileRadius: Dp = 28.dp
+    val cardRadius: Dp = AuraTokens.cardRadius
+    val tileRadius: Dp = AuraTokens.tileRadius
 }
 
 // MARK: Metric families (radial glow hues)
@@ -104,15 +107,33 @@ enum class AuraFamily(
     private val edgeDark: Color, private val edgeLight: Color,
 ) {
     /** recovery — jade green */
-    CHARGE(hex(0x14C078), hex(0x6FD3A2), hex(0x05241A), hex(0xDDF0E6)),
+    CHARGE(
+        hex(AuraTokens.chargeGlowDark), hex(AuraTokens.chargeGlowLight),
+        hex(AuraTokens.chargeEdgeDark), hex(AuraTokens.chargeEdgeLight),
+    ),
     /** sleep — deep ocean blue */
-    REST(hex(0x3E7BFF), hex(0x8FB2FB), hex(0x061634), hex(0xE2EAFC)),
+    REST(
+        hex(AuraTokens.restGlowDark), hex(AuraTokens.restGlowLight),
+        hex(AuraTokens.restEdgeDark), hex(AuraTokens.restEdgeLight),
+    ),
     /** strain — floral magenta */
-    EFFORT(hex(0xF52E9C), hex(0xFB7EC2), hex(0x2A0A1E), hex(0xFCE2F0)),
+    EFFORT(
+        hex(AuraTokens.effortGlowDark), hex(AuraTokens.effortGlowLight),
+        hex(AuraTokens.effortEdgeDark), hex(AuraTokens.effortEdgeLight),
+    ),
     /** cardio/HR — rose */
-    HEART(hex(0xF5476A), hex(0xFB8194), hex(0x2A0912), hex(0xFCE4E8)),
-    ENERGY(hex(0xE0A81E), hex(0xF3CE5A), hex(0x241C06), hex(0xFAF0D8)),
-    VITALS(hex(0x12AEBE), hex(0x76D3DF), hex(0x042426), hex(0xDFF3F6));
+    HEART(
+        hex(AuraTokens.heartGlowDark), hex(AuraTokens.heartGlowLight),
+        hex(AuraTokens.heartEdgeDark), hex(AuraTokens.heartEdgeLight),
+    ),
+    ENERGY(
+        hex(AuraTokens.energyGlowDark), hex(AuraTokens.energyGlowLight),
+        hex(AuraTokens.energyEdgeDark), hex(AuraTokens.energyEdgeLight),
+    ),
+    VITALS(
+        hex(AuraTokens.vitalsGlowDark), hex(AuraTokens.vitalsGlowLight),
+        hex(AuraTokens.vitalsEdgeDark), hex(AuraTokens.vitalsEdgeLight),
+    );
 
     /** Luminous glow centre — saturated on dark so the tile emits light. */
     fun glow(dark: Boolean): Color = if (dark) glowDark else glowLight
@@ -144,10 +165,10 @@ object AuraType {
     /** Roman display headings ("Good evening", screen titles). */
     fun display(size: TextUnit) = TextStyle(fontWeight = FontWeight.Normal, fontSize = size)
     fun heading(size: TextUnit) = TextStyle(fontWeight = FontWeight.Medium, fontSize = size)
-    val title = heading(19.sp)
-    val label = TextStyle(fontWeight = FontWeight.Medium, fontSize = 15.sp)
-    val sub = TextStyle(fontWeight = FontWeight.Normal, fontSize = 14.sp)
-    val caption = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.sp)
+    val title = heading(AuraTokens.titleSize)
+    val label = TextStyle(fontWeight = FontWeight.Medium, fontSize = AuraTokens.labelSize)
+    val sub = TextStyle(fontWeight = FontWeight.Normal, fontSize = AuraTokens.subSize)
+    val caption = TextStyle(fontWeight = FontWeight.Medium, fontSize = AuraTokens.captionSize)
 }
 
 // MARK: - Status semantics (the WHOOP colour language)

@@ -87,8 +87,10 @@ pub fn ffi_handle<C: Connector>(cell: &RuntimeCell<C>, ptr: i32, len: i32) -> i6
     call_with_event(ptr, len, |event| cell.handle(event))
 }
 
+/// Zero is a legal empty snapshot; -1 says the guest could not build one. Collapsing the two would
+/// turn a failed snapshot into empty state, which the host would then persist as the truth.
 pub fn ffi_snapshot<C: Connector>(cell: &RuntimeCell<C>) -> i64 {
-    cell.snapshot().map_or(0, return_bytes)
+    cell.snapshot().map_or(-1, return_bytes)
 }
 
 fn call_with_event(

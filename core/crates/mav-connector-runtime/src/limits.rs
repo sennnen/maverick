@@ -16,6 +16,9 @@ pub struct LimitProfile {
     pub(crate) max_input_bytes: usize,
     pub(crate) max_output_bytes: usize,
     pub(crate) max_state_bytes: usize,
+    /// Fuel for one host call, spanning `mav_alloc`, the handler, and `mav_dealloc` together —
+    /// not per ABI function. A handler that allocates a large buffer pays for it out of the same
+    /// budget it runs in, which is the honest accounting: allocation is work the guest chose.
     pub(crate) fuel_per_call: u64,
 }
 

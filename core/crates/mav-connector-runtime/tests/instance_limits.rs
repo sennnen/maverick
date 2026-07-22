@@ -267,3 +267,36 @@ fn input_state_bounds_and_trap_isolation_hold() {
     );
     assert!(good.is_usable());
 }
+
+/// The ABI's two snapshot sentinels must stay distinguishable. Zero is a legally empty snapshot;
+/// -1 is a guest saying it could not build one. Collapsing them turns a failure into empty state,
+/// which the host then persists as though it were the truth.
+#[test]
+fn a_failed_snapshot_is_an_error_and_an_empty_one_is_not() {
+    let mut failing = ConnectorInstance::instantiate(
+        &artifact(common::module_with_snapshot(
+            "i64.const 0",
+            &[],
+            &[],
+            Some(-1),
+        )),
+        LimitProfile::mobile_v1(),
+    )
+    .expect("failing instance");
+    assert_eq!(
+        code(failing.snapshot()),
+        codes::CONNECTOR_RUNTIME_SNAPSHOT_FAILED
+    );
+
+    let mut empty = ConnectorInstance::instantiate(
+        &artifact(common::module_with_snapshot(
+            "i64.const 0",
+            &[],
+            &[],
+            Some(0),
+        )),
+        LimitProfile::mobile_v1(),
+    )
+    .expect("empty instance");
+    assert_eq!(empty.snapshot(), Ok(Vec::new()));
+}

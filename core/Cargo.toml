@@ -7,8 +7,6 @@ members = [
     "crates/mav-connector-runtime",
     "crates/mav-connector-tool",
     "crates/mav-connector-store",
-    "crates/mav-frame",
-    "crates/mav-codec",
     "crates/mav-timeline",
     "crates/mav-sqi",
     "crates/mav-feature",
@@ -40,8 +38,6 @@ mav-connector-sdk = { path = "crates/mav-connector-sdk" }
 mav-connector-runtime = { path = "crates/mav-connector-runtime" }
 mav-connector-tool = { path = "crates/mav-connector-tool" }
 mav-connector-store = { path = "crates/mav-connector-store" }
-mav-frame = { path = "crates/mav-frame" }
-mav-codec = { path = "crates/mav-codec" }
 mav-timeline = { path = "crates/mav-timeline" }
 mav-sqi = { path = "crates/mav-sqi" }
 mav-feature = { path = "crates/mav-feature" }

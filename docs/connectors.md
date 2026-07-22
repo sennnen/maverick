@@ -275,7 +275,11 @@ WC-P0 froze development performance and footprint budgets in ADR-017. WC-P4 free
 one memory (4 MiB), one function table (1,024 elements), 4,096 functions, 1,000 globals, 1,000 each
 of element and data segments, recursion depth 128, 262,144 value-stack slots, 64 KiB canonical event
 input, 1 MiB action output, 64 KiB state, and five million fuel per call. A signed fixture may lower
-that fuel allowance but cannot raise it. Profile fields are host-private and the runtime rejects any
+that fuel allowance but cannot raise it. "Per call" means per host invocation, not per ABI function:
+`mav_alloc`, the handler, and `mav_dealloc` all spend from the same budget, so a handler that
+allocates a large buffer pays for it out of the fuel it runs in. That is deliberate — allocation is
+work the guest chose to do — and it means a guest cannot escape the bound by moving work into
+allocation. Profile fields are host-private and the runtime rejects any
 profile id or value drift. Later packets add session/action/diagnostic/watchdog bounds.
 
 Modules have zero imports and no start function. Shared, 64-bit, multi-memory, custom-page memory,

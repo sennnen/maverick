@@ -35,12 +35,12 @@ enum AuraDesign {
     /// a vivid-but-soft core that reads as lit against the off-white canvas.
     var glow: Color {
       switch self {
-      case .charge: AuraDesign.dyn(dark: 0x14C078, light: 0x6FD3A2)   // Rare Jade
-      case .rest:   AuraDesign.dyn(dark: 0x3E7BFF, light: 0x8FB2FB)   // Deep Ocean
-      case .effort: AuraDesign.dyn(dark: 0xF52E9C, light: 0xFB7EC2)   // Floral Magenta
-      case .heart:  AuraDesign.dyn(dark: 0xF5476A, light: 0xFB8194)
-      case .energy: AuraDesign.dyn(dark: 0xE0A81E, light: 0xF3CE5A)
-      case .vitals: AuraDesign.dyn(dark: 0x12AEBE, light: 0x76D3DF)
+      case .charge: AuraDesign.dyn(AuraTokens.chargeGlow)   // Rare Jade
+      case .rest:   AuraDesign.dyn(AuraTokens.restGlow)     // Deep Ocean
+      case .effort: AuraDesign.dyn(AuraTokens.effortGlow)   // Floral Magenta
+      case .heart:  AuraDesign.dyn(AuraTokens.heartGlow)
+      case .energy: AuraDesign.dyn(AuraTokens.energyGlow)
+      case .vitals: AuraDesign.dyn(AuraTokens.vitalsGlow)
       }
     }
 
@@ -48,45 +48,45 @@ enum AuraDesign {
     /// light so the card keeps a soft radial falloff, not a flat fill).
     var glowEdge: Color {
       switch self {
-      case .charge: AuraDesign.dyn(dark: 0x05241A, light: 0xDDF0E6)
-      case .rest:   AuraDesign.dyn(dark: 0x061634, light: 0xE2EAFC)
-      case .effort: AuraDesign.dyn(dark: 0x2A0A1E, light: 0xFCE2F0)
-      case .heart:  AuraDesign.dyn(dark: 0x2A0912, light: 0xFCE4E8)
-      case .energy: AuraDesign.dyn(dark: 0x241C06, light: 0xFAF0D8)
-      case .vitals: AuraDesign.dyn(dark: 0x042426, light: 0xDFF3F6)
+      case .charge: AuraDesign.dyn(AuraTokens.chargeEdge)
+      case .rest:   AuraDesign.dyn(AuraTokens.restEdge)
+      case .effort: AuraDesign.dyn(AuraTokens.effortEdge)
+      case .heart:  AuraDesign.dyn(AuraTokens.heartEdge)
+      case .energy: AuraDesign.dyn(AuraTokens.energyEdge)
+      case .vitals: AuraDesign.dyn(AuraTokens.vitalsEdge)
       }
     }
   }
 
   // MARK: Palette
 
-  static let bg = dyn(dark: 0x000000, light: 0xF5F4F1)
-  static let card = dyn(dark: 0x141416, light: 0xEDECE8)   // neutral (non-glow) card
-  static let cardEdge = dyn(dark: 0x0B0B0C, light: 0xF4F3F0)
+  static let bg = dyn(AuraTokens.bg)
+  static let card = dyn(AuraTokens.card)   // neutral (non-glow) card
+  static let cardEdge = dyn(AuraTokens.cardEdge)
 
   /// Value / label ink. `ink` is the strong text colour, `inkDim` the muted one —
   /// both adapt to scheme, so they read on black and on the colour tiles alike.
-  static let ink = dyn(dark: 0xFFFFFF, light: 0x0C0C0D)
+  static let ink = dyn(AuraTokens.ink)
 
   /// Starship — the single INTERACTIVE hue (slider markers, range selection,
   /// tick emphasis). Never used as a status or decorative colour.
-  static let accent = Color(red: 0.906, green: 0.996, blue: 0.333)  // #E7FE55
+  static let accent = Color(UIColor(hex: AuraTokens.accent))
   /// Starship as TEXT/ICON ink: the raw hue on dark, an olive shift on light so
   /// small glyphs keep contrast on pale glass.
-  static let accentInk = dyn(dark: 0xE7FE55, light: 0x74731A)
-  static let good = dyn(dark: 0x3DE383, light: 0x1F9E57)
-  static let fair = dyn(dark: 0xF5B840, light: 0xC4841A)
-  static let bad = dyn(dark: 0xFF5A66, light: 0xD83A44)
+  static let accentInk = dyn(AuraTokens.accentInk)
+  static let good = dyn(AuraTokens.good)
+  static let fair = dyn(AuraTokens.fair)
+  static let bad = dyn(AuraTokens.bad)
 
   // MARK: Shape
 
-  static let screenMargin: CGFloat = 20
-  static let cardSpacing: CGFloat = 12
-  static let sectionGap: CGFloat = 24
-  static let tilePadding: CGFloat = 20
+  static let screenMargin = AuraTokens.screenMargin
+  static let cardSpacing = AuraTokens.cardSpacing
+  static let sectionGap = AuraTokens.sectionGap
+  static let tilePadding = AuraTokens.tilePadding
 
-  static let cardRadius: CGFloat = 32
-  static let tileRadius: CGFloat = 28
+  static let cardRadius = AuraTokens.cardRadius
+  static let tileRadius = AuraTokens.tileRadius
 
   static var cardShape: RoundedRectangle { RoundedRectangle(cornerRadius: cardRadius, style: .continuous) }
   static var tileShape: RoundedRectangle { RoundedRectangle(cornerRadius: tileRadius, style: .continuous) }
@@ -99,10 +99,10 @@ enum AuraDesign {
   /// Roman display headings ("Good evening", screen titles).
   static func display(_ size: CGFloat) -> Font { .custom("HelveticaNeue", size: size) }
   static func heading(_ size: CGFloat) -> Font { .custom("HelveticaNeue-Medium", size: size) }
-  static let title = Font.custom("HelveticaNeue-Medium", size: 19)
-  static let label = Font.custom("HelveticaNeue-Medium", size: 15)
-  static let sub = Font.custom("HelveticaNeue", size: 14)
-  static let caption = Font.custom("HelveticaNeue-Medium", size: 12)
+  static let title = Font.custom("HelveticaNeue-Medium", size: AuraTokens.title)
+  static let label = Font.custom("HelveticaNeue-Medium", size: AuraTokens.label)
+  static let sub = Font.custom("HelveticaNeue", size: AuraTokens.sub)
+  static let caption = Font.custom("HelveticaNeue-Medium", size: AuraTokens.caption)
 
   // MARK: Contrast tokens
   //
@@ -110,23 +110,26 @@ enum AuraDesign {
   // or black — so both schemes clear the contrast floor.
 
   /// Card hairline border. Ink-based so it's visible on light too.
-  static let hairline = dynAlpha(dark: (0xFFFFFF, 0.08), light: (0x0C0C0D, 0.10))
+  static let hairline = dynAlpha(AuraTokens.hairline)
   /// Translucent pill scrim that reads on BOTH the glow tiles and dark cards.
-  static let scrim = dynAlpha(dark: (0x000000, 0.28), light: (0xFFFFFF, 0.60))
+  static let scrim = dynAlpha(AuraTokens.scrim)
   /// Chart gridline.
-  static let grid = dynAlpha(dark: (0xFFFFFF, 0.07), light: (0x0C0C0D, 0.08))
+  static let grid = dynAlpha(AuraTokens.grid)
 
   // MARK: Helpers
 
-  static func dyn(dark: UInt32, light: UInt32) -> Color {
-    Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: dark) : UIColor(hex: light) })
+  /// Resolve a generated (dark, light) token against the active scheme.
+  static func dyn(_ token: (dark: UInt32, light: UInt32)) -> Color {
+    Color(UIColor {
+      $0.userInterfaceStyle == .dark ? UIColor(hex: token.dark) : UIColor(hex: token.light)
+    })
   }
 
-  static func dynAlpha(dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) -> Color {
+  static func dynAlpha(_ token: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat))) -> Color {
     Color(UIColor {
       $0.userInterfaceStyle == .dark
-        ? UIColor(hex: dark.0).withAlphaComponent(dark.1)
-        : UIColor(hex: light.0).withAlphaComponent(light.1)
+        ? UIColor(hex: token.dark.0).withAlphaComponent(token.dark.1)
+        : UIColor(hex: token.light.0).withAlphaComponent(token.light.1)
     })
   }
 }

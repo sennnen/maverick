@@ -80,13 +80,11 @@ remaining dependent actions. This preserves append-before-ack without encoding W
 | crate | responsibility |
 |---|---|
 | `mav-model` | Frozen health-data and error vocabulary; no device protocol types |
-| `mav-frame` | Generic byte/frame primitives usable by host and SDK tests |
 | `mav-connector-abi` | Frozen no-device event, action, artifact metadata, and ABI wire types |
 | `mav-connector-sdk` | Public guest exports, allocation glue, bounded builders, metadata, and native harness |
 | `mav-connector-runtime` | `.mavconn` and signed-registry parsers/verifiers, interpreter adapter, limits, instance lifecycle |
 | `mav-connector-tool` | Deterministic pack, inspect, trust/export/registry validation, and executable fixture CLIs |
 | `mav-connector-store` | Install records, trust records, connector-scoped state, activation and rollback transactions |
-| `mav-codec` | Explicitly admitted open Bluetooth SIG profile decoders; no manifest parser or device registry |
 | `mav-timeline` | Ordering, deduplication, clock correction, canonical merge |
 | `mav-sqi` | Signal quality before normalization |
 | `mav-feature` | Primitive, derived, aggregate features with provenance |
@@ -124,7 +122,9 @@ no DNS, HTTP, filesystem, or platform API.
 The connector store depends only on runtime inspection/trust, the ABI records those reports expose,
 and `mav-model` errors. It owns a separate forward schema inside the install database; it cannot
 depend on engine, native transport, analytics, a device crate, or the evidence store.
-Engine depends on runtime; runtime never calls engine. Loadable connector source lives only in
+Engine depends on runtime; runtime never calls engine. Engine also depends on `mav-obs`, because
+the `Tap` boundary is where the pipeline is observed and the pipeline is what engine runs; a tap is
+passive and can change neither the data nor the call order. Loadable connector source lives only in
 `sennnen/maverick-connectors` and compiles against the public SDK. FFI reaches ABI, runtime, and
 connector store only to translate frozen records, open verified sessions, and serialize all
 mutation. FFI and replay have no connector implementation dependency.

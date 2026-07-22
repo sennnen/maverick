@@ -25,6 +25,10 @@ pub enum StreamKind {
     Gyro,
     Gravity,
     SkinTemp,
+    /// An unscaled thermistor register readout in counts, from a device that publishes no
+    /// calibrated temperature — WHOOP 4.0's v24/v25 records. Distinct from `SkinTemp`, which is
+    /// degrees Celsius; see ADR-026.
+    SkinTempRaw,
     Spo2Raw,
     /// A device-computed SpO2 percentage (0–100), distinct from `Spo2Raw` (unscaled optical ADC).
     /// On WHOOP 5.0/MG this is the sleep-only tri-mode byte in the K=18 record; see ADR-014 and

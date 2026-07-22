@@ -223,6 +223,8 @@ pub struct ConnectorLifecycleReport {
     pub outstanding_operations: u32,
     pub state_revision: u64,
     pub trace_hash: String,
+    pub samples_persisted: u64,
+    pub samples_duplicate: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
@@ -756,6 +758,8 @@ impl From<EngineLifecycleSnapshot> for ConnectorLifecycleReport {
             outstanding_operations: value.outstanding_operations,
             state_revision: value.state_revision,
             trace_hash: value.trace_hash,
+            samples_persisted: value.samples_persisted,
+            samples_duplicate: value.samples_duplicate,
         }
     }
 }

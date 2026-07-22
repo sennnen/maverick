@@ -95,8 +95,11 @@ maverick/
     Cargo.toml         the Rust workspace
     crates/
       mav-model/       frozen types: ids, time, streams, samples, quality, errors, versions
-      mav-frame/       CRC 8/16/32, the reassembler, the TypedReader
-      mav-codec/       explicitly admitted open Bluetooth SIG profile decoders
+      mav-connector-abi/      the frozen event/action wire contract signed artifacts speak
+      mav-connector-sdk/      the public crate a connector author compiles against
+      mav-connector-runtime/  the no-JIT WebAssembly interpreter, signing, trust, and limits
+      mav-connector-store/    installed connectors, approvals, and the trust policy
+      mav-connector-tool/     the packaging, signing, and parity checker
       mav-timeline/    ordering, dedup, clock correction, historical merge
       mav-sqi/         signal quality scoring
       mav-feature/     primitive, derived, and aggregate features
@@ -190,7 +193,7 @@ Milestones are gated by exit criteria, not dates. A milestone is done when its e
 | M4 | Sleep | Gravity, HR, RR, and respiration features; staging (rule-based first, an ML stager only behind the admission rule); sleep windows, efficiency, and a night-summary snapshot | A capture produces a night summary with staged sleep and the numbers trace back to samples |
 | M5 | Historical sync and canonical merge | A fail-closed backfill controller, every evidence-admitted record version, clock-correction segments, plausibility gates, and recompute triggers | A historical capture backfills, merges canonically, and recomputes affected days without inventing, dropping, or acknowledging uncommitted data |
 | M6 | Analytics breadth and ML | Strain and the remaining metrics that pass the admission rule; Rust preprocessing plus native inference wired with golden vectors; every analytic engine justified in writing or culled | Every shipped metric has a fixture or a published reference, and no engine exists without one |
-| M7 | Host-mediated cloud source | Re-plan after WC-P16: native acquisition supplies bounded source events through an explicitly reviewed ABI capability; connector code still gets no network | Cloud data reaches the same admission/pipeline path with provenance and no connector network access or device special case |
+| M7 | Host-mediated cloud source | A manifest of kind `cloud` runs the same pipeline: native acquisition supplies bounded source events through an explicitly reviewed ABI capability, and connector code still gets no network | Cloud data reaches the same admission/pipeline path with provenance and no connector network access or device special case |
 | M8 | Hardening | Observability audit demonstrating the walk-back requirement, the error-report UX, a fixture-coverage audit, doc gardening, a dependency-edge audit, and ADR backfill | Walk-back is demonstrated end to end, coverage gaps are closed or documented, and the docs match the code |
 
 Two standing lanes sit beside the numbered milestones because neither belongs at one point in the

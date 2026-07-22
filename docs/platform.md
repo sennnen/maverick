@@ -344,6 +344,27 @@ Native code may not:
 The four hub slots exist even when their analytics do not. Their state is one of value, collecting,
 unavailable, or failed. That state comes from the core contract.
 
+### Design tokens
+
+The Aura palette, spacing, radii, and type-scale sizes live once, in `tokens/aura.json`.
+`tools/gen_design_tokens.py` (Python stdlib only, deterministic) generates
+`apps/ios/Maverick/UI/AuraTokens.generated.swift` and
+`apps/android/.../ui/aura/AuraTokens.generated.kt`; both files are committed, and the docs CI job
+regenerates them and fails on a diff. Edit the JSON, run the generator, commit both.
+
+The generator owns *values*, not decisions. Font families, weight names, and how a scheme is resolved
+at runtime stay in the hand-written `AuraDesign.swift` and `AuraTheme.kt`, which consume the
+constants — Helvetica Neue on iOS and the platform sans on Android is a deliberate difference, not
+drift. So is Android's Material3 typography mapping, which has no iOS counterpart: those `.sp` values
+are role names in a Compose API, not shared theme values.
+
+The extraction audit found the two platforms already agreed on every colour, spacing, and radius, so
+no divergence had to be resolved. That is worth stating rather than assuming: the value of this
+pipeline from here on is that the next divergence fails CI instead of shipping.
+
+Deliberately not built: any wireframe-to-code or layout-generation system. Two native shells that
+already share an information model need a shared palette, not a shared renderer.
+
 ## Compatibility and fixtures
 
 Every schema has:

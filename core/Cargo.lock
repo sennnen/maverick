@@ -580,15 +580,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mav-codec"
-version = "0.1.0"
-dependencies = [
- "mav-model",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "mav-connector-abi"
 version = "0.1.0"
 dependencies = [
@@ -615,7 +606,7 @@ dependencies = [
 
 [[package]]
 name = "mav-connector-sdk"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "mav-connector-abi",
  "sha2",
@@ -655,6 +646,7 @@ dependencies = [
  "mav-connector-abi",
  "mav-connector-runtime",
  "mav-model",
+ "mav-obs",
  "mav-sqi",
  "mav-store",
  "mav-timeline",
@@ -680,21 +672,12 @@ dependencies = [
  "mav-engine",
  "mav-model",
  "mav-obs",
+ "mav-sqi",
  "serde_json",
  "sha2",
  "thiserror",
  "uniffi",
  "wat",
-]
-
-[[package]]
-name = "mav-frame"
-version = "0.1.0"
-dependencies = [
- "mav-model",
- "proptest",
- "serde",
- "serde_json",
 ]
 
 [[package]]

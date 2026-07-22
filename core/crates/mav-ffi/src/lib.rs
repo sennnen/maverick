@@ -57,6 +57,38 @@ pub struct MavRuntime {
     connectors: Mutex<mav_connector_store::ConnectorRepository>,
     connector_session: Mutex<Option<mav_engine::ConnectorHost>>,
     database_path: String,
+    /// The always-on ring log every connector session reports into, and the app version that
+    /// stamps the report bundle drawn from it.
+    ring: Arc<mav_obs::RingLog>,
+    app_version: String,
+}
+
+/// How many stage events the ring log holds. Bounded on purpose: observability that grows without
+/// limit is a leak, and the durable record is the error journal, not this.
+const RING_CAPACITY: usize = 512;
+
+/// One observed pipeline boundary, flattened for the bindings.
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct ObservedStage {
+    pub seq: u64,
+    pub stage: String,
+    pub kind: String,
+    pub count: u32,
+    pub detail: String,
+}
+
+/// What a bug report carries: the app build, the live session if there is one, and the recent
+/// stage boundaries. No sample values — the ring log holds counts, and payload summaries exist
+/// only in debug builds.
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct ReportBundle {
+    pub app_version: String,
+    pub connector_id: Option<String>,
+    pub session_id: Option<u64>,
+    pub trace_hash: Option<String>,
+    pub samples_persisted: u64,
+    pub samples_duplicate: u64,
+    pub recent_stages: Vec<ObservedStage>,
 }
 
 #[uniffi::export]
@@ -69,6 +101,8 @@ impl MavRuntime {
             connectors: Mutex::new(connectors),
             connector_session: Mutex::new(None),
             database_path,
+            ring: Arc::new(mav_obs::RingLog::new(RING_CAPACITY)),
+            app_version: config.app_version,
         }))
     }
 
@@ -326,6 +360,7 @@ impl MavRuntime {
                 transport_capacity: config.transport_capacity,
             },
         )?;
+        host.set_tap(Arc::new(mav_obs::RingLogTap(Arc::clone(&self.ring))));
         host.start()?;
         let report = host.lifecycle_snapshot().into();
         let mut session = self.connector_session_lock()?;
@@ -389,6 +424,33 @@ impl MavRuntime {
         Ok(host.lifecycle_snapshot().into())
     }
 
+    /// Everything a bug report needs and nothing a user would not want to send.
+    pub fn export_report_bundle(&self, limit: u32) -> Result<ReportBundle, FfiError> {
+        let session = self.connector_session_lock()?;
+        let lifecycle = session.as_ref().map(|host| host.lifecycle_snapshot());
+        let connector_id = session.as_ref().map(|host| host.connector_id().to_owned());
+        drop(session);
+
+        Ok(ReportBundle {
+            app_version: self.app_version.clone(),
+            connector_id,
+            session_id: lifecycle.as_ref().map(|state| state.session_id),
+            trace_hash: lifecycle.as_ref().map(|state| state.trace_hash.clone()),
+            samples_persisted: lifecycle
+                .as_ref()
+                .map_or(0, |state| state.samples_persisted),
+            samples_duplicate: lifecycle
+                .as_ref()
+                .map_or(0, |state| state.samples_duplicate),
+            recent_stages: self
+                .ring
+                .recent(limit as usize)
+                .into_iter()
+                .map(observed_stage)
+                .collect(),
+        })
+    }
+
     pub fn connector_telemetry(&self) -> Result<ConnectorTelemetrySnapshot, FfiError> {
         let session = self.connector_session_lock()?;
         let host = session.as_ref().ok_or_else(no_connector_session)?;
@@ -419,6 +481,27 @@ impl MavRuntime {
             on_wrist: bounded_sample(&wrist, 0, 1).map(|value| value == 1),
             last_sample_wall_time_ms,
         })
+    }
+}
+
+fn observed_stage(entry: mav_obs::RingEntry) -> ObservedStage {
+    let (kind, count, detail) = match entry.kind {
+        mav_obs::RingEntryKind::Produced { count, summary } => {
+            ("produced", count as u32, summary.unwrap_or_default())
+        }
+        mav_obs::RingEntryKind::Rejected { code, message, .. } => {
+            ("rejected", u32::from(code), message)
+        }
+        mav_obs::RingEntryKind::Transition { from, to } => {
+            ("transition", 0, format!("{from} -> {to}"))
+        }
+    };
+    ObservedStage {
+        seq: entry.seq,
+        stage: entry.stage.name().to_owned(),
+        kind: kind.to_owned(),
+        count,
+        detail,
     }
 }
 

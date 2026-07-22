@@ -50,8 +50,22 @@ pub fn event() -> ConnectorEvent {
 }
 
 pub fn module(handle: &str, output: &[u8], state: &[u8]) -> Vec<u8> {
+    module_with_snapshot(handle, output, state, None)
+}
+
+/// `snapshot_packed` overrides what `mav_snapshot` returns, so a test can exercise the sentinel
+/// values the ABI defines: 0 for a legally empty snapshot, -1 for a guest that could not build one.
+pub fn module_with_snapshot(
+    handle: &str,
+    output: &[u8],
+    state: &[u8],
+    snapshot_packed: Option<i64>,
+) -> Vec<u8> {
     let output_packed = ((1_024_u64) << 32) | output.len() as u64;
-    let state_packed = ((2_048_u64) << 32) | state.len() as u64;
+    let state_packed = match snapshot_packed {
+        Some(value) => value as u64,
+        None => ((2_048_u64) << 32) | state.len() as u64,
+    };
     let wat = format!(
         r#"(module
             (memory (export "memory") 2 100)

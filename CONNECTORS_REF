@@ -1,0 +1,9 @@
+# The maverick-connectors commit whose released artifacts this repository vendors.
+#
+# CI checks that repository out at exactly this SHA and compares its signed registry entries against
+# the .mavconn files in fixtures/connectors/. A mismatch means the vendored artifacts have drifted
+# from the release they claim to be, which is how a parity golden ends up pinning a build nobody can
+# reproduce.
+#
+# Bumping it is a deliberate commit, made together with the fixture update it justifies.
+d11d277
