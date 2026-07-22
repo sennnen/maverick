@@ -116,5 +116,64 @@ Firmware load, `FORCE_TRIM`, and the DFU entries are refused by `build_command` 
 Nothing about ECG discovery requires writing firmware, and a bricked strap ends the investigation
 permanently.
 
-**Status: open.** Two runs, no waveform, three infrastructure defects fixed that would have hidden
-one, and one hardware-verified identity readout. The next step is physical.
+## Run 3 — the firmware told us what is wrong
+
+Adding a diagnostic to every probe write and every command response turned the strap into a talking
+witness. Three things came back, and together they change the picture completely.
+
+**1. The console channel is fully readable, and the firmware narrates everything.** Sixty-five
+CONSOLE_LOGS frames in one short session: BLE connect and disconnect with reasons, every
+subscription index, the negotiated MTU, each command as it is received, sensor state changes,
+battery SOC to two decimals, IMU double-tap, even the LED current array. This is the single most
+valuable instrument we have, and it cost one diagnostic.
+
+Note the routing: those frames arrived as **unmapped packets on a data channel**, not on `fd4b0007`.
+Console output is not confined to the console characteristic.
+
+**2. The config chain is half-broken, and the firmware says so in words.**
+
+```
+BLE_CMD: WSBLE_CMD_START_DEVICE_CONFIG_KEY_EX unsupported revision:0
+BLE_CMD: WSBLE_CMD_SEND_NEXT_DEVICE_CONFIG   unsupported revision:0
+BLE_CMD: WSBLE_CMD_CONFIG_VALUE_SET_DEVICE_CONFIG unsupported revision:101
+```
+
+Opcodes 117 and 118 are the "start" and "send next" halves of the config key exchange, and we send
+both with **empty bodies**. The strap reads a revision byte, finds zero, and refuses. The key
+exchange therefore never opens, and the SET_CONFIG writes that follow are parsed by a fallback path
+that reports nonsense revisions (101, 109, 104 — which are the ASCII codes of `e`, `m`, `h`, the
+first letters of the flag names, so the strap is reading a revision where we put a name).
+
+**3. Which flags actually took, from the status byte the WF-P1 fix now reads correctly:**
+
+| flag | result |
+|---|---|
+| `enable_r22_packets`, `_v2`, `_v3`, `_v4`, `_v5`, `_v6`, `_v8` | **Ok** |
+| `disable_pip_r26_packets`, `wear_detect_bias`, `hr_ch_switching`, `ir_hw_switching` | **Ok** |
+| `make_hrfm_visible` | rejected (status 0) |
+| `enable_passive_strap_fit_gen5`, `enable_sig11_during_sleep` | rejected |
+| `dorset_inhibit_wpt`, `enable_sig12` | rejected |
+| **`enable_raw_data_w_ecg`** | **rejected (status 0)** |
+
+So the ECG flag never took. That is why `START_RAW_DATA` produced nothing, and it is a far more
+tractable problem than "the waveform is hidden somewhere unknown".
+
+This also hardware-confirms WF-P1 end to end: the status byte at inner `[4]` cleanly separates the
+accepted flags from the rejected ones. Read at the old offset (inner `[3]`) it is a counter —
+`0x05, 0x06 … 0x15` — and every one of these results would have been noise.
+
+## The next run
+
+1. **Send opcodes 117 and 118 with a revision byte.** The firmware complains about `revision:0`,
+   which is what an empty body reads as. Try `&[1]` first, then sweep 1..=8 while watching the
+   console — the strap names the revision it rejected, so the sweep is self-reporting and cheap.
+2. **Re-check the flag results once the key exchange opens.** If the eleven that already succeed are
+   the pre-key-exchange subset, the rejected six — including the ECG flag — may simply require it.
+3. **Only then re-try `START_RAW_DATA`.** Chasing packet 43 before the flag takes is chasing a
+   stream that was never enabled.
+
+Keep the console diagnostic on throughout. It has already earned its place twice.
+
+**Status: open, and much better posed than it was.** Not "where is the ECG hidden" but "why does the
+config key exchange refuse revision 0" — a question the strap answers out loud every time it is
+asked.

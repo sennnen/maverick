@@ -85,6 +85,13 @@ and `…0007` is a debug menu. [ONE, Rust repo]
 On gen5 the notify characteristics carry, in order, command responses (`…0003`), events (`…0004`),
 fragmented data (`…0005`), and a fourth channel new in the 5.0 (`…0007`). [JUDES]
 
+**The console is the best instrument on this device.** [HW] A live MG emits a running narration —
+BLE connect/disconnect with reason codes, every subscription index, the negotiated MTU, each command
+as it is received and whether it was understood, sensor state changes, battery SOC to two decimals,
+IMU double-tap, LED currents. Anything unexplained on this strap should be investigated with the
+console open first. Note that console frames also arrive on the **data** channel, not only on
+`fd4b0007`.
+
 That fourth channel is the **firmware console**, not a second data stream: the strap narrates
 history-sync progress, RTC complaints, and the persistent-config table over it as text behind a
 ten-byte record header. The connector decodes it to printable ASCII and emits a diagnostic, never a
@@ -235,6 +242,24 @@ The gen5 deep-data unlock (the R22 path) is a feature-flag channel rather than a
 fuller key-exchange chain of 117 (start), 118 (send next), and 120 (set). R22 is the gen5 realtime
 capability (packet `0x10`), gated by capability rather than by any one opcode. [ONE each, and the
 two accounts are consistent with one another]
+
+**Hardware, and the firmware says it out loud: 117 and 118 need a revision byte, and we send them
+empty.** [HW] A live MG console reports
+
+```
+BLE_CMD: WSBLE_CMD_START_DEVICE_CONFIG_KEY_EX unsupported revision:0
+BLE_CMD: WSBLE_CMD_SEND_NEXT_DEVICE_CONFIG   unsupported revision:0
+```
+
+so the key exchange never opens, and the SET_CONFIG writes that follow fall to a path that reports
+`unsupported revision:101` / `109` / `104` — the ASCII of `e`, `m`, `h`, the first letters of the
+flag names, so the strap is reading a revision where we put a name. Eleven of the sixteen R22 flags
+are accepted anyway; five are refused, **including `enable_raw_data_w_ecg`**. Finding the revision
+byte 117 and 118 want is the next move, and the console names the value it rejected each time, so
+the search is self-reporting.
+
+This also confirms the response-status offset end to end: at inner `[4]` the accepted and refused
+flags separate cleanly, while inner `[3]` is a plain counter (`0x05, 0x06 … 0x15`).
 
 The SET_CONFIG body is **41 bytes**: the `0x01` config prefix, the flag name NUL-padded to 32 bytes,
 the value, and seven trailing zeros. The value is an **ASCII digit** — `'1'` or `'2'`, not binary 1
