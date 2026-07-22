@@ -463,7 +463,10 @@ fn drive_one_packaged_connector(bytes: Vec<u8>) {
             .expect("every subscription callback is valid");
     }
     assert_eq!(
-        runtime.connector_telemetry().expect("telemetry").lifecycle,
+        runtime
+            .connector_telemetry(1_700_000_000_123)
+            .expect("telemetry")
+            .lifecycle,
         ConnectorLifecycleState::Configuring
     );
     let mut configured_writes = 0;
@@ -503,7 +506,10 @@ fn drive_one_packaged_connector(bytes: Vec<u8>) {
         "connector issued no configuration write"
     );
     assert_eq!(
-        runtime.connector_telemetry().expect("telemetry").lifecycle,
+        runtime
+            .connector_telemetry(1_700_000_000_123)
+            .expect("telemetry")
+            .lifecycle,
         ConnectorLifecycleState::Streaming
     );
     runtime
@@ -522,7 +528,10 @@ fn drive_one_packaged_connector(bytes: Vec<u8>) {
         )
         .expect("native disconnect completes lifecycle");
     assert_eq!(
-        runtime.connector_telemetry().expect("telemetry").lifecycle,
+        runtime
+            .connector_telemetry(1_700_000_000_123)
+            .expect("telemetry")
+            .lifecycle,
         ConnectorLifecycleState::Disconnected
     );
     let _ = std::fs::remove_file(path);
@@ -628,7 +637,7 @@ fn active_session_exposes_exact_persisted_connector_telemetry() {
     }
 
     let telemetry = runtime
-        .connector_telemetry()
+        .connector_telemetry(1_700_000_000_123)
         .expect("read connector telemetry");
     assert_eq!(telemetry.connector_id, CONNECTOR);
     assert_eq!(telemetry.device_id, 7);
@@ -637,6 +646,15 @@ fn active_session_exposes_exact_persisted_connector_telemetry() {
     assert_eq!(telemetry.battery_percent, Some(82));
     assert_eq!(telemetry.on_wrist, Some(true));
     assert_eq!(telemetry.last_sample_wall_time_ms, Some(1_700_000_000_123));
+
+    // A day later the same rows are no longer a claim about now: the live heart rate goes blank
+    // while battery and wrist, which are device state, are still reported.
+    let later = runtime
+        .connector_telemetry(1_700_000_000_123 + 24 * 3_600_000)
+        .expect("stale telemetry");
+    assert_eq!(later.heart_rate_bpm, None);
+    assert_eq!(later.battery_percent, None);
+    assert_eq!(later.last_sample_wall_time_ms, Some(1_700_000_000_123));
     let _ = std::fs::remove_file(path);
 }
 
@@ -720,7 +738,7 @@ fn telemetry_survives_the_quality_stage_it_actually_passes_through() {
     }
 
     let telemetry = runtime
-        .connector_telemetry()
+        .connector_telemetry(1_700_000_000_123)
         .expect("read connector telemetry");
     assert_eq!(telemetry.heart_rate_bpm, Some(73));
     assert_eq!(
@@ -1050,6 +1068,27 @@ fn the_daily_snapshot_crosses_the_boundary_with_a_stable_hash() {
                 );
             }
         }
+        // One sustained run of successive beats. Variability is computed from this, not from the
+        // scattered bursts above — see the spine's beat-run split.
+        let run_start = midnight_ns + 3_600 * 1_000_000_000;
+        for beat in 0..60i64 {
+            let interval = if beat % 2 == 0 { 900u16 } else { 950 };
+            let store = mav_engine::Store::open(&path).expect("seed store");
+            store
+                .insert_sample(
+                    device,
+                    &Sample {
+                        kind: StreamKind::RrInterval,
+                        device_time: DeviceTime::from_nanos(run_start + beat * 1_000_000_000),
+                        wall_time: Some(WallTime::from_nanos(run_start + beat * 1_000_000_000)),
+                        seq: 0,
+                        value: RawValue::U16(interval),
+                        quality: Quality::scored(1.0),
+                        provenance: MetadataId::new(1),
+                    },
+                )
+                .expect("run sample");
+        }
     }
 
     runtime
@@ -1075,13 +1114,16 @@ fn the_daily_snapshot_crosses_the_boundary_with_a_stable_hash() {
         .as_ref()
         .expect("a day of intervals has variability");
     assert_eq!(hrv.rmssd_ms, 50.0);
-    assert_eq!(hrv.interval_count, 120);
+    assert_eq!(
+        hrv.interval_count, 60,
+        "variability comes from the sustained run, not the scattered bursts"
+    );
     assert_eq!(
         hrv.label, "pulse_rate_variability",
         "optical intervals must never be labelled HRV"
     );
     assert_eq!(
-        snapshot.snapshot_hash, "a220b57a8d4690b0",
+        snapshot.snapshot_hash, "70f978c5c613f04b",
         "the cross-platform parity hash changed; if an algorithm moved, repin here and on both apps"
     );
 

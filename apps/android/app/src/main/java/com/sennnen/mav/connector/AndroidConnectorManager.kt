@@ -400,7 +400,7 @@ class AndroidConnectorManager(
                         ConnectorCancelReason.USER,
                         System.currentTimeMillis(),
                     )
-                    active.drainConnectorActions(64u) to active.connectorTelemetry()
+                    active.drainConnectorActions(64u) to active.connectorTelemetry(System.currentTimeMillis())
                 }
             }.onSuccess { (actions, telemetry) ->
                 publishTelemetry(telemetry)
@@ -507,7 +507,7 @@ class AndroidConnectorManager(
                 policy,
                 revocations,
             )
-            active.drainConnectorActions(64u) to active.connectorTelemetry()
+            active.drainConnectorActions(64u) to active.connectorTelemetry(System.currentTimeMillis())
         }
         publishTelemetry(telemetry)
         withContext(Dispatchers.Main) { actions.forEach(bluetooth::execute) }
@@ -524,7 +524,7 @@ class AndroidConnectorManager(
             gate.withLock {
                 val active = ensureRuntime()
                 active.applyConnectorEvent(event, System.currentTimeMillis())
-                active.drainConnectorActions(64u) to active.connectorTelemetry()
+                active.drainConnectorActions(64u) to active.connectorTelemetry(System.currentTimeMillis())
             }
         }.onSuccess { (actions, telemetry) ->
             publishTelemetry(telemetry)
@@ -541,7 +541,11 @@ class AndroidConnectorManager(
             sessionId = telemetry.sessionId,
             cancellationGeneration = telemetry.cancellationGeneration,
         )
-        mutableConnection.value = ConnectorConnectionState.from(telemetry)
+        val counts = runCatching { ensureRuntime().connectorLifecycle() }.getOrNull()
+        mutableConnection.value = ConnectorConnectionState.from(telemetry).copy(
+            samplesPersisted = counts?.samplesPersisted?.toLong() ?: 0L,
+            samplesDuplicate = counts?.samplesDuplicate?.toLong() ?: 0L,
+        )
     }
 
     private fun ensureRuntime(): MavRuntime {
@@ -586,6 +590,33 @@ class AndroidConnectorManager(
         }
         return spans
     }
+
+    /**
+     * The diagnostics bundle as JSON: app build, live session, trace hash, commit totals, and the
+     * recent pipeline boundaries. Counts and hashes only — the ring log holds no sample values and
+     * payload summaries exist only in debug builds — so this is safe to share as it stands.
+     */
+    fun reportBundleJson(limit: UInt = 200u): String? = runCatching {
+        val bundle = ensureRuntime().exportReportBundle(limit)
+        buildString {
+            append("{\n")
+            append("  \"app_version\": \"${bundle.appVersion}\",\n")
+            append("  \"connector_id\": ${bundle.connectorId?.let { "\"$it\"" } ?: "null"},\n")
+            append("  \"session_id\": ${bundle.sessionId ?: "null"},\n")
+            append("  \"trace_hash\": ${bundle.traceHash?.let { "\"$it\"" } ?: "null"},\n")
+            append("  \"samples_persisted\": ${bundle.samplesPersisted},\n")
+            append("  \"samples_duplicate\": ${bundle.samplesDuplicate},\n")
+            append("  \"recent_stages\": [\n")
+            bundle.recentStages.forEachIndexed { index, stage ->
+                append("    {\"seq\": ${stage.seq}, \"stage\": \"${stage.stage}\", ")
+                append("\"kind\": \"${stage.kind}\", \"count\": ${stage.count}, ")
+                append("\"detail\": \"${stage.detail.replace("\"", "'")}\"}")
+                if (index < bundle.recentStages.lastIndex) append(",")
+                append("\n")
+            }
+            append("  ]\n}\n")
+        }
+    }.getOrNull()
 
     /** One local day's analytics from the core, or null when no runtime is open yet. */
     fun dailySnapshot(deviceId: ULong, wallTimeMs: Long): DailySnapshotReport? =

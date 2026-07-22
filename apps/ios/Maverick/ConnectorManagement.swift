@@ -1064,7 +1064,7 @@ private final class ConnectorRuntimeWorker: @unchecked Sendable {
   func telemetry(
     completion: @escaping @Sendable (Result<ConnectorTelemetrySnapshot, Error>) -> Void
   ) {
-    perform(completion) { try $0.connectorTelemetry() }
+    perform(completion) { try $0.connectorTelemetry(nowMs: Self.nowMs) }
   }
 
   func cancelSession(
@@ -1072,7 +1072,7 @@ private final class ConnectorRuntimeWorker: @unchecked Sendable {
   ) {
     perform(completion) { runtime in
       _ = try runtime.cancelConnectorSession(reason: .user, wallTimeMs: Self.nowMs)
-      return try runtime.connectorTelemetry()
+      return try runtime.connectorTelemetry(nowMs: Self.nowMs)
     }
   }
 

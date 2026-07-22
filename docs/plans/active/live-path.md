@@ -220,4 +220,12 @@ stages in pipeline order with counts matching LP-P2's accounting.
 
 ## Decision log
 
-- (empty — packets not yet started)
+- **UX-P7 (found during the audit, landed here):** `MavRuntime` held no store handle, so
+  `connector_telemetry` opened SQLite on every poll. It now holds one reader connection behind the
+  existing lock discipline; a session's host still owns its own writer, which is correct.
+- **Live telemetry is gated on recency, and this was found by running the app.** With no strap
+  connected the hub showed `149 bpm`, because `connector_telemetry` returned the newest stored
+  sample regardless of age — a stale reading presented as a live one, which is exactly the
+  "absent stays absent" rule broken at the boundary. `connector_telemetry` now takes `now_ms` and
+  drops a heart rate older than ninety seconds; battery and wrist state are device state, not a
+  claim about this instant, so they survive six hours and their age is displayed.

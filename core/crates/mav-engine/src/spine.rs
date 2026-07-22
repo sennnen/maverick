@@ -31,6 +31,12 @@ use crate::recompute::{AffectedDays, CacheKey, LocalDay, RecomputeCache, Timezon
 /// itself decides how many valid nights it needs; this only bounds how far back we read.
 const READINESS_WINDOW_DAYS: i64 = 60;
 
+/// The longest wall-clock gap between two interval samples that can still be the same run of
+/// beats. Real straps deliver RR in short bursts minutes apart; within a burst the samples are a
+/// second or less apart, and across bursts they are tens of seconds. Differencing across a burst
+/// boundary is differencing two beats that never followed one another.
+const BEAT_RUN_GAP_MS: i64 = 3_000;
+
 /// Every stream the spine reads. A day holding none of them produces a snapshot that says so.
 const READ_STREAMS: [StreamKind; 2] = [StreamKind::HeartRate, StreamKind::RrInterval];
 
@@ -150,11 +156,21 @@ impl Spine {
         };
 
         let heart_rate = hr_summary(&of_kind(today, StreamKind::HeartRate), provenance(day));
-        let intervals = of_kind(today, StreamKind::RrInterval);
+
+        // Time-domain variability is a statement about successive beats, so it is computed over the
+        // longest run of intervals that actually followed one another — not over a day of bursts,
+        // where the difference between the last beat of one burst and the first of the next is not
+        // a beat-to-beat change at all. On real hardware that mistake inflates RMSSD roughly
+        // tenfold.
+        //
         // Optical intervals, so the analytic labels the result PRV rather than HRV. Nothing on the
         // supported straps produces ECG intervals on this path; when something does, the source
         // becomes a property of the stream rather than an assumption here.
-        let hrv = time_domain(&intervals, IntervalSource::Ppg, provenance(day));
+        let runs = beat_runs(&of_kind(today, StreamKind::RrInterval));
+        let hrv = runs
+            .iter()
+            .max_by_key(|run| run.len())
+            .and_then(|run| time_domain(run, IntervalSource::Ppg, provenance(day)));
 
         // Readiness reads the trailing nights, oldest first, with a gap for every day that has no
         // usable series. The analytic decides how many valid nights it needs before answering.
@@ -165,8 +181,18 @@ impl Spine {
                     .get(past)
                     .map(|samples| of_kind(samples, StreamKind::RrInterval))
                     .and_then(|rr| {
-                        time_domain(&rr, IntervalSource::Ppg, provenance(past))
-                            .map(|value| value.rmssd_ms)
+                        // Gap-aware: squared successive differences pool within each run and never
+                        // across the break between runs.
+                        let runs = beat_runs(&rr);
+                        let beats: Vec<Vec<u16>> = runs
+                            .iter()
+                            .map(|run| {
+                                run.iter()
+                                    .map(|sample| sample.value.as_f64().round() as u16)
+                                    .collect()
+                            })
+                            .collect();
+                        HrvReadiness::rmssd_runs(beats.iter().map(Vec::as_slice))
                     })
             })
             .collect();
@@ -202,6 +228,30 @@ impl DayIndex {
     fn get(&self, day: LocalDay) -> Option<&[Sample<RawValue>]> {
         self.days.get(&day.index()).map(Vec::as_slice)
     }
+}
+
+/// Split interval samples into runs of beats that genuinely followed one another, in device-time
+/// order. A gap wider than [`BEAT_RUN_GAP_MS`] starts a new run.
+fn beat_runs(intervals: &[Sample<RawValue>]) -> Vec<Vec<Sample<RawValue>>> {
+    let mut ordered = intervals.to_vec();
+    ordered.sort_by_key(|sample| (sample.device_time.as_nanos(), sample.seq));
+
+    let mut runs: Vec<Vec<Sample<RawValue>>> = Vec::new();
+    let mut previous_ms: Option<i64> = None;
+    for sample in ordered {
+        let at_ms = sample.device_time.as_nanos().div_euclid(1_000_000);
+        let continues =
+            previous_ms.is_some_and(|last| at_ms.saturating_sub(last) <= BEAT_RUN_GAP_MS);
+        if continues {
+            if let Some(run) = runs.last_mut() {
+                run.push(sample);
+            }
+        } else {
+            runs.push(vec![sample]);
+        }
+        previous_ms = Some(at_ms);
+    }
+    runs
 }
 
 fn of_kind(samples: &[Sample<RawValue>], kind: StreamKind) -> Vec<Sample<RawValue>> {

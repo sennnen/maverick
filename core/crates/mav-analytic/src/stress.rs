@@ -90,7 +90,11 @@ fn clean_rr(rr: &[f64]) -> Vec<f64> {
 
 /// Drop any beat deviating over `ECTOPIC_THRESHOLD` from its local median; short series pass
 /// through.
-fn reject_ectopic(nn: &[f64]) -> Vec<f64> {
+///
+/// Public because every time-domain calculation needs it, not just the stress index: a missed or
+/// doubled beat is one enormous successive difference, and RMSSD is the square root of the mean of
+/// those squared — one artefact dominates the answer.
+pub fn reject_ectopic(nn: &[f64]) -> Vec<f64> {
     if nn.len() <= ECTOPIC_WINDOW_RADIUS {
         return nn.to_vec();
     }

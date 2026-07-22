@@ -67,6 +67,17 @@ an availability result; it does not hardcode device-family checks.
 
 This is a deliberate refusal to fill missing science with product theatre.
 
+### Cleaning before variability
+
+`time_domain` applies the range band **and** the Malik local-median ectopic rejection before it
+computes anything, and counts every rejected beat in `excluded_count`. Both halves are needed: a
+missed or doubled beat lands inside 300–2000 ms and still produces one enormous successive
+difference, and RMSSD is the root mean square of those, so a single artefact dominates the result.
+
+The spine feeds it the longest run of genuinely successive beats rather than a whole day's
+intervals, because a strap delivers them in bursts minutes apart. Both facts came from the first
+live capture; `docs/protocol/whoop.md` records the numbers.
+
 ### The DailySnapshot
 
 Analytics reach the apps as one record per `LocalDay`, frozen in [ADR-024](adr/ADR-024.md): the HRV

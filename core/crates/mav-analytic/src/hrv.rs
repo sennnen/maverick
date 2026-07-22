@@ -70,7 +70,18 @@ pub fn time_domain(
     }
 
     accepted.sort_by_key(|(device_ns, seq, _)| (*device_ns, *seq));
-    let intervals: Vec<f64> = accepted.into_iter().map(|(_, _, rr_ms)| rr_ms).collect();
+    let ranged: Vec<f64> = accepted.into_iter().map(|(_, _, rr_ms)| rr_ms).collect();
+
+    // The range band alone is not enough. A missed or doubled beat lands inside 300..2000 ms and
+    // still produces one enormous successive difference, and RMSSD is the root mean square of
+    // those — a single artefact dominates the result. Against a live optical capture, skipping this
+    // reported an RMSSD around 600 ms where the truth was tens. The Malik local-median rejection is
+    // the second half of the rule `docs/protocol/whoop.md` already states.
+    let intervals = crate::stress::reject_ectopic(&ranged);
+    excluded += (ranged.len() - intervals.len()) as u32;
+    if intervals.len() < MIN_INTERVALS {
+        return None;
+    }
     let count = intervals.len();
     let mean = intervals.iter().sum::<f64>() / count as f64;
 
@@ -208,6 +219,41 @@ mod tests {
                 MetadataId::new(1)
             ),
             None
+        );
+    }
+
+    /// A doubled beat sits inside the 300..2000 ms band and still wrecks RMSSD, because one
+    /// enormous successive difference dominates the root-mean-square. Found against a live optical
+    /// capture that reported ~600 ms.
+    #[test]
+    fn a_single_ectopic_beat_does_not_dominate_rmssd() {
+        let series = |beats: &[u16]| -> Vec<Sample<RawValue>> {
+            beats
+                .iter()
+                .enumerate()
+                .map(|(i, &rr)| exact_rr(i as i64 * 1_000_000_000, i as u16, rr))
+                .collect()
+        };
+        let steady: Vec<u16> = (0..20)
+            .map(|i| if i % 2 == 0 { 900 } else { 950 })
+            .collect();
+        let clean = time_domain(&series(&steady), IntervalSource::Ppg, MetadataId::new(1))
+            .expect("a steady series has variability");
+        assert_eq!(clean.rmssd_ms, 50.0);
+
+        // Replace one beat with a doubled one; unfiltered this alone lifts RMSSD past 200 ms.
+        let mut artefact = steady.clone();
+        artefact[10] = 1_800;
+        let filtered = time_domain(&series(&artefact), IntervalSource::Ppg, MetadataId::new(1))
+            .expect("the rest of the series survives");
+        assert!(
+            filtered.rmssd_ms < 100.0,
+            "one artefact must not dominate; got {} ms",
+            filtered.rmssd_ms
+        );
+        assert!(
+            filtered.excluded_count >= 1,
+            "and the rejected beat must be counted, never silently dropped"
         );
     }
 

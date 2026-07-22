@@ -1,5 +1,9 @@
 package com.sennnen.mav.ui
 
+import android.content.Intent
+import android.widget.Toast
+import androidx.core.content.FileProvider
+import java.io.File
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +21,7 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.GppGood
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material3.Button
@@ -62,6 +67,7 @@ fun DevicesScreen(vm: AppViewModel, onChooseConnectorFile: () -> Unit) {
     val discoveredDevices by manager.discoveredDevices.collectAsStateWithLifecycle()
     var remoteUrl by remember { mutableStateOf("") }
     val palette = Aura.palette
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     AuraScreen(lead = AuraFamily.HEART) {
         Column(
@@ -140,10 +146,38 @@ fun DevicesScreen(vm: AppViewModel, onChooseConnectorFile: () -> Unit) {
                         append(it)
                         connection.heartRateBpm?.let { bpm -> append(" · $bpm bpm") }
                         connection.batteryPercent?.let { battery -> append(" · $battery%") }
+                        // Absent stays absent: no last-known value presented as current.
+                        connection.onWrist?.let { worn ->
+                            append(if (worn) " · on wrist" else " · off wrist")
+                        }
+                        connection.lastSampleWallTimeMs?.let { at ->
+                            append(" · last ${sampleAge(at)}")
+                        }
+                        if (connection.samplesPersisted > 0 || connection.samplesDuplicate > 0) {
+                            append(" · ${connection.samplesPersisted} stored")
+                            if (connection.samplesDuplicate > 0) {
+                                append(", ${connection.samplesDuplicate} already held")
+                            }
+                        }
                         connection.errorMessage?.let { error -> append(" · $error") }
                     },
                 )
             }
+
+            // Diagnostics: counts and hashes, never sample values, so sharing it is safe as it
+            // stands. Native share sheet — the platform already has one.
+            AuraSectionHeader(title = "Diagnostics")
+            StatusCard(
+                icon = { Icon(Icons.Filled.BugReport, contentDescription = null) },
+                title = "Export diagnostics",
+                body = "Recent pipeline activity, the session's trace hash, and how many samples " +
+                    "were stored. No readings are included.",
+                action = {
+                    OutlinedButton(onClick = { shareDiagnostics(context, manager) }) {
+                        Text("Export")
+                    }
+                },
+            )
 
             if (connection.lifecycle == ConnectorLifecycleState.SCANNING) {
                 AuraSectionHeader(title = "Nearby")
@@ -377,5 +411,46 @@ private fun StatusCard(
             }
             action?.invoke()
         }
+    }
+}
+
+/** How long ago the newest stored sample landed, in the coarsest unit that is still true. */
+private fun sampleAge(wallTimeMs: Long): String {
+    val seconds = ((System.currentTimeMillis() - wallTimeMs) / 1000L).coerceAtLeast(0L)
+    return when {
+        seconds < 60 -> "just now"
+        seconds < 3_600 -> "${seconds / 60}m ago"
+        seconds < 86_400 -> "${seconds / 3_600}h ago"
+        else -> "${seconds / 86_400}d ago"
+    }
+}
+
+/**
+ * Write the core's report bundle to the cache and hand it to the share sheet, reusing the
+ * FileProvider the report export already declares.
+ */
+private fun shareDiagnostics(
+    context: android.content.Context,
+    manager: com.sennnen.mav.connector.AndroidConnectorManager,
+) {
+    val json = manager.reportBundleJson()
+    if (json == null) {
+        Toast.makeText(context, "No runtime open yet.", Toast.LENGTH_SHORT).show()
+        return
+    }
+    runCatching {
+        val dir = File(context.cacheDir, "reports").apply { mkdirs() }
+        val file = File(dir, "maverick-diagnostics.json")
+        file.writeText(json)
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "application/json"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, "Maverick diagnostics")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(send, "Share diagnostics"))
+    }.onFailure {
+        Toast.makeText(context, "Couldn't export: ${it.message}", Toast.LENGTH_LONG).show()
     }
 }

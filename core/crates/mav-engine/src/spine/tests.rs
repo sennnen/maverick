@@ -39,10 +39,24 @@ fn sample(kind: StreamKind, wall_ns: i64, value: RawValue, seq: u16) -> Sample<R
     }
 }
 
-/// A day with heart rate and a variability-bearing interval series. RR values alternate so the
-/// successive differences are non-zero and RMSSD is a real number rather than an artefact of
-/// identical beats.
+/// A day shaped like real hardware: heart rate once a minute, and intervals in bursts — a short
+/// four-beat burst most minutes, plus one sustained sixty-beat run. Values alternate 900/950 ms so
+/// every successive difference inside a run is exactly 50 ms.
+///
+/// The bursts are the point. On a real strap they arrive minutes apart, and differencing the last
+/// beat of one against the first of the next is not a beat-to-beat change; a day-wide calculation
+/// over these samples reports an RMSSD roughly ten times the truth.
 fn seed_day(store: &Store, device: DeviceId, day_start_ns: i64) {
+    let write_interval = |at: i64, index: i64| {
+        let interval = if index % 2 == 0 { 900u16 } else { 950 };
+        store
+            .insert_sample(
+                device,
+                &sample(StreamKind::RrInterval, at, RawValue::U16(interval), 0),
+            )
+            .expect("interval");
+    };
+
     for minute in 0..30i64 {
         let at = day_start_ns + minute * 60 * 1_000_000_000;
         store
@@ -57,19 +71,14 @@ fn seed_day(store: &Store, device: DeviceId, day_start_ns: i64) {
             )
             .expect("heart rate");
         for beat in 0..4i64 {
-            let interval = if beat % 2 == 0 { 900u16 } else { 950 };
-            store
-                .insert_sample(
-                    device,
-                    &sample(
-                        StreamKind::RrInterval,
-                        at + beat * 1_000_000_000,
-                        RawValue::U16(interval),
-                        (minute * 4 + beat) as u16,
-                    ),
-                )
-                .expect("interval");
+            write_interval(at + beat * 1_000_000_000, beat);
         }
+    }
+
+    // One sustained run, an hour into the day, one beat per second.
+    let run_start = day_start_ns + 3_600 * 1_000_000_000;
+    for beat in 0..60i64 {
+        write_interval(run_start + beat * 1_000_000_000, beat);
     }
 }
 
@@ -97,10 +106,17 @@ fn a_golden_day_produces_pinned_values() {
     // "Current" is the latest by device time: minute 29, so 58 + (29 % 5) = 62.
     assert_eq!(snapshot.heart_rate.current_bpm, Some(62));
 
-    // 120 intervals alternating 900/950 ms: mean 925, and every successive difference is 50 ms, so
-    // RMSSD is exactly 50 and none of them exceeds the 50 ms NN50 threshold.
-    let hrv = snapshot.hrv.as_ref().expect("a day of intervals has HRV");
-    assert_eq!(hrv.interval_count, 120);
+    // Variability comes from the longest run of genuinely successive beats — the sixty-beat one,
+    // not the day's 180 scattered intervals. Alternating 900/950 gives a mean of 925 and a
+    // successive difference of exactly 50 ms every time.
+    let hrv = snapshot
+        .hrv
+        .as_ref()
+        .expect("a day with a sustained run has variability");
+    assert_eq!(
+        hrv.interval_count, 60,
+        "the four-beat bursts must not be spliced into the sustained run"
+    );
     assert_eq!(hrv.excluded_count, 0);
     assert_eq!(hrv.mean_interval_ms, 925.0);
     assert_eq!(hrv.rmssd_ms, 50.0);
@@ -117,6 +133,41 @@ fn a_golden_day_produces_pinned_values() {
         .collect();
     assert!(ids.contains(&HR_FEATURE_ALGORITHM));
     assert!(ids.contains(&HRV_ALGORITHM));
+}
+
+/// The failure real hardware exposed: RR arrives in bursts minutes apart, and treating a day of
+/// them as one series differences beats that never followed one another. Against a live WHOOP MG
+/// capture that reported an RMSSD of 476 ms — roughly ten times any plausible value.
+#[test]
+fn intervals_from_separate_bursts_are_never_differenced_against_each_other() {
+    let store = Store::open_in_memory().expect("store");
+    let device = DeviceId::new(7);
+    // Two beats a second apart, then a burst three minutes later. The within-burst difference is
+    // 50 ms; the across-burst one would be 600 ms.
+    for (offset_ms, interval) in [(0i64, 900u16), (1_000, 950), (180_000, 350), (181_000, 400)] {
+        store
+            .insert_sample(
+                device,
+                &sample(
+                    StreamKind::RrInterval,
+                    MIDNIGHT_NS + offset_ms * 1_000_000,
+                    RawValue::U16(interval),
+                    0,
+                ),
+            )
+            .expect("interval");
+    }
+
+    let spine = Spine::new(utc());
+    let day = LocalDay::of(WallTime::from_nanos(MIDNIGHT_NS), &utc());
+    let snapshot = spine.compute(&store, device, day).expect("compute");
+
+    // Two beats is not a variance estimate, and neither burst reaches the analytic's minimum, so
+    // the honest answer is no reading at all — not a number assembled across the gap.
+    assert!(
+        snapshot.hrv.is_none(),
+        "two-beat bursts must not be spliced into a four-interval series"
+    );
 }
 
 /// One night is not a baseline. Readiness stays absent rather than reporting a tier from a single

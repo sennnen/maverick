@@ -2,13 +2,20 @@
 
 Read this before you write anything that touches a WHOOP strap.
 
-Every fact here was reverse-engineered from two prior codebases and from packet captures. Not one
-line has been confirmed against a physical strap, because at the time of writing we have none; a
-WHOOP 4.0 and a 5.0/MG are on order. So each fact carries a confidence tag, and the tag is the most
-important thing on the line. When the straps arrive, verifying this document is a checklist, not an
-excavation: every tag that is not yet hardware-verified is an item to confirm or correct against a
-live capture. Do not treat a high-confidence tag as a settled fact; treat it as a strong prior that
-still owes a hardware check.
+Every fact here was reverse-engineered from two prior codebases and from packet captures. Each
+carries a confidence tag, and the tag is the most important thing on the line. Do not treat a
+high-confidence tag as a settled fact; treat it as a strong prior that still owes a hardware check.
+
+**The hardware epoch has begun.** A WHOOP MG now pairs, streams, and banks history through this
+pipeline: the first overnight capture (2026-07-21/22) holds roughly 26,000 samples across twelve
+streams. That changes this document's job. It was written when nothing here had touched a strap;
+verifying it is now a checklist to work through, not a wait. Every tag that is not yet
+hardware-verified is an item to confirm or correct against that capture and its successors, and
+`[HW]` no longer means "we cannot check this" — it means "we have not checked it yet."
+
+The first three corrections the live capture forced are recorded under the RR entry in
+[Unit conversions](#unit-conversions); the first is that a day of intervals is not one beat series,
+which no synthetic fixture could have shown.
 
 The tags:
 
@@ -529,7 +536,31 @@ packet type), so the manifest offset for `body[N]` is `N + 3`.
   Plausibility roughly `[30, 220]` bpm.
 - **RR:** whole milliseconds from gen4 and history; `raw * 1000 / 1024` ms from the GATT
   characteristic. Valid roughly `[300, 2000]` ms, then a Malik / Lipponen–Tarvainen ±20% ectopic
-  filter before any HRV is computed. [XVAL] The **four-slot cap is a historical-record layout fact,
+  filter before any HRV is computed. [XVAL] The filter is now applied inside the admitted
+  `time_domain` analytic; for a year it was documented and not implemented, and the range band alone
+  does not catch a doubled beat.
+
+### The first live capture — RR arrives in bursts, and it is noisy [HW]
+
+An overnight WHOOP MG session (2026-07-21/22, ~26,000 samples across twelve streams) settled three
+things no fixture could:
+
+1. **Intervals arrive in short bursts minutes apart**, not as a continuous series. Within a burst
+   samples are a second or less apart; between bursts, tens of seconds to minutes. Differencing
+   across a burst boundary compares two beats that never followed one another. A day-wide
+   calculation over that capture reported an RMSSD of **476 ms**. The spine now splits intervals
+   into runs (a gap over 3 s starts a new run) and computes variability over the longest run.
+2. **The range band is not enough.** Over the longest 54-beat run, RMSSD was still **603 ms** until
+   the Malik ectopic rejection above was applied, which brought it to **179 ms**.
+3. **Two thirds of the intervals in that run were rejected as ectopic** (54 → 18). The surviving
+   mean was 1,059 ms, about 57 bpm, which is plausible at rest — but a 67% rejection rate is not
+   explained. Either the optical interval path is genuinely this noisy at rest, or the gen5 RR
+   offsets are wrong. **Open, and the first thing to settle with the strap in hand.** The snapshot
+   carries `excluded_count` so the rate is visible rather than hidden inside a clean-looking number.
+
+The rest of that capture looks healthy: 4,231 heart-rate samples spanning 52–151 bpm with a mean of
+81, plus gravity, step count, sleep state, skin temperature, signal quality, activity class, and
+PPG. That is the corpus the hardware epoch's checklist should be verified against. The **four-slot cap is a historical-record layout fact,
   not a protocol one**: a realtime type-40 burst declares one interval per beat since the last
   packet and is unbounded. Capping it there silently discards beats and biases every variability
   metric computed downstream. [WRS]

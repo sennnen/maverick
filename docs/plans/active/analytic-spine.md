@@ -242,6 +242,17 @@ it is not the duplicate the packet assumed. Both want their own packet against r
   them blind would mean shipping app changes whose test output nobody has read, against the standing
   rule that a gate is verified by reading its output rather than trusting it. The contract they build
   against is frozen, which is the part that had to happen first.
+- **The first live capture corrected the spine twice, and neither error was visible in a fixture.**
+  A WHOOP MG streamed an overnight session through this pipeline — roughly 26,000 samples across
+  twelve streams — and the day's variability came out at an RMSSD of 476 ms. Two causes: RR arrives
+  in bursts minutes apart, so a day-wide calculation differences beats that never followed one
+  another (the spine now splits into runs and uses the longest); and the Malik ectopic rejection
+  that `docs/protocol/whoop.md` has always specified was never implemented, so a doubled beat inside
+  the range band dominated the root-mean-square (`time_domain` now applies it, reusing the
+  implementation `stress.rs` already had). 476 → 603 over the longest run → 179 ms cleaned.
+  **Still open:** two thirds of the intervals in that run were rejected as ectopic. Either the
+  optical path is this noisy at rest or the gen5 RR offsets are wrong, and that is a hardware
+  question, not a tuning one. `excluded_count` makes the rate visible instead of hiding it.
 - **The freeze is deliberately narrow on timezones.** The platforms supply offset spans and nothing
   else. It is the one place a platform feeds an analytic input, and a span is a fact about the world
   rather than a judgement about health data — the distinction that keeps "Rust owns analytics" true

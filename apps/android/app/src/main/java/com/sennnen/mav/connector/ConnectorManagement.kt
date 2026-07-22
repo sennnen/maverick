@@ -95,6 +95,11 @@ data class ConnectorConnectionState(
     val batteryPercent: Int? = null,
     val onWrist: Boolean? = null,
     val lastSampleWallTimeMs: Long? = null,
+    /// Samples this session persisted, and samples it recognised as already held. The second
+    /// number is normal during a backfill; showing it is what makes a stuck sync distinguishable
+    /// from one that is recognising data it already has.
+    val samplesPersisted: Long = 0,
+    val samplesDuplicate: Long = 0,
     val errorMessage: String? = null,
 ) {
     companion object {

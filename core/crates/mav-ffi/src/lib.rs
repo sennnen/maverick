@@ -607,7 +607,14 @@ impl MavRuntime {
         })
     }
 
-    pub fn connector_telemetry(&self) -> Result<ConnectorTelemetrySnapshot, FfiError> {
+    /// The live readout for the open session.
+    ///
+    /// `now_ms` is what makes it live. A heart rate is a statement about this moment, so a reading
+    /// older than [`LIVE_HEART_RATE_WINDOW_MS`] is reported as absent rather than as the current
+    /// value — the newest row in the store is not the same claim as "your heart rate is this". A
+    /// battery percentage and a wrist flag are slow-moving device *state*, so they survive a longer
+    /// window and `last_sample_wall_time_ms` lets a screen say how old they are.
+    pub fn connector_telemetry(&self, now_ms: i64) -> Result<ConnectorTelemetrySnapshot, FfiError> {
         let session = self.connector_session_lock()?;
         let host = session.as_ref().ok_or_else(no_connector_session)?;
         let lifecycle = host.lifecycle_snapshot();
@@ -626,6 +633,10 @@ impl MavRuntime {
             .map(|time| time.as_nanos().div_euclid(1_000_000))
             .max();
 
+        let heart_rate = fresh(heart_rate, now_ms, LIVE_HEART_RATE_WINDOW_MS);
+        let battery = fresh(battery, now_ms, DEVICE_STATE_WINDOW_MS);
+        let wrist = fresh(wrist, now_ms, DEVICE_STATE_WINDOW_MS);
+
         Ok(ConnectorTelemetrySnapshot {
             connector_id,
             lifecycle: ConnectorLifecycleReport::from(lifecycle.clone()).lifecycle,
@@ -638,6 +649,25 @@ impl MavRuntime {
             last_sample_wall_time_ms,
         })
     }
+}
+
+/// How recent a heart-rate sample must be to be shown as the current one. Ninety seconds is
+/// several beats' worth of missed notifications, so a live link never flickers, and a strap that
+/// has stopped reporting goes blank instead of freezing on its last number.
+const LIVE_HEART_RATE_WINDOW_MS: i64 = 90_000;
+/// Battery and wrist state change slowly and remain true between readings, so they survive a much
+/// longer gap — but not an unbounded one, or a week-old percentage reads as current.
+const DEVICE_STATE_WINDOW_MS: i64 = 6 * 60 * 60 * 1_000;
+
+/// Keep a sample only if it is recent enough to still be a claim about now. A sample with no wall
+/// time was never placed on the clock and cannot be judged, so it is dropped.
+fn fresh(
+    sample: Option<Sample<mav_model::raw::RawValue>>,
+    now_ms: i64,
+    window_ms: i64,
+) -> Option<Sample<mav_model::raw::RawValue>> {
+    let at = sample.as_ref()?.wall_time?.as_nanos().div_euclid(1_000_000);
+    (now_ms.saturating_sub(at) <= window_ms).then_some(sample?)
 }
 
 fn snapshot_report(snapshot: &mav_engine::DailySnapshot) -> DailySnapshotReport {
