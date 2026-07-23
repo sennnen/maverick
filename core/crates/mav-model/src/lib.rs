@@ -11,7 +11,6 @@
 #![forbid(unsafe_code)]
 
 pub mod error;
-pub mod historical;
 pub mod ids;
 pub mod raw;
 pub mod stream;
