@@ -1,9 +1,18 @@
 # ECG-discovery lane — finding the MG's waveform on the wire
 
-The WHOOP MG carries a single-lead ECG. **No source has decoded it.** It is in no mapped record, no
-source has found the command or the record type that carries it, and we have no official app or
-subscription to observe doing it properly. This lane is genuine reverse-engineering on our own
-hardware, and it is written down as it goes because the failures are as informative as the wins.
+> **RESOLVED (2026-07-23). The ECG is decoded.** The raw AFE stream is started by **opcode `63` with a
+> `[0x01]` revision byte** — not `START_RAW_DATA` (81), which is accepted but silent, and not
+> `enable_raw_data_w_ecg`, which is not a config key on this firmware. It produces packet type 43 at
+> **100 Hz**: three `u16` channels (two optical PPG, and the single-lead ECG between them, pinned by an
+> electrode-contact control capture). No subscription was needed — it was the wrong opcode all along.
+> The full, clean reference is **[`docs/protocol/whoop-raw-afe.md`](../../protocol/whoop-raw-afe.md)**;
+> the decoder shipped in `whoop-protocol::realtime_raw`. The narrative below is kept as the record of
+> how it was cracked (and of the two red herrings that cost the most time).
+
+The WHOOP MG carries a single-lead ECG. When this lane opened, **no source had decoded it** — it was
+in no mapped record, no source had found the command or record type that carries it, and we had no
+official app or subscription to observe it properly. This lane is genuine reverse-engineering on our
+own hardware, written down as it goes because the failures are as informative as the wins.
 
 Everything here runs against the user's own strap under the repository's standing refusal set: the
 destructive opcodes (trim, DFU) are never sent, and the only persistent write is a config flag that

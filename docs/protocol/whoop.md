@@ -233,7 +233,7 @@ The subset both codebases agree on is high confidence: [XVAL]
 | 23 | historical_data_result (cursor acknowledgement; does not delete) |
 | 26 | get_battery_level |
 | 34 | get_data_range |
-| 63 | send_r10_r11_realtime (type-43 raw stream on/off) |
+| 63 | **start raw AFE stream** — sent `[0x01]`, this is the real ECG/PPG trigger, `[HW]` (see `whoop-raw-afe.md`) |
 | 145 | get_hello (gen5 handshake) |
 
 The gen5 deep-data unlock (the R22 path) is a feature-flag channel rather than a single opcode.
@@ -693,13 +693,17 @@ the only MG-only behaviour at the BLE level. [SERIES] The hardware behind the by
 because every decoded field traces to one of these: an Ambiq Apollo4 Blue MCU, a Maxim MAX86176
 optical front-end, a TDK ICM45686 six-axis IMU, and an ams AS6221 skin-temperature sensor. [SERIES]
 
-**Hardware-verified from our own MG (firmware 50.33.2.0):** the strap answers the gen5 hello with
-`MGB0261172` and its firmware quad, so the identity path is confirmed. Setting
-`enable_raw_data_w_ecg` and sending `START_RAW_DATA` produced **no type-43 frames and no response at
-all** — with the strap off the wrist, which is very likely the reason. The live investigation and
-its next steps live in `docs/plans/active/ecg-discovery.md`. [HW]
+**Solved on our own MG (firmware 50.33.2.0): the ECG/PPG raw stream is started by opcode `63` with a
+`[0x01]` revision byte — not by `START_RAW_DATA` (81).** 81 is accepted but streams nothing, and
+`enable_raw_data_w_ecg` is not a config key on this firmware at all (the 14-key table is enumerated in
+`whoop-raw-afe.md`). Opcode 63 was in the table above the whole time as "type-43 raw stream on/off"; it
+just needed the revision byte every other command on this firmware wants. It produces packet type 43
+`REALTIME_RAW_DATA` at **100 Hz**: three `u16` channels — two optical PPG and, between them, the
+single-lead ECG electrode, identified by an electrode-contact control capture. **Full frame format,
+channel map, sample rate, config table, and the blood-pressure finding are in
+[`whoop-raw-afe.md`](whoop-raw-afe.md).** [HW]
 
-None of the five sources has decoded the ECG waveform. It is not in any mapped record, and no source
+The ECG waveform is now decoded here for the first time; historically none of the five sources had. It
 has found the command or the record type that carries it. So the honest state is: **the MG has ECG
 hardware, and reading its waveform over Bluetooth is unsolved as far as we know.** Finding it will
 need our own MG, an on-wrist ECG session captured while the official app records one, and the same
