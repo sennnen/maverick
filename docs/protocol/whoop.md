@@ -243,8 +243,15 @@ fuller key-exchange chain of 117 (start), 118 (send next), and 120 (set). R22 is
 capability (packet `0x10`), gated by capability rather than by any one opcode. [ONE each, and the
 two accounts are consistent with one another]
 
-**Hardware, and the firmware says it out loud: 117 and 118 need a revision byte, and we send them
-empty.** [HW] A live MG console reports
+**Solved on hardware: the config key exchange is `117 [0x01]` then `118 [0x01]` per key.** [HW]
+Revision `0x01` is the only accepted value — 2 through 8 all answer `Unknown(0)`. `117 [0x01]`
+answers `Ok` with the key count in its body (`0x0e` = 14 on firmware 50.33.2.0), and each
+`118 [0x01]` answers `Ok` with one config key's **name**; the first returned is `general_ab_test`,
+one of the firmware-only flags absent from the R22 sequence. So 118 enumerates the firmware's real
+config table, and a `SET_CONFIG` for a key the firmware has not announced that way is refused —
+which is why five R22 flags failed, `enable_raw_data_w_ecg` among them.
+
+The original symptom, for the record: A live MG console reports
 
 ```
 BLE_CMD: WSBLE_CMD_START_DEVICE_CONFIG_KEY_EX unsupported revision:0

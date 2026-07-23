@@ -174,6 +174,51 @@ accepted flags from the rejected ones. Read at the old offset (inner `[3]`) it i
 
 Keep the console diagnostic on throughout. It has already earned its place twice.
 
-**Status: open, and much better posed than it was.** Not "where is the ECG hidden" but "why does the
-config key exchange refuse revision 0" — a question the strap answers out loud every time it is
-asked.
+## Run 4 — the config key exchange is open
+
+Swept revision bytes 1..8 across opcodes 117 and 118 in one session. The answer is **revision
+`0x01`**, and it is unambiguous:
+
+```
+sending opcode 117 revision 1  →  Ok   24 be 75 15 01 01 0e 00
+sending opcode 118 revision 1  →  Ok   24 bf 76 16 01 01 00 01 "general_ab_test"
+sending opcode 117 revision 2  →  Unknown(0)
+… 3, 4, 5, 6, 7, 8            →  Unknown(0)
+```
+
+Two facts fall straight out:
+
+- **`117 [0x01]` opens the exchange** and answers with `0x0e` = **14** in its body — the number of
+  config keys the firmware holds.
+- **`118 [0x01]` walks the table**, answering with one key's **name** per call. The first is
+  `general_ab_test` — which is in the oracle's `FIRMWARE_ONLY_FLAGS`, the set deliberately absent
+  from the R22 sequence. So 118 enumerates the firmware's real config table, and
+  `enable_raw_data_w_ecg` is in that table.
+
+This explains every earlier failure. With an empty body the strap reads revision 0, refuses both
+(`unsupported revision:0` on the console), the exchange never opens, and SET_CONFIG for any key the
+firmware has not announced through 118 is rejected — which is exactly the five R22 flags that
+failed, `enable_raw_data_w_ecg` among them.
+
+The sweep also spoiled its own success: having opened the exchange with revision 1 it immediately
+sent revisions 2..8, which the strap refused, closing it again. The corrected sequence is in
+v1.902.0: `117 [0x01]` once, then `118 [0x01]` repeatedly to walk all fourteen keys, **then** the
+ECG flag, **then** `START_RAW_DATA`.
+
+## The next run, and it is a short one
+
+v1.902.0 is built, signed, and on the phone at `/sdcard/Download/whoop5-ecg-probe.mavconn`. Install
+it (Devices → Choose .mavconn document → approve), connect, and read the journal. What to look for:
+
+1. **The fourteen key names**, from the `118 next key #N` responses. This is the firmware's own
+   config table — the first time anyone has enumerated it — and it will confirm the exact spelling
+   of the ECG key.
+2. **Whether `enable_raw_data_w_ecg` now returns `Ok`** instead of `Unknown(0)`.
+3. **Whether packet 43 appears** once the flag takes and `START_RAW_DATA` runs.
+
+Wear the strap with a finger on the electrode for the last one; the wear marker now reports honestly,
+so the diagnostics line will say `on wrist` when the circuit is right.
+
+**Status: open, and one step from the answer.** The question is no longer "where is the ECG hidden"
+or even "what revision" — it is "does the ECG key take once the exchange is open", and that is one
+install away.
