@@ -86,17 +86,18 @@ android {
             buildConfigField(
                 "String",
                 "MAV_CONNECTOR_REGISTRY_ROOT_PUBLIC_KEY_HEX",
-                "\"84167d0a028be2cf2759ec87199f7ecf40f2819e8a7a547d2b7e338c31d1fbbb\"",
+                "\"7be29b98ba0937eadfa1fc1b47931f05dfce49faeee896c0f40c24a78d649fe6\"",
             )
-            buildConfigField("String", "MAV_CONNECTOR_PUBLISHER_KEY_ID", "\"maverick-whoop-test\"")
+            buildConfigField(
+                "String", "MAV_CONNECTOR_PUBLISHER_KEY_ID", "\"maverick-whoop-live-test\"")
             buildConfigField(
                 "String",
                 "MAV_CONNECTOR_PUBLISHER_PUBLIC_KEY_HEX",
-                // Local dev-loop key: original test signer's private key isn't recoverable on
-                // this machine. Swapped to a throwaway Ed25519 keypair generated for this
-                // session so freshly rebuilt whoop4/whoop5 test artifacts can be sideloaded and
-                // verified again. Not a production/distribution key.
-                "\"04797a44551f1f41f977cae6227c867ec42dba22b4088704505aff7bfa287e4b\"",
+                // Committed TEST publisher key (Ed25519 seed [151;32]) shared by every surface and
+                // reproduced by maverick-connectors/tools/testsign.py. It signs the dev-registry
+                // artifacts and locally sideloaded rebuilds alike. DEVELOPMENT scope only; every
+                // production policy refuses it. Not a distribution key.
+                "\"e1b71abfd3232804261e423f36556f6b4185bed41fdfd00d769ce15a394f43ce\"",
             )
         }
         release {

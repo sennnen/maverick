@@ -96,7 +96,7 @@ mod tests {
         artifacts.sort();
         assert!(!artifacts.is_empty(), "no packaged artifacts to replay");
         // The replay engine names no device: it exercises whatever the fixture directory carries.
-        let key = "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd";
+        let key = "e1b71abfd3232804261e423f36556f6b4185bed41fdfd00d769ce15a394f43ce";
         for artifact in artifacts {
             let replay = replay_file(&artifact, decode_public_key(key).unwrap()).unwrap();
             assert!(!replay.connector_id.is_empty());

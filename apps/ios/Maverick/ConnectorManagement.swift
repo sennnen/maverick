@@ -318,9 +318,8 @@ struct ConnectorReleasePolicy {
   }
 
   static func development(nowMs: Int64) -> ConnectorReleasePolicy {
-    let publisher = Data(base64Encoded: "3+8dkqaFyd9iO4oyF0CwpZ3g3lOLv+qd23AzlKHg9b0=") ?? Data()
-    let livePublisher = Data(base64Encoded: "1C5+7VPZq+m9LpP41yvXobJUOado7z6r76CpxXBqpdI=") ?? Data()
-    let registryRoot = Data(base64Encoded: "hBZ9CgKL4s8nWeyHGZ9+z0DygZ6KelR9K34zjDHR+7s=") ?? Data()
+    let livePublisher = Data(base64Encoded: "4bcav9MjKAQmHkI/NlVva0GFvtQf39ANdpzhWjlPQ84=") ?? Data()
+    let registryRoot = Data(base64Encoded: "e+KbmLoJN+rfofwbR5MfBd/OSfru6JbA9Awkp41kn+Y=") ?? Data()
     return ConnectorReleasePolicy(
       managerEnabled: true,
       remoteImportEnabled: true,
@@ -329,15 +328,6 @@ struct ConnectorReleasePolicy {
         allowThirdParty: false,
         allowDevelopment: true,
         keys: [
-          ConnectorPublisherKey(
-            id: "maverick-whoop-test",
-            publicKey: publisher,
-            scope: .development,
-            validFromMs: 0,
-            validUntilMs: nil,
-            status: .active,
-            statusAtMs: nil,
-            statusDetail: nil),
           ConnectorPublisherKey(
             id: "maverick-whoop-live-test",
             publicKey: livePublisher,

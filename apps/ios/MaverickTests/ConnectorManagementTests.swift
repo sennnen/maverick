@@ -111,7 +111,7 @@ final class ConnectorManagementTests: XCTestCase {
   func testDevelopmentPolicyPinsSignedRegistryAndOfficialPublisher() {
     let policy = ConnectorReleasePolicy.development(nowMs: 100)
     XCTAssertEqual(policy.trust.keys.count, 1)
-    XCTAssertEqual(policy.trust.keys.first?.id, "maverick-whoop-test")
+    XCTAssertEqual(policy.trust.keys.first?.id, "maverick-whoop-live-test")
     XCTAssertEqual(policy.trust.keys.first?.publicKey.count, 32)
     XCTAssertEqual(policy.registry?.root.registryId, "dev.maverick.connectors")
     XCTAssertEqual(policy.registry?.root.keyId, "registry-root-v1")

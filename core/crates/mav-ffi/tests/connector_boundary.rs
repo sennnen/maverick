@@ -129,9 +129,9 @@ fn packaged_trust(public_key_hex: &str) -> (ConnectorTrustPolicy, ConnectorTrust
 }
 
 /// The development publisher identity the packaged fixtures are signed under.
-const PUBLISHER_KEY_ID: &str = "maverick-whoop-test";
+const PUBLISHER_KEY_ID: &str = "maverick-whoop-live-test";
 const PUBLISHER_PUBLIC_KEY: &str =
-    "dfef1d92a685c9df623b8a321740b0a59de0de538bbfea9ddb703394a1e0f5bd";
+    "e1b71abfd3232804261e423f36556f6b4185bed41fdfd00d769ce15a394f43ce";
 
 fn packaged_dir() -> std::path::PathBuf {
     std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../fixtures/connectors")
@@ -470,7 +470,7 @@ fn drive_one_packaged_connector(bytes: Vec<u8>) {
         ConnectorLifecycleState::Configuring
     );
     let mut configured_writes = 0;
-    for sequence in 0..16 {
+    for sequence in 0..32 {
         let actions = runtime
             .drain_connector_actions(32)
             .expect("configuration actions");

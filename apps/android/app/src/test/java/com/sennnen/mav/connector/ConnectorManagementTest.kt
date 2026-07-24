@@ -79,7 +79,7 @@ class ConnectorManagementTest {
         assertEquals(32, registry.root.publicKey.size)
         val keys = AndroidConnectorTrust.configuredKeys()
         assertEquals(
-            setOf("maverick-whoop-test", "maverick-whoop-live-test"),
+            setOf("maverick-whoop-live-test"),
             keys.map { it.id }.toSet(),
         )
         assertTrue(keys.all { it.publicKey.size == 32 })
