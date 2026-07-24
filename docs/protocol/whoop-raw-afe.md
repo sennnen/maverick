@@ -19,6 +19,9 @@ this repo (`whoop-mg-android/`); a memory note records the paths.
 - The stream is packet type **43 `REALTIME_RAW_DATA`**, two interleaved subtypes, **one pair per
   second**.
 - Subtype **v0x0a** (1920 B) carries **three 100-sample `u16` channels at 100 Hz**: PPG, **ECG**, PPG.
+- Subtype **v0x0b** (1924 B) carries **three 25-sample signed `i32` channels at 25 Hz** — the pulse-ox
+  triad **red + IR + ambient** (identified with light controls; see below).
+- The stream is **wear-gated**: it stops ~2–3 s after the strap decides it is off-wrist.
 - Stop with opcode `82` (`[0x01]`), or just drop the link.
 
 ## The command
@@ -54,9 +57,9 @@ Three contiguous **100-sample little-endian `u16`** channels at fixed byte offse
 
 | Channel | Offset | Baseline (worn) | Identity |
 |---------|--------|-----------------|----------|
-| PPG A | `0x055` | ~470 | optical |
+| PPG A | `0x055` | ~470 | optical — green HR PPG (inferred; see *Green and yellow* below) |
 | **ECG** | `0x11d` | ~1220 | **single-lead electrode** |
-| PPG B | `0x1e5` | ~3900 | optical |
+| PPG B | `0x1e5` | ~3900 | optical — green HR PPG (inferred) |
 
 100 samples per one-second frame ⇒ **100 Hz** per channel. Sample *i* is at
 `unix_time * 1000 + i * 10` ms. After the channels come two ~25-sample `u32` blocks (≈25 Hz derived
@@ -68,11 +71,60 @@ electrode *floating* the same channel rails between the ADC extremes (0 ↔ ~400
 explodes (σ ≈ 475 vs 99). The two optical channels barely move either way — they only need skin
 proximity, not the electrode. That flip *is* the proof of which channel is the ECG lead.
 
-### Subtype v0x0b (not decoded)
+### Subtype v0x0b — the pulse-ox triad (25 Hz)
 
-1924 B, `u32` optical channels (~449k, ~414k baselines) — full-resolution / DC AFE data. Left
-undecoded on purpose: no derived-metric maths are done on-strap, so the raw channels are surfaced and
-the interpretation is deferred to the host.
+Three **25-sample signed little-endian `i32`** channels at fixed offsets in the otherwise
+zero-padded 1924 B payload. 25 samples per one-second frame ⇒ **25 Hz** each. They are exactly the
+channels a reflectance pulse oximeter needs — two illuminating LEDs plus an ambient reference:
+
+| Channel | Offset | On-skin baseline | Identity | Confidence |
+|---------|--------|------------------|----------|------------|
+| A | `0x026` | ~+250k | **RED PPG** (~660 nm) | `[HW]` |
+| B | `0x0ee` | ~+180k | **IR PPG** (~940 nm) | `[HW]` |
+| C | `0x6b9` | ~+300k | **ambient-light reference** | `[HW]` |
+
+The samples are **signed**. On skin they sit positive; off skin, channels A and B rail to a
+**negative** floor (~−100k), so a decoder must read `i32`, not `u32`. (An earlier draft of this
+document called them `u32` — that was wrong.)
+
+**How the three were told apart — two lighting controls on a worn strap.**
+
+- *Reflective LED vs ambient (finger-press / air-dip).* Pressed to skin, A and B carry a positive,
+  pulsatile PPG and are highly correlated (r ≈ 0.95); lifted into open air they both rail to ~−100k
+  (an ambient-subtracted reading over-subtracts when there is no LED backscatter). C does the
+  opposite — low when skin blocks the room, then **floods to tens of millions in open air** — the
+  signature of an ambient-light photodiode, not a reflective channel.
+- *Red vs IR (940 nm remote).* Firing a TV remote (≈940 nm) at the sensor moves **B about five times
+  more than A** (Δ ≈ +170k vs +32k; correlation with the ambient channel 0.60 vs 0.44). B's band
+  passes 940 nm and A's rejects it, so **B is IR and A is red**. Broadband C spikes on the remote too.
+
+So v0x0b is the **SpO2 / pulse-ox measurement set** — red + IR + an ambient reference, sampled slow
+and full-resolution, complementing v0x0a's 100 Hz HR/ECG path. Turning the raw counts into an SpO2
+percentage is a downstream calibration problem (it needs a reference oximeter), not a wire problem.
+
+### Wear-gating — the raw stream only runs when worn
+
+The strap **stops emitting the raw AFE stream within ~2–3 s of deciding it is off-wrist.** Fully
+removing it kills the stream after roughly one frame, so there is no way to capture a sustained
+off-skin trace by simply taking it off. The lab tool copes with a watchdog that re-fires opcode 63
+whenever frames stall, plus keeping the sensor lightly touched (a finger, or the wrist) so brief
+lifts ride the 2–3 s grace window. This gate is why the optical-identity controls above had to be run
+as quick press/lift cycles rather than a clean on/off.
+
+### Green and yellow — what the evidence does and does not show
+
+The firmware console names four optical sources — `red`, `green`, `opt_ir`, `opt_amb` — and **no
+`yellow`**. v0x0b accounts for red, IR and ambient, so **green is the remaining LED, and it lives in
+the v0x0a 100 Hz path**: green is the standard motion-robust heart-rate wavelength and 100 Hz is the
+HR rate, and v0x0a's optical channels do saturate under bright external light, confirming they are
+light-sensitive. That placement is a strong inference, not a direct wavelength measurement — an
+attempt to isolate green by pressing the sensor to a colour-cycling screen was confounded (pressing
+floods the ambient-subtracted channels so they rail regardless of colour, the strap's own LEDs
+reflect off the glass, and wear-gating cut the capture off after the green frame). Pinning the
+wavelength would need a *directional* green source, which the available kit (an IR remote and a
+UV/red/blue torch) lacks. **There is no evidence of a dedicated yellow channel** in the firmware
+strings or on the wire; on an RGB screen "yellow" is red+green light, so any yellow response is just
+the sum of the red and green channels.
 
 ## The firmware config table (14 keys)
 
@@ -114,16 +166,22 @@ which this stream now provides — so BP is a downstream signal-timing problem, 
 | Data | Rate | Where |
 |------|------|-------|
 | ECG (electrode) | **100 Hz** | v0a channel @ `0x11d` |
-| PPG A / PPG B | **100 Hz** | v0a channels @ `0x055` / `0x1e5` |
-| derived u32 blocks | ~25 Hz | v0a tail |
-| full-res u32 optical | per v0b | v0b (undecoded) |
+| HR PPG (green, inferred) | **100 Hz** | v0a channels @ `0x055` / `0x1e5` |
+| SpO2 red / IR / ambient | **25 Hz** | v0b `i32` channels @ `0x026` / `0x0ee` / `0x6b9` |
 | live HR (already emitted) | ~1 Hz | packet 40 `REALTIME_DATA`, byte 8 = bpm |
 
 ## Where this lives in code
 
-`maverick-connectors/crates/whoop-protocol/src/realtime_raw.rs` decodes the v0a frame
+`maverick-connectors/crates/whoop-protocol/src/realtime_raw.rs` decodes the **v0a** frame
 (`decode_realtime_raw` → `RawAfeFrame`) and defines `START_AFE_RAW` (63). The whoop5 connector emits
 `ecg` / `ppg-raw-a` / `ppg-raw-b` samples from it, behind the `ecg-probe` feature so release builds
 never stream raw (battery/bandwidth) and their signed artifacts stay byte-identical. The decoder is
 general to gen5, so the PPG path is expected to work on a non-MG WHOOP 5.0 as well (untested — no
 such unit available).
+
+The **v0b** pulse-ox triad above is documented but **not yet decoded in code** — the connector still
+routes only v0a. Adding it would be a small extension of `realtime_raw.rs` (three signed `i32`
+channels at the offsets in the table), gated behind the same `ecg-probe` feature; it is left until
+there is a consumer for raw SpO2 channels, per the standing rule of not surfacing raw streams that no
+host stage reads yet. Hardware notes and captures for all of the above live in the standalone
+`whoop-mg-android` lab tool, outside this repo.
