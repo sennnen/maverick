@@ -444,6 +444,28 @@ checks downloaded size/SHA-256 and runs ordinary publisher-signature inspection,
 installation. Channel selection and explicit downgrade policy use semantic versions. Direct URL,
 file, and share imports remain independent of registry availability.
 
+## Power policy
+
+The host states a power policy and each connector decides what to give up for it (ADR-030). The
+event is `EventBody::PowerModeChanged { low_power }`: it is sent on every change, and re-stated on
+activation and resume when low power is engaged. Full power is the connector's own default and is
+never restated, so a connector that has never seen the event behaves exactly as it always did — and
+an artifact built before the event existed keeps working unchanged.
+
+A connector in low power **must keep its primary vitals stream running**. What it may trade:
+
+- **Diagnostic subscriptions.** WHOOP 5.0/MG drops the console characteristic, which produces log
+  lines rather than samples. WHOOP 4.0 has no diagnostic-only characteristic, so it drops nothing.
+- **Historical offload cadence.** Both WHOOP connectors multiply their idle timer by five. History
+  is not time-critical, and this is the largest saving available that loses no data.
+- **Raw streams.** Raw AFE capture is already probe-only, so there is nothing to drop in a release
+  build.
+
+The policy is host-owned, not connector state: it is deliberately absent from every connector's
+snapshot, so a resumed or reinstalled connector is told again rather than remembering a stale value.
+The host does not verify what a connector actually gives up; "how much battery" is not something the
+ABI can measure, and a connector that ignores the event is correct but impolite.
+
 ## Platform policy
 
 iOS defaults to official reviewed publishers and may disable arbitrary URL/local activation if App

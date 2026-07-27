@@ -57,6 +57,8 @@ pub struct RuntimeConfig {
 pub struct MavRuntime {
     connectors: Mutex<mav_connector_store::ConnectorRepository>,
     connector_session: Mutex<Option<mav_engine::ConnectorHost>>,
+    /// Survives session teardown so a reconnect re-states the user's choice (ADR-030).
+    low_power: core::sync::atomic::AtomicBool,
     database_path: String,
     /// One long-lived connection for every read path. A session's host owns its own writer, so
     /// this is a second connection by design; what it replaces is opening a third on every poll.
@@ -204,6 +206,7 @@ impl MavRuntime {
         Ok(Arc::new(Self {
             connectors: Mutex::new(connectors),
             connector_session: Mutex::new(None),
+            low_power: core::sync::atomic::AtomicBool::new(false),
             reader: Mutex::new(reader),
             spine: Mutex::new(mav_engine::Spine::new(mav_engine::Timezone::fixed(
                 &config.timezone_id,
@@ -470,6 +473,12 @@ impl MavRuntime {
             },
         )?;
         host.set_tap(Arc::new(mav_obs::RingLogTap(Arc::clone(&self.ring))));
+        // Carry the user's power choice into the new session before it activates, so a reconnect
+        // never silently returns to full power (ADR-030).
+        host.set_low_power(
+            self.low_power.load(core::sync::atomic::Ordering::Relaxed),
+            Some(config.now_ms),
+        )?;
         host.start()?;
         let report = host.lifecycle_snapshot().into();
         let mut session = self.connector_session_lock()?;
@@ -669,6 +678,27 @@ impl MavRuntime {
     /// value — the newest row in the store is not the same claim as "your heart rate is this". A
     /// battery percentage and a wrist flag are slow-moving device *state*, so they survive a longer
     /// window and `last_sample_wall_time_ms` lets a screen say how old they are.
+    /// Trade data density for battery on both the phone and the strap (ADR-030). The connector
+    /// keeps its primary vitals stream either way; what it gives up is diagnostic subscriptions,
+    /// raw streams, and how often it pulls the historical offload.
+    ///
+    /// Applies to the running session and is stated again to any session started afterwards, so a
+    /// reconnect cannot silently return to full power. Returns whether the mode actually changed.
+    pub fn set_low_power(&self, low_power: bool, now_ms: i64) -> Result<bool, FfiError> {
+        self.low_power
+            .store(low_power, core::sync::atomic::Ordering::Relaxed);
+        let mut session = self.connector_session_lock()?;
+        let Some(host) = session.as_mut() else {
+            return Ok(true);
+        };
+        Ok(host.set_low_power(low_power, Some(now_ms))?)
+    }
+
+    /// The power policy currently in force, whether or not a session is running.
+    pub fn low_power(&self) -> bool {
+        self.low_power.load(core::sync::atomic::Ordering::Relaxed)
+    }
+
     pub fn connector_telemetry(&self, now_ms: i64) -> Result<ConnectorTelemetrySnapshot, FfiError> {
         let session = self.connector_session_lock()?;
         let host = session.as_ref().ok_or_else(no_connector_session)?;

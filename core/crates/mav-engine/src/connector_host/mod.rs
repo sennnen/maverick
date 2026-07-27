@@ -190,6 +190,9 @@ pub struct ConnectorHost {
     /// every commit buries everything else — a real capture wrote 495 duplicate notices in a
     /// 500-row window. One entry per order of magnitude keeps the fact and drops the noise.
     duplicates_journalled_at: u64,
+    /// Host power policy, mirrored to the connector as `PowerModeChanged` (ADR-030). Host-side, not
+    /// connector state: a reinstalled or resumed connector is told again rather than remembering.
+    low_power: bool,
 }
 
 mod actions;
@@ -264,6 +267,7 @@ impl ConnectorHost {
             samples_persisted: 0,
             samples_duplicate: 0,
             duplicates_journalled_at: 0,
+            low_power: false,
         })
     }
 
@@ -281,7 +285,41 @@ impl ConnectorHost {
         )?;
         self.lifecycle = ConnectorLifecycle::Selected;
         self.dispatch(EventBody::Activate, None, false, 0)?;
+        // Connectors start at full power, so only a low-power session needs stating (ADR-030).
+        // Sending the default would spend a connector's fuel to tell it what it already assumes.
+        if self.low_power {
+            self.dispatch(
+                EventBody::PowerModeChanged { low_power: true },
+                None,
+                false,
+                0,
+            )?;
+        }
         Ok(())
+    }
+
+    /// Set the host's power policy and tell the running connector. Returns whether it changed;
+    /// re-stating the current mode is a no-op rather than a redundant event.
+    pub fn set_low_power(&mut self, low_power: bool, wall_time_ms: Option<i64>) -> Result<bool> {
+        if self.low_power == low_power {
+            return Ok(false);
+        }
+        self.low_power = low_power;
+        if self.lifecycle == ConnectorLifecycle::Installed {
+            return Ok(true);
+        }
+        self.dispatch(
+            EventBody::PowerModeChanged { low_power },
+            wall_time_ms,
+            false,
+            0,
+        )?;
+        Ok(true)
+    }
+
+    /// The power policy currently in force.
+    pub fn low_power(&self) -> bool {
+        self.low_power
     }
 
     pub fn apply(
@@ -292,7 +330,21 @@ impl ConnectorHost {
         if !self.accept_event(&mut body, wall_time_ms)? {
             return Ok(ApplyOutcome::IgnoredLate);
         }
+        let resumed = matches!(body, EventBody::Resume);
         self.dispatch(body, wall_time_ms, false, 0)?;
+        // A resumed connector may have been rebuilt from a snapshot that never carried the power
+        // policy, so re-state it rather than making every connector persist a host-owned bit. As on
+        // activation, the default needs no restating.
+        if resumed && self.low_power {
+            self.dispatch(
+                EventBody::PowerModeChanged {
+                    low_power: self.low_power,
+                },
+                wall_time_ms,
+                false,
+                0,
+            )?;
+        }
         Ok(ApplyOutcome::Applied)
     }
 

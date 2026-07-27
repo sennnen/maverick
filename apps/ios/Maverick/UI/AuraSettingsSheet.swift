@@ -17,6 +17,8 @@ struct AuraSettingsSheet: View {
   @State private var showPairing = false
   @State private var showMigrate = false
   @AppStorage(AuraDataProtection.storageKey) private var fileProtectionOn = false
+  /// Battery saver, persisted so the choice survives a restart (ADR-030).
+  @AppStorage("aura.lowPowerEnabled") private var lowPowerOn = false
   @AppStorage(JournalReminder.enabledKey) private var journalReminderOn = false
   @AppStorage(JournalReminder.minutesKey) private var journalReminderMinutes = 8 * 60
   @State private var showHealth = false
@@ -37,6 +39,7 @@ struct AuraSettingsSheet: View {
           unitsSection
           deviceSection
           personalSection
+          batterySection
           systemHealthSection
           workoutHapticsSection
           notificationsSection
@@ -235,6 +238,29 @@ struct AuraSettingsSheet: View {
     case .unavailable: "Apple Health isn't available on this device."
     case .entitlementMissing: "This build can't talk to Apple Health (missing entitlement)."
     case .unknown: "Nothing is shared until you connect."
+    }
+  }
+
+  private var batterySection: some View {
+    group("Battery") {
+      HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 2) {
+          Text("Battery saver").font(AuraDesign.label).foregroundStyle(AuraDesign.ink.opacity(0.92))
+          Text("Syncs history less often and drops device diagnostics to save strap and phone battery. Live heart rate keeps working.")
+            .font(AuraDesign.caption).foregroundStyle(AuraDesign.ink.opacity(0.55))
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        Spacer()
+        Toggle("", isOn: Binding(
+          get: { lowPowerOn },
+          set: { on in
+            lowPowerOn = on
+            repo.setLowPower(on)
+          }))
+          .labelsHidden()
+          .tint(AuraDesign.Family.heart.glow)
+      }
+      .padding(.horizontal, 18).padding(.vertical, 11)
     }
   }
 

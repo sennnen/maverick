@@ -31,7 +31,10 @@ struct MaverickApp: App {
             connectors.importRemote(url)
           }
         }
-        .onAppear { repo.reload = { store.retry() } }
+        .onAppear {
+          repo.reload = { store.retry() }
+          repo.lowPowerSink = { connectors.setLowPower($0) }
+        }
         .onReceive(connectors.$connection) { connection in
           model.apply(connection: connection, to: live)
           if let device = connection.deviceID { connectors.refreshDays(deviceID: device) }

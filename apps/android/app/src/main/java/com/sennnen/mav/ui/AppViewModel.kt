@@ -115,6 +115,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Wrist haptics — no transport wiring in the host yet, so these are inert. */
     @Suppress("UNUSED_PARAMETER")
+    /**
+     * Trade data density for battery on both the phone and the strap (ADR-030). The core keeps the
+     * setting across sessions, so a reconnect does not quietly return to full power.
+     */
+    fun setLowPower(on: Boolean) {
+        runtime?.setLowPower(on, System.currentTimeMillis())
+    }
+
     fun buzz(loops: Int = 2) {}
 
     fun buzzStrapOnce() {}

@@ -432,6 +432,10 @@ final class ConnectorManager: ObservableObject {
   @Published private(set) var days: [DailySnapshotReport] = []
 
   private let worker: ConnectorRuntimeWorker
+
+  /// Battery saver (ADR-030). Routed to the core, which applies it to the live session and to any
+  /// session started afterwards.
+  func setLowPower(_ on: Bool) { worker.setLowPower(on) }
   private var inspection: ConnectorInspection?
   private var acquisition: ConnectorAcquisition?
   private lazy var bluetooth = MavBluetoothExecutor(
@@ -1146,6 +1150,17 @@ private final class ConnectorRuntimeWorker: @unchecked Sendable {
     perform(completion) { runtime in
       _ = try runtime.cancelConnectorSession(reason: .user, wallTimeMs: Self.nowMs)
       return try runtime.connectorTelemetry(nowMs: Self.nowMs)
+    }
+  }
+
+  /// Trade data density for battery on both phone and strap (ADR-030). Fire-and-forget: the core
+  /// keeps the setting for later sessions, so a failure here cannot desync the user's choice.
+  func setLowPower(_ on: Bool) {
+    queue.async { [weak self] in
+      guard let self else { return }
+      guard let runtime = try? (self.runtime ?? MavRuntime(config: self.config)) else { return }
+      self.runtime = runtime
+      _ = try? runtime.setLowPower(lowPower: on, nowMs: Self.nowMs)
     }
   }
 

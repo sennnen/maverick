@@ -6,11 +6,11 @@ connectors: tests install bytes through the public API, and WC-P12 proves no dev
 is linked into Maverick.
 
 - `generic_hr_v1.mavconn`: SHA-256
-  `33a7c5141295ef9d5c030cb0706963291c2ce432f9c82a1375367056730c26f2`.
+  `68386e9d4c34f901183a00b746f790925dce049f9ed5086569e477a4b484bc98`.
 - `whoop4_v1.mavconn`: SHA-256
-  `cbba766ea7c9e69b1025274cd56438fa53b78426469ab40b4d30b702af1055d8`.
+  `43039ce95960505f465ae6c11fb6014e97b3852d5d95add28f8f9a6a1e15ff14`.
 - `whoop5_v1.mavconn`: SHA-256
-  `4046f48d48c943b9e81f7db124a177922507d17dd00f6c76ddffa936cd8f58b4`.
+  `e9b5f0ee29c4836bf1013983bff2f82c2d6d6c932fd491a81a0606a6b31932d5`.
 - `*_parity_v1.expected.json`: canonical event, action, sample, final-state, fuel, and linear-memory
   results produced by `mavconn-test --report` from those exact bytes.
 

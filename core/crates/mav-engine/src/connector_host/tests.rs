@@ -781,3 +781,29 @@ fn every_stream_kind_has_a_wire_name() {
         assert_eq!(stream_contract(name).expect("parses"), (kind, *unit));
     }
 }
+
+#[test]
+pub(super) fn low_power_is_stated_on_activation_and_on_change_but_the_default_is_not() {
+    // Full power is the connector's own default, so a normal session must cost no extra event.
+    let mut normal = host(vec![empty(), empty(), empty()], 4);
+    normal.start().expect("start");
+    assert!(!normal.low_power());
+    assert!(
+        !normal.set_low_power(false, Some(1)).expect("no-op"),
+        "restating the current mode must not count as a change"
+    );
+
+    // Engaging it mid-session delivers exactly one event, which costs one scripted batch.
+    assert!(
+        normal.set_low_power(true, Some(2)).expect("engage"),
+        "engaging low power must report a change"
+    );
+    assert!(normal.low_power());
+
+    // A session that starts already in low power is told before it does anything else, so it never
+    // has to ask: Init, Activate, then the power statement.
+    let mut saver = host(vec![empty(), empty(), empty()], 4);
+    saver.set_low_power(true, None).expect("pre-set");
+    saver.start().expect("start in low power");
+    assert!(saver.low_power());
+}

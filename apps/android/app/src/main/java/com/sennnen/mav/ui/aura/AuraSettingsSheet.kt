@@ -173,6 +173,35 @@ fun AuraSettingsSheet(
         }
 
         // MARK: System health (plan Phase 4: master switch · status · deep links)
+        SettingsGroup("Battery") {
+            var lowPower by remember { mutableStateOf(AuraLowPowerPrefs.enabled(context)) }
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 11.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("Battery saver", style = AuraType.label, color = p.ink.copy(alpha = 0.92f))
+                    Text(
+                        "Syncs history less often and drops device diagnostics to save strap and " +
+                            "phone battery. Live heart rate keeps working.",
+                        style = AuraType.caption, color = p.ink.copy(alpha = 0.55f),
+                    )
+                }
+                Switch(
+                    checked = lowPower,
+                    onCheckedChange = { on ->
+                        lowPower = on
+                        AuraLowPowerPrefs.setEnabled(context, on)
+                        vm.setLowPower(on)
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedTrackColor = AuraFamily.HEART.glow,
+                        checkedThumbColor = Color.Black,
+                    ),
+                )
+            }
+        }
         SettingsGroup("System health") {
             val hcAvailable = remember {
                 com.sennnen.mav.ingest.HealthConnectImporter.sdkStatus(context) ==

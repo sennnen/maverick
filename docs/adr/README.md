@@ -28,3 +28,4 @@
 - [ADR-027](ADR-027.md) — Two interval streams, and the raw channels behind them
 - [ADR-028](ADR-028.md) — Clock placement is not a quality judgement
 - [ADR-029](ADR-029.md) — An all-integer sample table, indexed by wall time
+- [ADR-030](ADR-030.md) — Power mode is a host policy the connector obeys

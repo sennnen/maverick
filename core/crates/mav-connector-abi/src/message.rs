@@ -289,6 +289,15 @@ pub enum EventBody {
         #[n(0)]
         schema: u32,
     },
+    /// The host's power policy changed. A connector is expected to trade data density for battery
+    /// when `low_power` is set — longer offload cadence, no optional diagnostic subscriptions — and
+    /// to keep its primary vitals stream working either way. Delivered on activation and whenever
+    /// the user changes the setting, so a connector never has to ask. See ADR-030.
+    #[n(27)]
+    PowerModeChanged {
+        #[n(0)]
+        low_power: bool,
+    },
 }
 
 fn logical_id(value: &str, field: &'static str) -> Result<(), WireError> {
@@ -320,7 +329,8 @@ impl Validate for EventBody {
             | Self::StateCommitted { .. }
             | Self::SamplesCommitted { .. }
             | Self::SamplesRejected { .. }
-            | Self::StateMigrationCommitted { .. } => Ok(()),
+            | Self::StateMigrationCommitted { .. }
+            | Self::PowerModeChanged { .. } => Ok(()),
             Self::Cancel { reason } => reason.validate(),
             Self::RestoreState { bytes: value } => {
                 bounds::bytes(value, bounds::MAX_STATE_BYTES, "restore state bytes")

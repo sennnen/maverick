@@ -16,6 +16,13 @@ final class Repository: ObservableObject {
   /// Set by the app shell: re-reads the core snapshot (pull-to-refresh, tab reselect).
   var reload: @MainActor () -> Void = {}
 
+  /// Set by the app shell: routes the battery-saver toggle to the connector runtime (ADR-030).
+  /// A closure rather than a stored manager, so the read model keeps no connector dependency.
+  var lowPowerSink: @MainActor (Bool) -> Void = { _ in }
+
+  /// Trade data density for battery on both the phone and the strap.
+  @MainActor func setLowPower(_ on: Bool) { lowPowerSink(on) }
+
   /// Replace the day history from a core range read. Only the fields an admitted analytic
   /// produces are filled; the rest stay nil, which is what keeps the empty states honest.
   func acceptDays(_ snapshots: [DailySnapshotReport]) {
