@@ -1,17 +1,12 @@
 //! HRV readiness (WHOOP-P6, `[WRS]`): a log-domain rolling-baseline vs personal-normal-band
-//! reading over a nightly RMSSD series, plus the gap-aware, artifact-corrected RMSSD primitives it
-//! rests on. Distinct from the admitted Task-Force `time_domain` calculation in `hrv`: that one is
-//! the reference formula over one scored window; this one is the longitudinal readout — nightly
-//! RMSSD per UTC day, a 7-night baseline against a 30/60-night normal band (smallest-worthwhile-
-//! change, k = 0.5), and a tier. Returns `None` (calibrating) below `MIN_NIGHTS` valid nights.
-//! Wellness estimate, never medical.
+//! reading over a nightly RMSSD series. Distinct from the Task-Force `time_domain` calculation in
+//! `hrv`: that one is the reference formula over one scored window; this one is the longitudinal
+//! readout — a 7-night baseline against a 30/60-night normal band (smallest-worthwhile-change,
+//! k = 0.5) and a tier. The nightly RMSSD values it consumes come from [`crate::intervals`], the
+//! one place successive differences are taken. Wellness estimate, never medical.
 use serde::{Deserialize, Serialize};
 
 use crate::stats::{least_squares_slope, mean, sample_sd};
-use std::collections::BTreeMap;
-
-/// Seconds per calendar day, the bucket a nightly metric is keyed on.
-pub const SECS_PER_DAY: u32 = 86_400;
 
 const HRV_MIN_MS: f64 = 5.0;
 const HRV_MAX_MS: f64 = 250.0;
@@ -19,22 +14,13 @@ const ROLL_WINDOW: usize = 7;
 const LONG_WINDOW: usize = 60;
 const LONG_WINDOW_FALLBACK: usize = 30;
 const SWC_K: f64 = 0.5;
-// The readiness tier mirrors the vendor recovery score, which unlocks after 3 recoveries; the
-// 7-night baseline and long-window band keep refining past that.
-const MIN_NIGHTS: usize = crate::calibration::RECOVERY_SCORE.unlock as usize;
+/// The fewest nights for which every number in the result means what it says: the baseline is
+/// described as a seven-night one, so seven is the floor. This is a statistical minimum and
+/// deliberately not a product unlock schedule — `crate::calibration` holds those, and reading one
+/// as the other is how a display rule ends up deciding whether an estimator is defined.
+const MIN_NIGHTS: usize = ROLL_WINDOW;
 const CV_TREND_WINDOW: usize = 28;
 const LONG_SD_FLOOR: f64 = 1e-9;
-/// R-R records more than this many seconds apart start a new run (an offload gap breaks the beat
-/// chain).
-const MAX_GAP_S: u32 = 5;
-/// A physiologically plausible R-R interval (ms); values outside break the chain rather than
-/// inflate RMSSD.
-const RR_MIN_MS: u16 = 300;
-const RR_MAX_MS: u16 = 2000;
-/// A beat-to-beat R-R change beyond this (ms) is an artifact (ectopic/missed beat), not real
-/// variability, so its squared difference is dropped from RMSSD — the standard HRV
-/// artifact-correction step.
-const MAX_BEAT_DELTA_MS: f64 = 200.0;
 
 /// Where the short baseline sits vs the personal normal band.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -59,76 +45,6 @@ pub struct HrvReadinessResult {
 pub struct HrvReadiness;
 
 impl HrvReadiness {
-    /// Gap-aware, artifact-corrected RMSSD (ms): pools squared successive differences **within**
-    /// each run of consecutive beats, never across the break between runs, and drops any single
-    /// beat-to-beat change over `MAX_BEAT_DELTA_MS` (an ectopic/missed beat), so neither an
-    /// offload gap nor an artifact can inflate it. `None` if no run has two beats.
-    pub fn rmssd_runs<'a>(runs: impl IntoIterator<Item = &'a [u16]>) -> Option<f64> {
-        let (mut sumsq, mut pairs) = (0.0f64, 0usize);
-        for run in runs {
-            for w in run.windows(2) {
-                let d = f64::from(w[1]) - f64::from(w[0]);
-                if d.abs() > MAX_BEAT_DELTA_MS {
-                    continue;
-                }
-                sumsq += d * d;
-                pairs += 1;
-            }
-        }
-        (pairs > 0).then(|| (sumsq / pairs as f64).sqrt())
-    }
-
-    /// RMSSD (ms) of one run of consecutive R-R beats. `None` for fewer than 2 beats.
-    pub fn rmssd(rr_ms: &[u16]) -> Option<f64> {
-        Self::rmssd_runs(std::iter::once(rr_ms))
-    }
-
-    /// Gap-aware nightly RMSSD (ms) from one night's per-record `(unix, R-R)` beats. Splits them
-    /// into time-contiguous, physiologically-plausible runs (breaking on a gap over `MAX_GAP_S` or
-    /// an interval outside the plausible band) and pools only within-run successive differences.
-    /// Input need not be sorted. `None` if no run has two beats.
-    pub fn rmssd_gap_aware(beats: &[(u32, Vec<u16>)]) -> Option<f64> {
-        let mut order: Vec<&(u32, Vec<u16>)> = beats.iter().collect();
-        order.sort_by_key(|(t, _)| *t);
-        let mut runs: Vec<Vec<u16>> = Vec::new();
-        let mut cur: Vec<u16> = Vec::new();
-        let mut last: Option<u32> = None;
-        for (unix, rr) in order {
-            if last.is_some_and(|p| unix.saturating_sub(p) > MAX_GAP_S) {
-                runs.push(std::mem::take(&mut cur));
-            }
-            for &ms in rr {
-                if (RR_MIN_MS..=RR_MAX_MS).contains(&ms) {
-                    cur.push(ms);
-                } else {
-                    runs.push(std::mem::take(&mut cur));
-                }
-            }
-            last = Some(*unix);
-        }
-        runs.push(cur);
-        Self::rmssd_runs(runs.iter().map(Vec::as_slice))
-    }
-
-    /// Per-calendar-day gap-aware RMSSD series (ms) from `(unix, R-R)` beats, oldest → newest, for
-    /// `evaluate`. Groups records into UTC days, then applies `rmssd_gap_aware` per day. A sleep
-    /// that straddles UTC midnight is split across the two days.
-    pub fn nightly_rmssd(beats: &[(u32, Vec<u16>)]) -> Vec<Option<f64>> {
-        let mut by_day: BTreeMap<u32, Vec<(u32, Vec<u16>)>> = BTreeMap::new();
-        for (unix, rr) in beats {
-            if !rr.is_empty() {
-                by_day
-                    .entry(unix / SECS_PER_DAY)
-                    .or_default()
-                    .push((*unix, rr.clone()));
-            }
-        }
-        by_day
-            .values()
-            .map(|beats| Self::rmssd_gap_aware(beats))
-            .collect()
-    }
-
     /// Readiness over a nightly RMSSD series (ms), oldest → newest; `None` slots = missing
     /// nights. Implausible nights (outside 5..250 ms) are dropped. `None` result = calibrating.
     pub fn evaluate(nightly_rmssd_ms: &[Option<f64>]) -> Option<HrvReadinessResult> {
@@ -207,66 +123,6 @@ fn cv_slope(ell: &[f64]) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn rmssd_of_known_intervals() {
-        // successive diffs 10, 10 → mean square 100 → sqrt 10.
-        assert_eq!(HrvReadiness::rmssd(&[800, 810, 820]), Some(10.0));
-        assert_eq!(HrvReadiness::rmssd(&[800]), None);
-    }
-
-    #[test]
-    fn rmssd_runs_pools_within_runs_only() {
-        // Two runs; the break between them (810 → 100) must never be differenced.
-        let a: &[u16] = &[800, 810];
-        let b: &[u16] = &[100, 110];
-        assert!((HrvReadiness::rmssd_runs([a, b]).unwrap() - 10.0).abs() < 1e-9);
-        // No run with two beats → None.
-        assert_eq!(
-            HrvReadiness::rmssd_runs([[500u16].as_slice(), [600].as_slice()]),
-            None
-        );
-        assert_eq!(HrvReadiness::rmssd_runs(std::iter::empty::<&[u16]>()), None);
-    }
-
-    #[test]
-    fn rmssd_runs_excludes_artifact_beat_jumps() {
-        // A 900 ms jump in the middle (an ectopic/missed beat) must not inflate RMSSD; only the
-        // clean 10 ms diffs survive → ~10 ms, not the ~600 ms a raw pooling would give.
-        let run: &[u16] = &[600, 610, 1500, 610, 600];
-        let v = HrvReadiness::rmssd_runs([run]).unwrap();
-        assert!(
-            v < 20.0,
-            "artifact beat-to-beat jumps should be excluded, got {v}"
-        );
-    }
-
-    #[test]
-    fn nightly_rmssd_produces_one_gap_aware_value_per_day() {
-        // day 0: two contiguous records; day 1: one record with two beats.
-        let beats = vec![
-            (0u32, vec![600u16, 610]),
-            (1, vec![605, 615]),
-            (SECS_PER_DAY, vec![700, 720]),
-        ];
-        let series = HrvReadiness::nightly_rmssd(&beats);
-        assert_eq!(series.len(), 2);
-        assert!(series.iter().all(|v| v.is_some()));
-    }
-
-    #[test]
-    fn rmssd_gap_aware_breaks_on_time_gaps_and_artifacts() {
-        // Steady contiguous beats, then a far-away single beat (unsorted input) and an artifact
-        // interval.
-        let beats = vec![
-            (10_000u32, vec![1400u16]), // far gap isolates it into a lone 1-beat run
-            (0, vec![600, 610]),
-            (1, vec![605, 615]),
-            (2, vec![5, 620]), // the 5 ms artifact breaks the chain, the 620 survives
-        ];
-        let g = HrvReadiness::rmssd_gap_aware(&beats).unwrap();
-        assert!(g < 20.0, "gap-aware RMSSD should stay small, got {g}");
-    }
 
     #[test]
     fn evaluate_calibrating_below_min_nights() {

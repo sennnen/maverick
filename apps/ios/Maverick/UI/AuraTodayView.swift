@@ -12,6 +12,8 @@ struct AuraTodayModel: Equatable {
   var rest: Double?
   var effort: Double?
   var hrv: Double?
+  /// The core's own label for `hrv`, so the tile is titled rather than assumed.
+  var hrvLabel: String?
   var restingHr: Int?
   var respRate: Double?
   var spo2: Double?
@@ -45,6 +47,7 @@ struct AuraTodayModel: Equatable {
     return AuraTodayModel(
       charge: day?.recovery, rest: rest, effort: day?.strain,
       hrv: day?.avgHrv ?? vitalsDay?.avgHrv,
+      hrvLabel: (day ?? vitalsDay)?.hrvLabel,
       restingHr: day?.restingHr ?? vitalsDay?.restingHr,
       respRate: day?.respRateBpm ?? vitalsDay?.respRateBpm,
       spo2: day?.spo2Pct ?? vitalsDay?.spo2Pct,
@@ -228,7 +231,7 @@ struct AuraTodayView: View {
       AuraSectionHeader(title: "Vitals")
       LazyVGrid(columns: [GridItem(.flexible(), spacing: 22), GridItem(.flexible(), spacing: 22)],
                 spacing: 22) {
-        AuraMiniStat(value: intText(data.hrv), unit: "ms", label: "HRV",
+        AuraMiniStat(value: intText(data.hrv), unit: "ms", label: auraVariabilityTitle(data.hrvLabel),
                      level: (data.hrv ?? 0) / 140, tint: AuraDesign.Family.charge.glow)
         AuraMiniStat(value: data.restingHr.map { "\($0)" } ?? "--", unit: "bpm", label: "Resting HR",
                      level: 1 - Double(data.restingHr ?? 60) / 100, tint: AuraDesign.Family.heart.glow)

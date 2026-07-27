@@ -11,16 +11,23 @@ class ConnectorParityTest {
     fun frozenConnectorParityReportsMeetMobileBudgets() {
         val expected = listOf(
             Expected(
+                "generic_hr",
+                "dev.maverick.generic-hr",
+                3,
+                "33a7c5141295ef9d5c030cb0706963291c2ce432f9c82a1375367056730c26f2",
+                setOf("chest-strap-reports-electrical-intervals"),
+            ),
+            Expected(
                 "whoop4",
                 "dev.maverick.whoop4",
-                14,
-                "3158072c210ff18a510e044192a28b781669a276cab6279ed0ae58dfef23c72d",
+                16,
+                "a51540d872b3262aa47ef64197f1c36d5cec5838d48cd47239294da6ec0d0f28",
             ),
             Expected(
                 "whoop5",
                 "dev.maverick.whoop5",
-                12,
-                "3c4c013f6c593c411fb822e65b8c363a6524dbf759390c10781a8bae695cfd47",
+                14,
+                "ac613682a7835833602c646ace549515c3ce80dd458fbb8feccedb56923a1944",
             ),
         )
         expected.forEach { value ->
@@ -39,11 +46,7 @@ class ConnectorParityTest {
                 }
                 .map { it.getString("name") }
                 .toSet()
-            assertTrue(
-                names.containsAll(
-                    setOf("history-cursor-retry", "state-restart", "malformed-frame"),
-                ),
-            )
+            assertTrue(names.containsAll(value.requiredFixtures))
         }
     }
 
@@ -65,5 +68,13 @@ class ConnectorParityTest {
         val connectorId: String,
         val fixtureCount: Int,
         val artifactHash: String,
+        /// The cases whose absence would mean a whole behaviour went untested. A device connector
+        /// has to prove its history, restart and malformed-frame paths; a connector that speaks a
+        /// standard profile has none of those and proves the claim it does make instead.
+        val requiredFixtures: Set<String> = setOf(
+            "history-cursor-retry",
+            "state-restart",
+            "malformed-frame",
+        ),
     )
 }

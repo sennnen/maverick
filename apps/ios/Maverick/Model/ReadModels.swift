@@ -14,6 +14,9 @@ struct DailyMetric: Equatable, Codable {
   let disturbances: Int?
   let restingHr: Int?
   let avgHrv: Double?
+  /// What the core is willing to call the variability figure: `heart_rate_variability` only when
+  /// the beats were timed electrically, `pulse_rate_variability` from an optical pulse.
+  let hrvLabel: String?
   let recovery: Double?
   let strain: Double?
   let exerciseCount: Int?
@@ -26,16 +29,27 @@ struct DailyMetric: Equatable, Codable {
 
   init(day: String, totalSleepMin: Double? = nil, efficiency: Double? = nil, deepMin: Double? = nil,
        remMin: Double? = nil, lightMin: Double? = nil, disturbances: Int? = nil, restingHr: Int? = nil,
-       avgHrv: Double? = nil, recovery: Double? = nil, strain: Double? = nil, exerciseCount: Int? = nil,
+       avgHrv: Double? = nil, hrvLabel: String? = nil, recovery: Double? = nil,
+       strain: Double? = nil, exerciseCount: Int? = nil,
        spo2Pct: Double? = nil, skinTempDevC: Double? = nil, respRateBpm: Double? = nil,
        steps: Int? = nil, activeKcalEst: Double? = nil, sourcePriority: Int? = nil) {
     self.day = day; self.totalSleepMin = totalSleepMin; self.efficiency = efficiency
     self.deepMin = deepMin; self.remMin = remMin; self.lightMin = lightMin
     self.disturbances = disturbances; self.restingHr = restingHr; self.avgHrv = avgHrv
+    self.hrvLabel = hrvLabel
     self.recovery = recovery; self.strain = strain; self.exerciseCount = exerciseCount
     self.spo2Pct = spo2Pct; self.skinTempDevC = skinTempDevC; self.respRateBpm = respRateBpm
     self.steps = steps; self.activeKcalEst = activeKcalEst; self.sourcePriority = sourcePriority
   }
+}
+
+/// What a variability figure may be called on screen, decided by the core's own label.
+///
+/// Only beats timed from the heart's electrical signal are heart-rate variability; an optical pulse
+/// is a different event and reads as PRV. Every surface asks this rather than deciding for itself,
+/// so the app cannot title the same number two ways on two tabs.
+func auraVariabilityTitle(_ label: String?) -> String {
+  label == "heart_rate_variability" ? "HRV" : "PRV"
 }
 
 /// One sleep session; `stagesJSON` is the verbatim stage-segments JSON array.

@@ -115,7 +115,11 @@ private fun buildMetrics(
             "str", "Effort", AuraFamily.EFFORT, "",
             pts { it.strain }.map { AuraPoint(it.day, it.value * effortFactor) },
         ),
-        TrendMetric("hrv", "HRV", AuraFamily.CHARGE, "ms", pts { it.avgHrv }),
+        TrendMetric(
+            "hrv",
+            auraVariabilityTitle(window.lastOrNull { it.hrvLabel != null }?.hrvLabel),
+            AuraFamily.CHARGE, "ms", pts { it.avgHrv },
+        ),
         TrendMetric("rhr", "Resting HR", AuraFamily.HEART, "bpm", pts { it.restingHr?.toDouble() }),
     )
 }

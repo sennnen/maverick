@@ -1,5 +1,6 @@
 package com.sennnen.mav.ui.aura
 
+import com.sennnen.mav.ui.AuraZoneMath
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -123,11 +124,11 @@ fun AuraSettingsSheet(
             StepperRow(
                 "Max HR", if (hrMaxOverride > 0) "$hrMaxOverride" else "auto",
                 dec = {
-                    hrMaxOverride = max(0, (if (hrMaxOverride > 0) hrMaxOverride else 220 - age) - 1)
+                    hrMaxOverride = max(0, AuraZoneMath.maxHr(age, hrMaxOverride) - 1)
                     profile.hrMaxOverride = hrMaxOverride
                 },
                 inc = {
-                    hrMaxOverride = min(230, (if (hrMaxOverride > 0) hrMaxOverride else 220 - age) + 1)
+                    hrMaxOverride = min(230, AuraZoneMath.maxHr(age, hrMaxOverride) + 1)
                     profile.hrMaxOverride = hrMaxOverride
                 },
             )

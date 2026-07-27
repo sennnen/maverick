@@ -57,7 +57,7 @@ fn valid_instance_runs_init_handle_snapshot_and_repeats_exactly() {
                 0xef, 0x77, 0xcc, 0x0f, 0x78, 0xab, 0xcc, 0xce, 0xd5, 0x28, 0x7d, 0x84, 0xa1, 0xa2,
                 0x01, 0x1c, 0xfb, 0x81,
             ],
-            max_fuel_consumed: 8,
+            max_fuel_consumed: 6,
             peak_memory_bytes: 131_072,
         }
     );

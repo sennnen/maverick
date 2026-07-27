@@ -17,10 +17,13 @@
 
 pub mod calibration;
 pub mod capability;
+pub mod ecg;
+pub mod frequency;
 pub mod hr_anomaly;
 pub mod hr_zones;
 pub mod hrv;
 pub mod imu_features;
+pub mod intervals;
 pub mod ppg_hr;
 pub mod readiness;
 pub mod recovery;
@@ -31,11 +34,12 @@ pub mod spo2;
 pub mod stats;
 pub mod strain;
 pub mod stress;
+pub mod subject;
 pub mod vo2max;
 
 pub use capability::{negotiate, AnalyticAvailability, AnalyticId, UnavailableReason, ANALYTICS};
-pub use hrv::{
-    time_domain, IntervalSource, TimeDomainHrv, HRV_ALGORITHM, HRV_VERSION, MIN_INTERVALS,
-};
-pub use readiness::{HrvReadiness, HrvReadinessResult, ReadinessTier, SECS_PER_DAY};
+pub use hrv::{time_domain, TimeDomainHrv, HRV_ALGORITHM, HRV_VERSION, MIN_INTERVALS};
+pub use intervals::BeatSeries;
+pub use readiness::{HrvReadiness, HrvReadinessResult, ReadinessTier};
 pub use stats::{linear_fit, pearson, LinearFit};
+pub use subject::BiologicalSex;

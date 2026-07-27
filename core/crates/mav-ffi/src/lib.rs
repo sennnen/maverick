@@ -105,8 +105,28 @@ pub struct HrvReport {
     pub rmssd_ms: f64,
     pub sdnn_ms: f64,
     pub pnn50_percent: f64,
+    /// Poincaré short-term scatter — the beat-to-beat axis.
+    pub sd1_ms: f64,
+    /// Poincaré long-term scatter — the axis along the identity line.
+    pub sd2_ms: f64,
+    /// Short-term detrended fluctuation exponent, when a long enough uninterrupted run existed.
+    pub alpha1: Option<f64>,
     pub interval_count: u32,
     pub excluded_count: u32,
+}
+
+/// Task Force band powers over the longest uninterrupted run of beats. `lf_normalized` and
+/// `hf_normalized` are the convention-free form and are what a display should prefer.
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct HrvSpectrumReport {
+    pub vlf_power_ms2: f64,
+    pub lf_power_ms2: f64,
+    pub hf_power_ms2: f64,
+    pub total_power_ms2: f64,
+    pub lf_normalized: f64,
+    pub hf_normalized: f64,
+    pub lf_hf_ratio: f64,
+    pub span_seconds: f64,
 }
 
 /// The longitudinal readiness readout. Absent while the baseline is still calibrating.
@@ -130,6 +150,7 @@ pub struct DailySnapshotReport {
     pub hr_sample_count: u32,
     pub hr_excluded_count: u32,
     pub hrv: Option<HrvReport>,
+    pub hrv_spectrum: Option<HrvSpectrumReport>,
     pub readiness: Option<ReadinessReport>,
     pub availability: Vec<AnalyticAvailabilityReport>,
     /// `id@version` for every algorithm that contributed.
@@ -528,7 +549,8 @@ impl MavRuntime {
             })
             .collect();
         let timezone = mav_engine::Timezone::new(timezone_id, spans)?;
-        self.spine_lock()?.set_timezone(timezone);
+        let store = self.reader_lock()?;
+        self.spine_lock()?.set_timezone(&store, timezone)?;
         Ok(())
     }
 
@@ -539,7 +561,7 @@ impl MavRuntime {
         device_id: u64,
         wall_time_ms: i64,
     ) -> Result<DailySnapshotReport, FfiError> {
-        let mut spine = self.spine_lock()?;
+        let spine = self.spine_lock()?;
         let day = spine.day_of(mav_model::time::WallTime::from_nanos(
             wall_time_ms.saturating_mul(1_000_000),
         ));
@@ -551,6 +573,39 @@ impl MavRuntime {
             wall_time_ms.saturating_mul(1_000_000),
         )?;
         Ok(snapshot_report(&snapshot))
+    }
+
+    /// One snapshot per local day in `[from_ms, to_ms]`, oldest first. The history surfaces need a
+    /// range, and asking for one day at a time would recompute the longitudinal look-back once per
+    /// day rendered.
+    pub fn daily_snapshots(
+        &self,
+        device_id: u64,
+        from_ms: i64,
+        to_ms: i64,
+    ) -> Result<Vec<DailySnapshotReport>, FfiError> {
+        let spine = self.spine_lock()?;
+        let store = self.reader_lock()?;
+        let device = DeviceId::new(device_id);
+        let day_of = |at_ms: i64| {
+            spine
+                .day_of(mav_model::time::WallTime::from_nanos(
+                    at_ms.saturating_mul(1_000_000),
+                ))
+                .index()
+        };
+        let (first, last) = (day_of(from_ms.min(to_ms)), day_of(to_ms.max(from_ms)));
+        (first..=last)
+            .map(|index| {
+                let day = mav_engine::LocalDay::from_index(index);
+                Ok(snapshot_report(&spine.snapshot(
+                    &store,
+                    device,
+                    day,
+                    to_ms.saturating_mul(1_000_000),
+                )?))
+            })
+            .collect()
     }
 
     /// Which analytics the day can serve, and why not for the rest. The same list the snapshot
@@ -629,7 +684,7 @@ impl MavRuntime {
         let wrist = store.latest_sample(device, StreamKind::WristState)?;
         let last_sample_wall_time_ms = [&heart_rate, &battery, &wrist]
             .into_iter()
-            .filter_map(|sample| sample.as_ref()?.wall_time)
+            .filter_map(|sample| sample.as_ref()?.wall_time())
             .map(|time| time.as_nanos().div_euclid(1_000_000))
             .max();
 
@@ -666,7 +721,11 @@ fn fresh(
     now_ms: i64,
     window_ms: i64,
 ) -> Option<Sample<mav_model::raw::RawValue>> {
-    let at = sample.as_ref()?.wall_time?.as_nanos().div_euclid(1_000_000);
+    let at = sample
+        .as_ref()?
+        .wall_time()?
+        .as_nanos()
+        .div_euclid(1_000_000);
     (now_ms.saturating_sub(at) <= window_ms).then_some(sample?)
 }
 
@@ -684,8 +743,21 @@ fn snapshot_report(snapshot: &mav_engine::DailySnapshot) -> DailySnapshotReport 
             rmssd_ms: hrv.rmssd_ms,
             sdnn_ms: hrv.sdnn_ms,
             pnn50_percent: hrv.pnn50_percent,
+            sd1_ms: hrv.sd1_ms,
+            sd2_ms: hrv.sd2_ms,
+            alpha1: hrv.alpha1,
             interval_count: hrv.interval_count,
             excluded_count: hrv.excluded_count,
+        }),
+        hrv_spectrum: snapshot.hrv_spectrum.map(|bands| HrvSpectrumReport {
+            vlf_power_ms2: bands.vlf_power_ms2,
+            lf_power_ms2: bands.lf_power_ms2,
+            hf_power_ms2: bands.hf_power_ms2,
+            total_power_ms2: bands.total_power_ms2,
+            lf_normalized: bands.lf_normalized,
+            hf_normalized: bands.hf_normalized,
+            lf_hf_ratio: bands.lf_hf_ratio,
+            span_seconds: bands.span_seconds,
         }),
         readiness: snapshot.readiness.map(|readiness| ReadinessReport {
             tier: format!("{:?}", readiness.tier).to_lowercase(),
@@ -714,7 +786,7 @@ fn availability_report(entry: &mav_analytic::AnalyticAvailability) -> AnalyticAv
             Some("missing_streams".to_owned()),
             streams
                 .iter()
-                .map(|stream| format!("{stream:?}").to_lowercase())
+                .map(|stream| stream.name().to_owned())
                 .collect(),
         ),
         Some(mav_analytic::UnavailableReason::AlgorithmNotAdmitted) => {
@@ -770,7 +842,7 @@ fn bounded_sample(
     maximum: u32,
 ) -> Option<u32> {
     let sample = sample.as_ref()?;
-    if sample.quality.reason.is_some() || sample.quality.score <= 0.0 {
+    if !sample.quality.is_usable() {
         return None;
     }
     let value = sample.value.as_f64();

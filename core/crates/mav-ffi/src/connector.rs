@@ -162,6 +162,8 @@ pub struct ConnectorInstallRequest {
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct InstalledConnectorRecord {
     pub connector_id: String,
+    /// The name to show a wearer. The connector id is an address, not a label.
+    pub display_name: String,
     pub version: String,
     pub publisher_key_id: String,
     pub state_schema: u32,
@@ -619,6 +621,7 @@ fn revocations_to_ffi(value: RevocationSet) -> ConnectorTrustRevocations {
 
 pub(crate) fn installed_to_ffi(value: InstalledConnector) -> InstalledConnectorRecord {
     InstalledConnectorRecord {
+        display_name: value.display_name,
         connector_id: value.connector_id,
         version: value.version,
         publisher_key_id: value.publisher_key_id,

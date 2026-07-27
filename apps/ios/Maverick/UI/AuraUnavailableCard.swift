@@ -23,11 +23,13 @@ func auraUnavailableReason(_ entry: AnalyticAvailabilityReport?) -> String {
 private func auraStreamNames(_ streams: [String]) -> String {
   let friendly = streams.map { stream -> String in
     switch stream {
-    case "rrinterval": "beat intervals"
-    case "heartrate": "heart rate"
-    case "skintemp": "skin temperature"
-    case "respraw": "respiration"
-    case "sleepstateraw": "sleep state"
+    case "rr_interval": "electrical beat intervals"
+    case "pulse_interval": "optical beat intervals"
+    case "ecg": "an ECG trace"
+    case "heart_rate": "heart rate"
+    case "skin_temp": "skin temperature"
+    case "resp_raw": "respiration"
+    case "sleep_state_raw": "sleep state"
     default: stream.replacingOccurrences(of: "_", with: " ")
     }
   }

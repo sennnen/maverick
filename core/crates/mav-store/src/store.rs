@@ -1,8 +1,8 @@
-use crate::migrations::{CURRENT_SCHEMA_VERSION, MIGRATIONS};
+use crate::migrations::{Migration, CURRENT_SCHEMA_VERSION, MIGRATIONS};
 use mav_model::error::{codes, Category, MavError, Result, Severity};
 use mav_model::ids::{DeviceId, MetadataId};
 use mav_model::raw::RawValue;
-use mav_model::stream::{Quality, RejectReason, Sample, StreamKind};
+use mav_model::stream::{Placement, Quality, RejectReason, Sample, StreamKind};
 use mav_model::time::{DeviceTime, WallTime};
 use mav_model::version::Version;
 use rusqlite::{params, Connection, OptionalExtension};
@@ -77,18 +77,32 @@ impl Store {
             )));
         }
 
-        for (index, sql) in MIGRATIONS.iter().enumerate() {
+        // Each migration is one transaction, and the version it reached is recorded inside it. A
+        // step that fails halfway would otherwise leave its scratch tables behind and its version
+        // unrecorded, so the next open would replay it onto a database it had already half
+        // rewritten — the failure mode that turns one bad migration into an unopenable store.
+        for (index, migration) in MIGRATIONS.iter().enumerate() {
             let target = index as i64 + 1;
-            if version < target {
-                conn.execute_batch(sql).map_err(|e| {
+            if version >= target {
+                continue;
+            }
+            let applied = conn.execute_batch("BEGIN IMMEDIATE").and_then(|()| {
+                match migration {
+                    Migration::Sql(sql) => conn.execute_batch(sql),
+                    Migration::Rust(step) => step(&conn),
+                }
+                .and_then(|()| conn.pragma_update(None, "user_version", target))
+                .and_then(|()| conn.execute_batch("COMMIT"))
+            });
+            if let Err(failure) = applied {
+                let _ = conn.execute_batch("ROLLBACK");
+                return Err(
                     MavError::new(codes::STORAGE_MIGRATION, "a migration failed to apply")
                         .context(format!("migration to v{target}"))
-                        .context(e.to_string())
-                })?;
+                        .context(failure.to_string()),
+                );
             }
         }
-        conn.pragma_update(None, "user_version", CURRENT_SCHEMA_VERSION)
-            .map_err(|e| open_err("could not record the schema version", &e))?;
 
         Ok(Self { conn })
     }
@@ -124,34 +138,31 @@ impl Store {
 
     /// Append one scored sample. Idempotent on the natural key
     /// `(device, stream, device_time, seq, value)`, so re-syncing the same history lands once and
-    /// two equal RR intervals with different `seq` both persist.
+    /// two equal intervals with different `seq` both persist. That key is the same tuple
+    /// `mav-timeline` deduplicates on, so the fast layer and the durable one cannot disagree.
     pub fn insert_sample(
         &self,
         device: DeviceId,
         sample: &Sample<RawValue>,
     ) -> Result<InsertOutcome> {
-        let stream = to_json(&sample.kind)?;
-        let value = to_json(&sample.value)?;
-        let reason = match sample.quality.reason {
-            Some(r) => Some(to_json(&r)?),
-            None => None,
-        };
         let changed = self
             .conn
             .execute(
                 "INSERT OR IGNORE INTO sample \
-                 (device_id, stream, device_time_ns, seq, value_json, wall_time_ns, \
-                  quality_score, quality_reason, provenance_id) \
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                 (device_id, stream, device_time_ns, seq, value_tag, value_bits, wall_time_ns, \
+                  placement, quality_score, quality_reason, provenance_id) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
                 params![
                     device.get() as i64,
-                    stream,
+                    sample.kind.code(),
                     sample.device_time.as_nanos(),
                     sample.seq,
-                    value,
-                    sample.wall_time.map(|w| w.as_nanos()),
+                    sample.value.tag(),
+                    sample.value.key_bits() as i64,
+                    sample.wall_time().map(WallTime::as_nanos),
+                    sample.placement.code(),
                     f64::from(sample.quality.score),
-                    reason,
+                    sample.quality.reason.map(RejectReason::code),
                     sample.provenance.get() as i64,
                 ],
             )
@@ -163,23 +174,59 @@ impl Store {
         })
     }
 
-    /// Read back the samples for one device and stream, ordered by device time then sequence. Used
-    /// by the round-trip guarantee and by tests.
+    /// Every stored sample of one stream, ordered by device time then sequence. Whole-stream reads
+    /// are for export and replay; anything rendering a day uses [`Store::samples_between`], which
+    /// the wall-time index serves as a range scan instead of a full scan.
     pub fn samples(&self, device: DeviceId, kind: StreamKind) -> Result<Vec<Sample<RawValue>>> {
-        let stream = to_json(&kind)?;
+        self.read_samples(
+            "SELECT device_time_ns, seq, value_tag, value_bits, wall_time_ns, placement, \
+                    quality_score, quality_reason, provenance_id \
+             FROM sample WHERE device_id = ?1 AND stream = ?2 \
+             ORDER BY device_time_ns, seq",
+            params![device.get() as i64, kind.code()],
+            kind,
+        )
+    }
+
+    /// The samples of one stream placed inside `[from, until)` on the wall clock. Unplaced samples
+    /// are not in any window and are therefore not returned.
+    pub fn samples_between(
+        &self,
+        device: DeviceId,
+        kind: StreamKind,
+        from: WallTime,
+        until: WallTime,
+    ) -> Result<Vec<Sample<RawValue>>> {
+        self.read_samples(
+            "SELECT device_time_ns, seq, value_tag, value_bits, wall_time_ns, placement, \
+                    quality_score, quality_reason, provenance_id \
+             FROM sample \
+             WHERE device_id = ?1 AND stream = ?2 \
+               AND wall_time_ns >= ?3 AND wall_time_ns < ?4 \
+             ORDER BY device_time_ns, seq",
+            params![
+                device.get() as i64,
+                kind.code(),
+                from.as_nanos(),
+                until.as_nanos()
+            ],
+            kind,
+        )
+    }
+
+    fn read_samples(
+        &self,
+        sql: &str,
+        bindings: &[&dyn rusqlite::ToSql],
+        kind: StreamKind,
+    ) -> Result<Vec<Sample<RawValue>>> {
         let mut statement = self
             .conn
-            .prepare(
-                "SELECT device_time_ns, seq, value_json, wall_time_ns, quality_score, \
-                        quality_reason, provenance_id \
-                 FROM sample WHERE device_id = ?1 AND stream = ?2 \
-                 ORDER BY device_time_ns, seq",
-            )
+            .prepare_cached(sql)
             .map_err(|e| query_err("preparing sample read", &e))?;
         let rows = statement
-            .query_map(params![device.get() as i64, stream], sample_columns)
+            .query_map(bindings, sample_columns)
             .map_err(|e| query_err("reading samples", &e))?;
-
         let mut out = Vec::new();
         for row in rows {
             let columns = row.map_err(|e| query_err("reading a sample row", &e))?;
@@ -196,15 +243,14 @@ impl Store {
         device: DeviceId,
         kind: StreamKind,
     ) -> Result<Option<Sample<RawValue>>> {
-        let stream = to_json(&kind)?;
         let row = self
             .conn
             .query_row(
-                "SELECT device_time_ns, seq, value_json, wall_time_ns, quality_score, \
-                        quality_reason, provenance_id \
+                "SELECT device_time_ns, seq, value_tag, value_bits, wall_time_ns, placement, \
+                        quality_score, quality_reason, provenance_id \
                  FROM sample WHERE device_id = ?1 AND stream = ?2 \
                  ORDER BY device_time_ns DESC, seq DESC LIMIT 1",
-                params![device.get() as i64, stream],
+                params![device.get() as i64, kind.code()],
                 sample_columns,
             )
             .optional()
@@ -213,11 +259,10 @@ impl Store {
     }
 
     pub fn count_samples(&self, device: DeviceId, kind: StreamKind) -> Result<u64> {
-        let stream = to_json(&kind)?;
         self.conn
             .query_row(
                 "SELECT COUNT(*) FROM sample WHERE device_id = ?1 AND stream = ?2",
-                params![device.get() as i64, stream],
+                params![device.get() as i64, kind.code()],
                 |row| row.get::<_, i64>(0),
             )
             .map(|n| n as u64)
@@ -330,17 +375,116 @@ impl Store {
             .map_err(|e| query_err("reading a daily snapshot", &e))
     }
 
-    /// Discard every derived snapshot for a device. Safe by construction: recomputing from the
-    /// retained samples reproduces them, which is the property the derived table is defined by.
-    pub fn clear_daily_snapshots(&self, device: DeviceId) -> Result<u64> {
-        let removed = self
-            .conn
-            .execute(
-                "DELETE FROM daily_snapshot WHERE device_id = ?1",
-                params![device.get() as i64],
-            )
-            .map_err(|e| query_err("clearing daily snapshots", &e))?;
+    /// Discard derived rows — for one device, or for every device when `device` is `None`. Safe by
+    /// construction: recomputing from the retained samples reproduces them, which is the property a
+    /// derived table is defined by.
+    pub fn clear_derived(&self, device: Option<DeviceId>) -> Result<u64> {
+        let filter = device.map(|id| id.get() as i64);
+        let mut removed = 0usize;
+        for table in ["daily_snapshot", "nightly_variability"] {
+            removed += self
+                .conn
+                .execute(
+                    &format!("DELETE FROM {table} WHERE ?1 IS NULL OR device_id = ?1"),
+                    params![filter],
+                )
+                .map_err(|e| query_err("clearing derived rows", &e))?;
+        }
         Ok(removed as u64)
+    }
+
+    /// Which streams hold a sample placed inside `[from, until)`. This is what the capability
+    /// graph negotiates against, so a day that carries skin temperature says so rather than
+    /// reporting the stream missing because nothing read it.
+    pub fn streams_between(
+        &self,
+        device: DeviceId,
+        from: WallTime,
+        until: WallTime,
+    ) -> Result<Vec<StreamKind>> {
+        let mut statement = self
+            .conn
+            .prepare_cached(
+                "SELECT DISTINCT stream FROM sample \
+                 WHERE device_id = ?1 AND wall_time_ns >= ?2 AND wall_time_ns < ?3 \
+                 ORDER BY stream",
+            )
+            .map_err(|e| query_err("preparing stream census", &e))?;
+        let rows = statement
+            .query_map(
+                params![device.get() as i64, from.as_nanos(), until.as_nanos()],
+                |row| row.get::<_, u8>(0),
+            )
+            .map_err(|e| query_err("reading the stream census", &e))?;
+        let mut out = Vec::new();
+        for row in rows {
+            let code = row.map_err(|e| query_err("reading a stream code", &e))?;
+            out.push(StreamKind::from_code(code).ok_or_else(|| corrupt("stream kind"))?);
+        }
+        Ok(out)
+    }
+
+    /// Remember one night's variability so a sixty-night look-back does not re-derive sixty nights
+    /// of beats. `None` records that the night was examined and held nothing usable.
+    pub fn upsert_nightly_variability(
+        &self,
+        device: DeviceId,
+        kind: StreamKind,
+        local_day: i64,
+        rmssd_ms: Option<f64>,
+    ) -> Result<()> {
+        self.conn
+            .execute(
+                "INSERT OR REPLACE INTO nightly_variability \
+                 (device_id, stream, local_day, rmssd_ms) VALUES (?1, ?2, ?3, ?4)",
+                params![device.get() as i64, kind.code(), local_day, rmssd_ms],
+            )
+            .map_err(|e| query_err("writing nightly variability", &e))?;
+        Ok(())
+    }
+
+    /// The remembered nights in `[first_day, last_day]`, as `(day, value)`. Days with no row are
+    /// absent, which is how the caller knows which ones it still has to derive.
+    pub fn nightly_variability(
+        &self,
+        device: DeviceId,
+        kind: StreamKind,
+        first_day: i64,
+        last_day: i64,
+    ) -> Result<Vec<(i64, Option<f64>)>> {
+        let mut statement = self
+            .conn
+            .prepare_cached(
+                "SELECT local_day, rmssd_ms FROM nightly_variability \
+                 WHERE device_id = ?1 AND stream = ?2 AND local_day BETWEEN ?3 AND ?4 \
+                 ORDER BY local_day",
+            )
+            .map_err(|e| query_err("preparing nightly variability read", &e))?;
+        let rows = statement
+            .query_map(
+                params![device.get() as i64, kind.code(), first_day, last_day],
+                |row| Ok((row.get::<_, i64>(0)?, row.get::<_, Option<f64>>(1)?)),
+            )
+            .map_err(|e| query_err("reading nightly variability", &e))?;
+        rows.collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(|e| query_err("collecting nightly variability", &e))
+    }
+
+    /// Forget the remembered nights a sync may have changed, so the next read re-derives them.
+    pub fn forget_nightly_variability(
+        &self,
+        device: DeviceId,
+        first_day: i64,
+        last_day: i64,
+    ) -> Result<()> {
+        self.conn
+            .execute(
+                "DELETE FROM nightly_variability \
+                 WHERE device_id = ?1 AND local_day BETWEEN ?2 AND ?3",
+                params![device.get() as i64, first_day, last_day],
+            )
+            .map_err(|e| query_err("forgetting nightly variability", &e))?;
+        Ok(())
     }
 
     pub fn record_error(&self, error: &MavError, created_ns: i64) -> Result<()> {
@@ -408,9 +552,9 @@ impl Store {
     }
 }
 
-/// The seven sample columns, in the order every sample query selects them. Both read paths share
-/// one row shape so a schema change cannot be applied to one and missed in the other.
-type SampleColumns = (i64, u16, String, Option<i64>, f64, Option<String>, i64);
+/// The nine sample columns, in the order every sample query selects them. All read paths share one
+/// row shape so a schema change cannot be applied to one and missed in the other.
+type SampleColumns = (i64, u16, u8, i64, Option<i64>, u8, f64, Option<u8>, i64);
 
 fn sample_columns(row: &rusqlite::Row<'_>) -> rusqlite::Result<SampleColumns> {
     Ok((
@@ -421,27 +565,38 @@ fn sample_columns(row: &rusqlite::Row<'_>) -> rusqlite::Result<SampleColumns> {
         row.get(4)?,
         row.get(5)?,
         row.get(6)?,
+        row.get(7)?,
+        row.get(8)?,
     ))
 }
 
 fn row_to_sample(kind: StreamKind, columns: SampleColumns) -> Result<Sample<RawValue>> {
-    let (device_time_ns, seq, value_json, wall_ns, score, reason_json, provenance) = columns;
-    let reason: Option<RejectReason> = match reason_json {
-        Some(text) => Some(from_json(&text)?),
+    let (device_ns, seq, tag, bits, wall_ns, placement, score, reason, provenance) = columns;
+    let value = RawValue::from_parts(tag, bits as u64).ok_or_else(|| corrupt("value width"))?;
+    let reason = match reason {
+        Some(code) => Some(RejectReason::from_code(code).ok_or_else(|| corrupt("reject reason"))?),
         None => None,
     };
     Ok(Sample {
         kind,
-        device_time: DeviceTime::from_nanos(device_time_ns),
-        wall_time: wall_ns.map(WallTime::from_nanos),
+        device_time: DeviceTime::from_nanos(device_ns),
+        placement: Placement::from_parts(placement, wall_ns.map(WallTime::from_nanos)),
         seq,
-        value: from_json(&value_json)?,
+        value,
         quality: Quality {
             score: score as f32,
             reason,
         },
         provenance: MetadataId::new(provenance as u64),
     })
+}
+
+fn corrupt(what: &str) -> MavError {
+    MavError::new(
+        codes::STORAGE_SERIALIZE,
+        "a stored sample column is not a value this build understands",
+    )
+    .context(what.to_owned())
 }
 
 fn to_json<T: Serialize>(value: &T) -> Result<String> {
@@ -543,7 +698,7 @@ mod tests {
         Sample {
             kind,
             device_time: DeviceTime::from_nanos(device_ns),
-            wall_time: Some(WallTime::from_unix_seconds(1_752_600_000)),
+            placement: Placement::DeviceClock(WallTime::from_unix_seconds(1_752_600_000)),
             seq,
             value,
             quality: Quality::scored(1.0),
@@ -778,5 +933,124 @@ mod tests {
         assert_eq!(recent.len(), 1);
         assert_eq!(recent[0].category, Category::Connector);
         assert_eq!(recent[0].code, codes::CONNECTOR_TRUST_SIGNATURE_INVALID);
+    }
+
+    /// A v1 database, built exactly as the shipped v1 migration did, so the upgrade path is
+    /// exercised against the encoding real installs actually hold.
+    fn legacy_v1(path: &std::path::Path) {
+        let conn = rusqlite::Connection::open(path).unwrap();
+        conn.execute_batch(
+            "
+            CREATE TABLE sample (
+                device_id      INTEGER NOT NULL,
+                stream         TEXT    NOT NULL,
+                device_time_ns INTEGER NOT NULL,
+                seq            INTEGER NOT NULL,
+                value_json     TEXT    NOT NULL,
+                wall_time_ns   INTEGER,
+                quality_score  REAL    NOT NULL,
+                quality_reason TEXT,
+                provenance_id  INTEGER NOT NULL,
+                PRIMARY KEY (device_id, stream, device_time_ns, seq, value_json)
+            ) WITHOUT ROWID;
+            CREATE TABLE provenance (
+                metadata_id INTEGER PRIMARY KEY, source_stream TEXT NOT NULL, quality REAL NOT NULL,
+                algorithm_id TEXT NOT NULL, algorithm_version TEXT NOT NULL,
+                sample_count INTEGER NOT NULL
+            );
+            CREATE TABLE error_journal (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, code INTEGER NOT NULL, category TEXT NOT NULL,
+                severity TEXT NOT NULL, message TEXT NOT NULL, context_json TEXT NOT NULL,
+                created_ns INTEGER NOT NULL
+            );
+            INSERT INTO sample VALUES
+                (7, '\"rr_interval\"', 1000, 0, '{\"u16\":812}', 1752624000000000000, 1.0, NULL, 1),
+                (7, '\"rr_interval\"', 2000, 0, '{\"u16\":820}', 1752624001000000000, 1.0,
+                 '\"implausible_timestamp\"', 1),
+                (7, '\"heart_rate\"', 3000, 0, '{\"u8\":62}', 1752624002000000000, 1.0, NULL, 1);
+            PRAGMA user_version = 1;
+            ",
+        )
+        .unwrap();
+    }
+
+    /// The bug a real phone found. Before the interval split there was one interval stream and
+    /// every producer of it was optical, so carrying `rr_interval` across literally relabelled a
+    /// wrist strap's beats as electrocardiography — and licensed the one claim this project exists
+    /// to keep honest.
+    #[test]
+    fn intervals_recorded_before_the_split_migrate_as_optical() {
+        let directory = std::env::temp_dir().join(format!("mav-migrate-{}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("legacy.sqlite");
+        let _ = std::fs::remove_file(&path);
+        legacy_v1(&path);
+
+        let store = Store::open(&path).unwrap();
+        assert_eq!(store.schema_version().unwrap(), CURRENT_SCHEMA_VERSION);
+
+        let device = DeviceId::new(7);
+        assert_eq!(
+            store.count_samples(device, StreamKind::RrInterval).unwrap(),
+            0
+        );
+        let optical = store.samples(device, StreamKind::PulseInterval).unwrap();
+        assert_eq!(optical.len(), 2);
+        assert_eq!(optical[0].value, RawValue::U16(812));
+        assert_eq!(
+            store.count_samples(device, StreamKind::HeartRate).unwrap(),
+            1
+        );
+
+        // The old timestamp flag was a placement, not a value judgement, so the value survives
+        // usable and the clock trouble is recorded separately.
+        assert!(optical[1].quality.is_usable());
+        assert_eq!(optical[1].quality.reason, None);
+        assert!(matches!(
+            optical[1].placement,
+            Placement::CaptureFallback(_)
+        ));
+        assert!(optical[0].placement.is_trusted());
+
+        drop(store);
+        let _ = std::fs::remove_dir_all(&directory);
+    }
+
+    /// A migration that fails partway must leave nothing behind. Reopening replays it from the
+    /// version it actually reached, so a broken step is one bad open rather than a store nobody
+    /// can open again.
+    #[test]
+    fn a_failed_migration_leaves_the_database_where_it_was() {
+        let directory = std::env::temp_dir().join(format!("mav-rollback-{}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("legacy.sqlite");
+        let _ = std::fs::remove_file(&path);
+        legacy_v1(&path);
+
+        {
+            // A table the v3 rebuild is about to create: its CREATE now collides and the whole
+            // step has to roll back.
+            let conn = rusqlite::Connection::open(&path).unwrap();
+            conn.execute_batch("CREATE TABLE sample_v3 (blocker INTEGER);")
+                .unwrap();
+        }
+
+        let Err(failure) = Store::open(&path) else {
+            panic!("a colliding table must fail the migration")
+        };
+        assert_eq!(failure.code, codes::STORAGE_MIGRATION);
+
+        let conn = rusqlite::Connection::open(&path).unwrap();
+        let version: i64 = conn
+            .pragma_query_value(None, "user_version", |row| row.get(0))
+            .unwrap();
+        assert_eq!(version, 2, "the version records only what actually landed");
+        let rows: i64 = conn
+            .query_row("SELECT COUNT(*) FROM sample", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(rows, 3, "the original table is untouched");
+
+        drop(conn);
+        let _ = std::fs::remove_dir_all(&directory);
     }
 }

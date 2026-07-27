@@ -5,10 +5,12 @@ exact `mavconn-parity/v1` reports. They are product-runtime inputs, not bundled 
 connectors: tests install bytes through the public API, and WC-P12 proves no device implementation
 is linked into Maverick.
 
+- `generic_hr_v1.mavconn`: SHA-256
+  `33a7c5141295ef9d5c030cb0706963291c2ce432f9c82a1375367056730c26f2`.
 - `whoop4_v1.mavconn`: SHA-256
-  `4f1d13cad4ebda43d6ca1adc89686ba29076a27835e9fff0e450dd0e3fd6ffa7`.
+  `cbba766ea7c9e69b1025274cd56438fa53b78426469ab40b4d30b702af1055d8`.
 - `whoop5_v1.mavconn`: SHA-256
-  `7b0e37531cc8293467ecbf90bc42ea5c352e956e22aef49fc811656f72d74cda`.
+  `4046f48d48c943b9e81f7db124a177922507d17dd00f6c76ddffa936cd8f58b4`.
 - `*_parity_v1.expected.json`: canonical event, action, sample, final-state, fuel, and linear-memory
   results produced by `mavconn-test --report` from those exact bytes.
 

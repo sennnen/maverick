@@ -5,7 +5,7 @@
 
 use mav_model::ids::MetadataId;
 use mav_model::raw::RawValue;
-use mav_model::stream::{Quality, Sample, StreamKind};
+use mav_model::stream::{Placement, Quality, Sample, StreamKind};
 use mav_model::time::DeviceTime;
 use mav_timeline::Timeline;
 use proptest::prelude::*;
@@ -14,7 +14,7 @@ fn sample(nanos: i64, ms: u16, seq: u16) -> Sample<RawValue> {
     Sample {
         kind: StreamKind::RrInterval,
         device_time: DeviceTime::from_nanos(nanos),
-        wall_time: None,
+        placement: Placement::Unplaced,
         seq,
         value: RawValue::U16(ms),
         quality: Quality::scored(1.0),

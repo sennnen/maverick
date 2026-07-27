@@ -25,3 +25,6 @@
 - [ADR-024](ADR-024.md) — The DailySnapshot contract
 - [ADR-025](ADR-025.md) — `mav-frame` and `mav-codec` are parked, not deleted
 - [ADR-026](ADR-026.md) — A raw stream kind for uncalibrated skin temperature
+- [ADR-027](ADR-027.md) — Two interval streams, and the raw channels behind them
+- [ADR-028](ADR-028.md) — Clock placement is not a quality judgement
+- [ADR-029](ADR-029.md) — An all-integer sample table, indexed by wall time

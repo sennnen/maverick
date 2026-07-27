@@ -1,16 +1,13 @@
-//! The affected-day recompute trigger (M5-P6): which local calendar days a completed historical
-//! sync dirtied, and the cache-invalidation hook that recomputes only those windows.
+//! Local calendar days and the injected timezone they are measured in.
 //!
-//! Timezone data is injected as an explicit offset table — the host owns the tzdb, the core owns
-//! the arithmetic. No code here reads the system timezone or clock, so every day boundary is
+//! Timezone data is an explicit offset table — the host owns the tzdb, the core owns the
+//! arithmetic. No code here reads the system timezone or clock, so every day boundary is
 //! reproducible from the inputs alone, and a tzdb update on the phone can never silently move a
 //! frozen fixture hash.
 
 use mav_model::error::{codes, MavError, Result};
 use mav_model::time::WallTime;
-use mav_model::version::Version;
 use serde::Serialize;
-use std::collections::BTreeMap;
 use std::fmt;
 
 const SECONDS_PER_DAY: i64 = 86_400;
@@ -97,6 +94,22 @@ impl LocalDay {
     pub const fn index(self) -> i64 {
         self.0
     }
+
+    pub const fn offset(self, days: i64) -> Self {
+        Self(self.0.saturating_add(days))
+    }
+
+    /// The instant this local day begins. Resolved twice because the offset in force at local
+    /// midnight is what defines the boundary, and a first guess is needed to find it — a second
+    /// pass is enough for any real transition, which is at most a few hours wide.
+    pub fn start(self, timezone: &Timezone) -> WallTime {
+        let local_midnight = self.0.saturating_mul(SECONDS_PER_DAY);
+        let mut at = WallTime::from_unix_seconds(local_midnight);
+        for _ in 0..2 {
+            at = WallTime::from_unix_seconds(local_midnight - i64::from(timezone.offset_at(at)));
+        }
+        at
+    }
 }
 
 impl fmt::Display for LocalDay {
@@ -135,115 +148,11 @@ fn civil_from_days(days: i64) -> (i64, u32, u32) {
     (year, month, day)
 }
 
-/// The sorted, unique set of local days a sync inserted new samples into. Duplicates never enter
-/// it, so an all-duplicate replay reports an empty set.
-#[derive(Clone, PartialEq, Eq, Debug, Default, Serialize)]
-pub struct AffectedDays(Vec<LocalDay>);
-
-impl AffectedDays {
-    pub fn insert(&mut self, day: LocalDay) {
-        if let Err(position) = self.0.binary_search(&day) {
-            self.0.insert(position, day);
-        }
-    }
-
-    pub fn union(&mut self, other: &AffectedDays) {
-        for day in &other.0 {
-            self.insert(*day);
-        }
-    }
-
-    pub fn contains(&self, day: LocalDay) -> bool {
-        self.0.binary_search(&day).is_ok()
-    }
-
-    pub fn days(&self) -> &[LocalDay] {
-        &self.0
-    }
-
-    pub fn iso(&self) -> Vec<String> {
-        self.0.iter().map(LocalDay::to_string).collect()
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-
-/// The identity of one cached computation: the metric, the algorithm version that produced it,
-/// and the inclusive local-day window it read. docs/architecture.md pins this key shape.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct CacheKey {
-    pub metric: String,
-    pub algorithm_version: Version,
-    pub first_day: LocalDay,
-    pub last_day: LocalDay,
-}
-
-impl CacheKey {
-    fn intersects(&self, days: &AffectedDays) -> bool {
-        days.days()
-            .iter()
-            .any(|day| (self.first_day..=self.last_day).contains(day))
-    }
-}
-
-/// The recompute cache hook: dirtied days evict exactly the entries whose window they intersect,
-/// and the evicted keys are what the engine recomputes and re-inserts.
-#[derive(Clone, PartialEq, Eq, Debug, Default)]
-pub struct RecomputeCache<V> {
-    entries: BTreeMap<CacheKey, V>,
-}
-
-impl<V> RecomputeCache<V> {
-    pub fn new() -> Self {
-        Self {
-            entries: BTreeMap::new(),
-        }
-    }
-
-    pub fn put(&mut self, key: CacheKey, value: V) {
-        self.entries.insert(key, value);
-    }
-
-    pub fn get(&self, key: &CacheKey) -> Option<&V> {
-        self.entries.get(key)
-    }
-
-    pub fn len(&self) -> usize {
-        self.entries.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.entries.is_empty()
-    }
-
-    /// Remove every entry whose input window intersects the dirtied days and return their keys,
-    /// sorted. Entries outside the window are untouched: an empty day set evicts nothing.
-    pub fn invalidate(&mut self, days: &AffectedDays) -> Vec<CacheKey> {
-        let evicted: Vec<CacheKey> = self
-            .entries
-            .keys()
-            .filter(|key| key.intersects(days))
-            .cloned()
-            .collect();
-        for key in &evicted {
-            self.entries.remove(key);
-        }
-        evicted
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use mav_model::error::codes;
     use mav_model::time::WallTime;
-    use mav_model::version::Version;
 
     fn day(index: i64) -> LocalDay {
         LocalDay::from_index(index)
@@ -299,74 +208,58 @@ mod tests {
         assert_eq!(blank_id.code, codes::FFI_RUNTIME_STATE);
     }
 
+    /// The day a boundary instant belongs to has to be the day that claims it, or a read window
+    /// and the bucket it fills disagree and samples fall between them.
     #[test]
-    fn affected_days_stay_sorted_and_unique() {
-        let mut days = AffectedDays::default();
-        days.insert(day(20_285));
-        days.insert(day(20_284));
-        days.insert(day(20_285));
-        assert_eq!(days.days(), &[day(20_284), day(20_285)]);
-        assert_eq!(days.iso(), vec!["2025-07-15", "2025-07-16"]);
-
-        let mut other = AffectedDays::default();
-        other.insert(day(20_290));
-        other.insert(day(20_284));
-        days.union(&other);
-        assert_eq!(days.days(), &[day(20_284), day(20_285), day(20_290)]);
-    }
-
-    fn key(metric: &str, first: i64, last: i64) -> CacheKey {
-        CacheKey {
-            metric: metric.to_owned(),
-            algorithm_version: Version::new(1, 0, 0),
-            first_day: day(first),
-            last_day: day(last),
+    fn a_days_span_is_exactly_the_instants_that_belong_to_it() {
+        let london = Timezone::new(
+            "Europe/London",
+            vec![
+                OffsetSpan {
+                    start_unix_seconds: 0,
+                    offset_seconds: 0,
+                },
+                OffsetSpan {
+                    start_unix_seconds: 1_743_296_400,
+                    offset_seconds: 3_600,
+                },
+            ],
+        )
+        .unwrap();
+        for index in [20_180i64, 20_181, 20_285] {
+            let today = day(index);
+            let start = today.start(&london);
+            let next = today.offset(1).start(&london);
+            assert_eq!(LocalDay::of(start, &london), today, "{today} start");
+            assert_eq!(
+                LocalDay::of(WallTime::from_nanos(next.as_nanos() - 1), &london),
+                today,
+                "{today} end"
+            );
+            assert_eq!(LocalDay::of(next, &london), today.offset(1));
         }
     }
 
+    /// The spring-forward day is 23 hours long, and the read window has to be too.
     #[test]
-    fn invalidation_evicts_only_intersecting_windows() {
-        let mut cache = RecomputeCache::new();
-        cache.put(key("a", 20_280, 20_283), "before".to_owned());
-        cache.put(key("b", 20_282, 20_285), "spanning".to_owned());
-        cache.put(key("c", 20_290, 20_290), "after".to_owned());
-
-        let mut dirtied = AffectedDays::default();
-        dirtied.insert(day(20_284));
-        let evicted = cache.invalidate(&dirtied);
-        assert_eq!(evicted, vec![key("b", 20_282, 20_285)]);
-        assert_eq!(cache.len(), 2);
-        assert!(cache.get(&key("a", 20_280, 20_283)).is_some());
-        assert!(cache.get(&key("c", 20_290, 20_290)).is_some());
-
-        let untouched = cache.invalidate(&AffectedDays::default());
-        assert!(untouched.is_empty());
-        assert_eq!(cache.len(), 2);
-    }
-
-    #[test]
-    fn a_recompute_after_invalidation_reproduces_identical_value() {
-        let inputs = [800_u64, 800, 850, 790, 900];
-        let run = || {
-            inputs
-                .windows(2)
-                .map(|pair| pair[0].abs_diff(pair[1]))
-                .sum::<u64>()
-        };
-        let mut cache = RecomputeCache::new();
-        let window = key("time_domain_interval_variability", 20_284, 20_284);
-        let first = run();
-        assert_eq!(first, 220);
-        cache.put(window.clone(), first);
-
-        let mut dirtied = AffectedDays::default();
-        dirtied.insert(day(20_284));
-        let evicted = cache.invalidate(&dirtied);
-        assert_eq!(evicted, vec![window.clone()]);
-
-        let recomputed = run();
-        assert_eq!(recomputed, first);
-        cache.put(window.clone(), recomputed);
-        assert_eq!(cache.get(&window), Some(&first));
+    fn a_daylight_saving_transition_shortens_the_day() {
+        let london = Timezone::new(
+            "Europe/London",
+            vec![
+                OffsetSpan {
+                    start_unix_seconds: 0,
+                    offset_seconds: 0,
+                },
+                OffsetSpan {
+                    start_unix_seconds: 1_743_296_400,
+                    offset_seconds: 3_600,
+                },
+            ],
+        )
+        .unwrap();
+        let transition = LocalDay::of(WallTime::from_unix_seconds(1_743_296_400), &london);
+        let length = transition.offset(1).start(&london).as_unix_seconds()
+            - transition.start(&london).as_unix_seconds();
+        assert_eq!(length, 23 * 3_600);
     }
 }

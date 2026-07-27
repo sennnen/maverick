@@ -290,8 +290,8 @@ struct AuraPairingView: View {
           VStack(alignment: .leading, spacing: 10) {
             HStack {
               VStack(alignment: .leading, spacing: 3) {
-                Text(record.connectorId).font(AuraDesign.label).foregroundStyle(AuraDesign.ink)
-                Text("v\(record.version) · \(record.publisherKeyId)")
+                Text(record.displayName).font(AuraDesign.label).foregroundStyle(AuraDesign.ink)
+                Text("\(record.connectorId) · v\(record.version) · \(record.publisherKeyId)")
                   .font(AuraDesign.caption).foregroundStyle(AuraDesign.ink.opacity(0.52))
               }
               Spacer()

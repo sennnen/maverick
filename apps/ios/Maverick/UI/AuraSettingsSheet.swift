@@ -138,8 +138,8 @@ struct AuraSettingsSheet: View {
                  inc: { profile.heightCm = min(230, profile.heightCm + 1) })
       divider
       stepperRow("Max HR", value: profile.hrMaxOverride > 0 ? "\(profile.hrMaxOverride)" : "auto",
-                 dec: { profile.hrMaxOverride = max(0, (profile.hrMaxOverride > 0 ? profile.hrMaxOverride : 220 - profile.age) - 1) },
-                 inc: { profile.hrMaxOverride = min(230, (profile.hrMaxOverride > 0 ? profile.hrMaxOverride : 220 - profile.age) + 1) })
+                 dec: { profile.hrMaxOverride = max(0, profile.hrMax - 1) },
+                 inc: { profile.hrMaxOverride = min(230, profile.hrMax + 1) })
     }
   }
 

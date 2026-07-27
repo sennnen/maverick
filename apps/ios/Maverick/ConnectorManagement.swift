@@ -5,12 +5,35 @@ enum ConnectorImportOrigin: Equatable {
   case file
   case share
   case remote
+  /// Shipped inside the app. The only connector that is: see `BundledConnector`.
+  case bundled
 
   var sourceKind: ConnectorSourceKind {
     switch self {
     case .file, .share: .imported
     case .remote: .remote
+    case .bundled: .bundled
     }
+  }
+}
+
+/// The one connector Maverick ships with.
+///
+/// Everything else installs from a file, a share or the registry — that is the product invariant,
+/// and bundling drivers is what the connector architecture exists to avoid. This one is the
+/// exception because it is not a driver for a device: it speaks the Bluetooth SIG heart-rate
+/// profile, which is a published standard rather than anyone's protocol, so a brand-new install has
+/// something to pair with before the wearer has found any connector at all. It also happens to be
+/// the only source of genuine heart-rate variability, because a chest strap times its beats
+/// electrically.
+enum BundledConnector {
+  static let resource = "generic-hr"
+  static let displayName = "Generic HR Monitor"
+  static let connectorID = "dev.maverick.generic-hr"
+
+  static func bytes() -> Data? {
+    Bundle.main.url(forResource: resource, withExtension: "mavconn")
+      .flatMap { try? Data(contentsOf: $0) }
   }
 }
 
@@ -83,6 +106,8 @@ struct ConnectorConnectionState: Equatable {
   var onWrist: Bool?
   var lastSampleWallTimeMs: Int64?
   var errorMessage: String?
+  /// The device the open session is bound to, so history can be read for it.
+  var deviceID: UInt64?
 
   static let disconnected = ConnectorConnectionState(
     connectorID: nil, lifecycle: nil, label: "Disconnected", connected: false,
@@ -92,7 +117,7 @@ struct ConnectorConnectionState: Equatable {
   init(
     connectorID: String?, lifecycle: ConnectorLifecycleState?, label: String, connected: Bool,
     heartRateBPM: Int?, batteryPercent: Int?, onWrist: Bool?,
-    lastSampleWallTimeMs: Int64?, errorMessage: String?
+    lastSampleWallTimeMs: Int64?, errorMessage: String?, deviceID: UInt64? = nil
   ) {
     self.connectorID = connectorID
     self.lifecycle = lifecycle
@@ -103,6 +128,7 @@ struct ConnectorConnectionState: Equatable {
     self.onWrist = onWrist
     self.lastSampleWallTimeMs = lastSampleWallTimeMs
     self.errorMessage = errorMessage
+    self.deviceID = deviceID
   }
 
   init(telemetry: ConnectorTelemetrySnapshot) {
@@ -115,6 +141,7 @@ struct ConnectorConnectionState: Equatable {
     onWrist = telemetry.onWrist
     lastSampleWallTimeMs = telemetry.lastSampleWallTimeMs
     errorMessage = nil
+    deviceID = telemetry.deviceId
   }
 
   private static func label(for lifecycle: ConnectorLifecycleState) -> String {
@@ -401,6 +428,8 @@ final class ConnectorManager: ObservableObject {
   @Published private(set) var registryError: String?
   @Published private(set) var connection = ConnectorConnectionState.disconnected
   @Published private(set) var discoveredDevices: [ConnectorScanDevice] = []
+  /// The trailing day history the trend and vitals surfaces read, straight from the core.
+  @Published private(set) var days: [DailySnapshotReport] = []
 
   private let worker: ConnectorRuntimeWorker
   private var inspection: ConnectorInspection?
@@ -422,8 +451,38 @@ final class ConnectorManager: ObservableObject {
     worker = ConnectorRuntimeWorker(config: MavStore.runtimeConfig())
     worker.publishTimezoneSpans { _ in }
     if !restoreRegistryIfAvailable() { refreshRegistry() }
+    installBundledConnectorIfMissing()
     refreshInstalled()
     DispatchQueue.main.async { [weak self] in self?.resumeIfNeeded() }
+  }
+
+  /// Install the shipped Generic HR Monitor the first time the app runs, so a fresh install can
+  /// pair with a chest strap before the wearer has found any connector at all.
+  ///
+  /// It goes through the same public path every other connector uses — inspect, then install
+  /// against the approval token that inspection issued — because a bundled artifact that skipped
+  /// verification would be a second trust path, and the whole point is that there is only one.
+  /// Already installed is the normal case and is silent.
+  private func installBundledConnectorIfMissing() {
+    worker.list { [weak self] result in
+      guard let self,
+        case let .success(records) = result,
+        !records.contains(where: { $0.connectorId == BundledConnector.connectorID }),
+        let bytes = BundledConnector.bytes(),
+        let acquisition = try? ConnectorAcquisition.make(
+          bytes: bytes, origin: .bundled, displayName: BundledConnector.displayName,
+          locator: BundledConnector.resource)
+      else { return }
+
+      let policy = self.releasePolicy
+      self.worker.inspect(acquisition: acquisition, policy: policy) { inspected in
+        guard case let .success(inspection) = inspected else { return }
+        self.worker.install(acquisition: acquisition, inspection: inspection, policy: policy) {
+          _ in
+          DispatchQueue.main.async { self.refreshInstalled() }
+        }
+      }
+    }
   }
 
   func refreshRegistry() {
@@ -706,6 +765,16 @@ final class ConnectorManager: ObservableObject {
     worker.list { [weak self] result in
       Task { @MainActor in
         if case let .success(records) = result { self?.installed = records }
+      }
+    }
+  }
+
+  /// Reload the trailing history for the device a session is open on. Sixty days is what the
+  /// longitudinal readout looks back over, so it is what the surfaces can honestly chart.
+  func refreshDays(deviceID: UInt64, days trailing: Int = 60) {
+    worker.dailySnapshots(deviceID: deviceID, days: trailing) { [weak self] result in
+      Task { @MainActor in
+        if case let .success(history) = result { self?.days = history }
       }
     }
   }
@@ -1049,6 +1118,20 @@ private final class ConnectorRuntimeWorker: @unchecked Sendable {
     completion: @escaping @Sendable (Result<DailySnapshotReport, Error>) -> Void
   ) {
     perform(completion) { try $0.dailySnapshot(deviceId: deviceID, wallTimeMs: Self.nowMs) }
+  }
+
+  /// A window of local days, oldest first. The trend and vitals surfaces read a range, and
+  /// asking day by day would recompute the longitudinal look-back once per day rendered.
+  func dailySnapshots(
+    deviceID: UInt64,
+    days: Int,
+    completion: @escaping @Sendable (Result<[DailySnapshotReport], Error>) -> Void
+  ) {
+    let now = Self.nowMs
+    let from = now - Int64(days) * 86_400_000
+    perform(completion) {
+      try $0.dailySnapshots(deviceId: deviceID, fromMs: from, toMs: now)
+    }
   }
 
   func telemetry(

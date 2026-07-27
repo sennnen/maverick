@@ -4,7 +4,7 @@
 //! parabolic-refine it. Pure.
 
 use crate::stats::{least_squares_line, mean};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 pub const SAMPLE_RATE_HZ: usize = 24;
 pub const WINDOW_SECONDS: usize = 8;
@@ -32,7 +32,7 @@ pub fn estimate(samples: &[Sample]) -> Vec<Estimate> {
     if samples.is_empty() {
         return Vec::new();
     }
-    let mut secs: HashMap<i64, Vec<f64>> = HashMap::new();
+    let mut secs: BTreeMap<i64, Vec<f64>> = BTreeMap::new();
     for s in samples {
         secs.entry(s.ts).or_default().push(f64::from(s.value));
     }
@@ -58,7 +58,7 @@ pub fn estimate(samples: &[Sample]) -> Vec<Estimate> {
         if run.len() < 3 {
             continue;
         }
-        let run_set: HashSet<i64> = run.iter().copied().collect();
+        let run_set: BTreeSet<i64> = run.iter().copied().collect();
         for &t in run {
             let mut win = Vec::new();
             let mut u = t - half;
@@ -93,21 +93,27 @@ fn detrend(x: &[f64]) -> Vec<f64> {
         .collect()
 }
 
-fn acf(x: &[f64], lag: usize) -> f64 {
-    if x.len() <= lag {
-        return 0.0;
-    }
-    let n = x.len() - lag;
-    let m = mean(x);
-    let den: f64 = x.iter().map(|v| (v - m) * (v - m)).sum();
-    if den == 0.0 {
-        return 0.0;
-    }
-    let mut num = 0.0;
-    for i in 0..n {
-        num += (x[i] - m) * (x[i + lag] - m);
-    }
-    num / den
+/// Normalised autocorrelation at every lag in `lags`, in one pass over the centred signal.
+///
+/// The mean and the total variance are properties of the window, not of a lag, so they are
+/// computed once. Recomputing them inside the lag loop made a window cost the number of lags times
+/// its own length — quadratic work, on the hottest loop in the optical path.
+fn autocorrelation(x: &[f64], lags: std::ops::RangeInclusive<usize>) -> Vec<f64> {
+    let average = mean(x);
+    let centred: Vec<f64> = x.iter().map(|value| value - average).collect();
+    let variance: f64 = centred.iter().map(|value| value * value).sum();
+    lags.map(|lag| {
+        if variance == 0.0 || centred.len() <= lag {
+            return 0.0;
+        }
+        centred
+            .iter()
+            .zip(centred.iter().skip(lag))
+            .map(|(left, right)| left * right)
+            .sum::<f64>()
+            / variance
+    })
+    .collect()
 }
 
 fn remove_record_rate_component(x: &[f64], fs: usize) -> Vec<f64> {
@@ -165,15 +171,12 @@ fn estimate_window(values: &[f64], ts: i64) -> Option<Estimate> {
         return None;
     }
 
-    let mut vals: HashMap<i64, f64> = HashMap::new();
-    let mut peak = f64::NEG_INFINITY;
-    for lag in lo_lag..=hi_lag {
-        let v = acf(&x, lag as usize);
-        vals.insert(lag, v);
-        if v > peak {
-            peak = v;
-        }
-    }
+    let correlation = autocorrelation(&x, lo_lag as usize..=hi_lag as usize);
+    let vals = |lag: i64| correlation[(lag - lo_lag) as usize];
+    let peak = correlation
+        .iter()
+        .copied()
+        .fold(f64::NEG_INFINITY, f64::max);
     if peak < MIN_CONFIDENCE {
         return None;
     }
@@ -182,24 +185,20 @@ fn estimate_window(values: &[f64], ts: i64) -> Option<Estimate> {
     let mut best_lag: i64 = -1;
     if lo_lag < hi_lag - 1 {
         for lag in (lo_lag + 1)..=(hi_lag - 1) {
-            let v = vals[&lag];
-            if v >= 0.85 * peak && v >= vals[&(lag - 1)] && v >= vals[&(lag + 1)] {
+            let v = vals(lag);
+            if v >= 0.85 * peak && v >= vals(lag - 1) && v >= vals(lag + 1) {
                 best_lag = lag;
                 break;
             }
         }
     }
     if best_lag < 0 {
-        let mut argmax = lo_lag;
-        let mut best = vals[&lo_lag];
-        for lag in (lo_lag + 1)..=hi_lag {
-            let v = vals[&lag];
-            if v > best {
-                best = v;
-                argmax = lag;
-            }
-        }
-        best_lag = argmax;
+        best_lag = lo_lag
+            + correlation
+                .iter()
+                .enumerate()
+                .max_by(|left, right| left.1.total_cmp(right.1))
+                .map_or(0, |(offset, _)| offset as i64);
     }
 
     // Sub-lag parabolic refine: fit a parabola to the ACF peak and its two neighbours so a true HR
@@ -207,11 +206,7 @@ fn estimate_window(values: &[f64], ts: i64) -> Option<Estimate> {
     // to the integer lag. conf stays the integer peak.
     let mut refined = best_lag as f64;
     if best_lag > lo_lag && best_lag < hi_lag {
-        let (y0, y1, y2) = (
-            vals[&(best_lag - 1)],
-            vals[&best_lag],
-            vals[&(best_lag + 1)],
-        );
+        let (y0, y1, y2) = (vals(best_lag - 1), vals(best_lag), vals(best_lag + 1));
         let denom = y0 - 2.0 * y1 + y2;
         if denom < 0.0 {
             let delta = (0.5 * (y0 - y2) / denom).clamp(-1.0, 1.0);
@@ -219,7 +214,7 @@ fn estimate_window(values: &[f64], ts: i64) -> Option<Estimate> {
         }
     }
     let bpm = (fs * 60.0 / refined).round() as i32;
-    let conf = (vals[&best_lag] * 1000.0).round() / 1000.0;
+    let conf = (vals(best_lag) * 1000.0).round() / 1000.0;
     Some(Estimate { ts, bpm, conf })
 }
 

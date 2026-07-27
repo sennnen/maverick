@@ -648,7 +648,9 @@ never learns WHOOP calibration rules.
   gyroscope `i16`, columnar, at 100 Hz. A live IMU request (command 106) is refused by the firmware;
   the offload path is what actually yields data. [ONE, Swift/Kotlin repo]
 - **PPG:** gen5 v26 gives 24 Hz; gen4 raw optical is roughly 437 Hz on a single green channel as
-  `s24` LE. [ONE each]
+  `s24` LE. [ONE each] — note this describes a *different* gen4 path than the type-43 raw AFE stream
+  that opcode 63 opens, which carries three 100 Hz `u16` channels plus red/IR at 50 Hz. See
+  `whoop-raw-afe.md`, which is `[HW]`-verified on both generations. [HW]
 
 ### The R22 deep stream may be unreachable over BLE alone
 

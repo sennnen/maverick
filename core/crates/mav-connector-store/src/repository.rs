@@ -9,7 +9,7 @@ use sha2::{Digest, Sha256};
 use std::cmp::Ordering;
 use std::path::Path;
 
-const SCHEMA_VERSION: i64 = 1;
+const SCHEMA_VERSION: i64 = 3;
 const APPROVAL_DOMAIN: &[u8] = b"mavconn-install-approval-v1\0";
 const MAX_SOURCE_DISPLAY_BYTES: usize = 256;
 const MAX_STATE_BYTES: usize = 64 * 1024;
@@ -153,6 +153,83 @@ impl ConnectorRepository {
                      COMMIT;",
                 )
                 .map_err(|source| storage("migrate schema", source))?;
+        }
+        // v2 — the list surfaces had only the connector id and the imported file's name to show,
+        // neither of which is what the publisher called the connector. The manifest's own display
+        // name is stored so a wearer sees "Generic HR Monitor" rather than
+        // `dev.maverick.generic-hr`.
+        if version < 2 {
+            self.step(2, |connection| {
+                connection
+                    .execute_batch("ALTER TABLE connector_artifact ADD COLUMN display_name TEXT;")
+            })?;
+        }
+        // v3 — fill that column in for artifacts installed before it existed. Separate from v2 on
+        // purpose: adding a column and populating it are two different pieces of work, and a
+        // database that already recorded v2 would otherwise never run the second one.
+        if version < 3 {
+            self.backfill_display_names()?;
+            self.step(3, |_| Ok(()))?;
+        }
+        Ok(())
+    }
+
+    /// Apply one migration and record the version it reached, both inside one transaction, so a
+    /// failure leaves the store exactly where it started rather than half-migrated.
+    fn step(
+        &mut self,
+        version: i64,
+        work: impl FnOnce(&Connection) -> rusqlite::Result<()>,
+    ) -> Result<()> {
+        let applied = self
+            .connection
+            .execute_batch("BEGIN IMMEDIATE")
+            .and_then(|()| {
+                work(&self.connection)
+                    .and_then(|()| {
+                        self.connection.execute(
+                        "INSERT INTO connector_store_meta(key, value) VALUES ('schema_version', ?1)
+                         ON CONFLICT(key) DO UPDATE SET value = ?1",
+                        [version],
+                    )
+                    })
+                    .and_then(|_| self.connection.execute_batch("COMMIT"))
+            });
+        applied.map_err(|source| {
+            let _ = self.connection.execute_batch("ROLLBACK");
+            storage("migrate schema", source)
+        })?;
+        Ok(())
+    }
+
+    /// Read the publisher's name out of every artifact already installed.
+    ///
+    /// The bytes are in the row beside the column being filled, so the name is recovered rather
+    /// than waiting for a reinstall — otherwise every existing wearer keeps seeing a connector id
+    /// where a name belongs. An artifact that no longer inspects keeps its id and does not stop
+    /// the migration: the store opening is more important than one label.
+    fn backfill_display_names(&mut self) -> Result<()> {
+        let installed: Vec<(Vec<u8>, Vec<u8>)> = {
+            let mut statement = self
+                .connection
+                .prepare("SELECT artifact_digest, artifact_bytes FROM connector_artifact")
+                .map_err(|source| storage("prepare display-name backfill", source))?;
+            let rows = statement
+                .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+                .map_err(|source| storage("read display-name backfill", source))?;
+            rows.collect::<rusqlite::Result<Vec<_>>>()
+                .map_err(|source| storage("collect display-name backfill", source))?
+        };
+        for (digest, bytes) in installed {
+            let Ok(artifact) = Artifact::inspect(bytes) else {
+                continue;
+            };
+            self.connection
+                .execute(
+                    "UPDATE connector_artifact SET display_name = ?2 WHERE artifact_digest = ?1",
+                    params![digest, artifact.report().manifest.display_name],
+                )
+                .map_err(|source| storage("write display-name backfill", source))?;
         }
         Ok(())
     }
@@ -330,8 +407,8 @@ impl ConnectorRepository {
                 "INSERT OR IGNORE INTO connector_artifact
                  (artifact_digest, connector_id, version, publisher_key_id, state_schema,
                   manifest_digest, artifact_bytes, installed_at_ms, policy_revision,
-                  revocation_revision, fixture_count)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                  revocation_revision, fixture_count, display_name)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
                 params![
                     report.artifact_digest.as_slice(),
                     connector_id,
@@ -349,7 +426,8 @@ impl ConnectorRepository {
                         codes::CONNECTOR_INSTALL_APPROVAL_INVALID,
                         "revocation revision exceeds storage range",
                     ))?,
-                    i64::from(fixture_count)
+                    i64::from(fixture_count),
+                    report.manifest.display_name,
                 ],
             )
             .map_err(|source| storage("store connector artifact", source))?;
@@ -392,7 +470,8 @@ impl ConnectorRepository {
                 "SELECT a.connector_id, a.version, a.publisher_key_id, a.state_schema,
                         a.artifact_digest, s.kind, s.display_name, s.locator_digest,
                         a.installed_at_ms, a.policy_revision, a.revocation_revision,
-                        a.fixture_count, (x.artifact_digest IS NOT NULL), a.disabled_reason
+                        a.fixture_count, (x.artifact_digest IS NOT NULL), a.disabled_reason,
+                        a.display_name
                  FROM connector_artifact a
                  JOIN connector_source s ON s.artifact_digest = a.artifact_digest
                  LEFT JOIN connector_activation x ON x.artifact_digest = a.artifact_digest
@@ -871,7 +950,8 @@ impl ConnectorRepository {
                 "SELECT a.connector_id, a.version, a.publisher_key_id, a.state_schema,
                         a.artifact_digest, s.kind, s.display_name, s.locator_digest,
                         a.installed_at_ms, a.policy_revision, a.revocation_revision,
-                        a.fixture_count, (x.artifact_digest IS NOT NULL), a.disabled_reason
+                        a.fixture_count, (x.artifact_digest IS NOT NULL), a.disabled_reason,
+                        a.display_name
                  FROM connector_artifact a
                  JOIN connector_source s ON s.artifact_digest = a.artifact_digest
                  LEFT JOIN connector_activation x ON x.artifact_digest = a.artifact_digest
@@ -1186,8 +1266,13 @@ fn read_installed_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<InstalledConn
     let policy_revision = row.get::<_, i64>(9)?;
     let revocation_revision = row.get::<_, i64>(10)?;
     let fixture_count = row.get::<_, i64>(11)?;
+    let connector_id: String = row.get(0)?;
     Ok(InstalledConnector {
-        connector_id: row.get(0)?,
+        display_name: row
+            .get::<_, Option<String>>(14)
+            .unwrap_or_default()
+            .unwrap_or_else(|| connector_id.clone()),
+        connector_id,
         version: row.get(1)?,
         publisher_key_id: row.get(2)?,
         state_schema: sql_u32(state_schema, 3)?,

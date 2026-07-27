@@ -71,14 +71,14 @@ pub fn hr_summary(samples: &[Sample<RawValue>], provenance: MetadataId) -> HrSum
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mav_model::stream::{Quality, RejectReason, StreamKind};
+    use mav_model::stream::{Placement, Quality, RejectReason, StreamKind};
     use mav_model::time::DeviceTime;
 
     fn hr(device_ns: i64, bpm: u16, score: f32) -> Sample<RawValue> {
         Sample {
             kind: StreamKind::HeartRate,
             device_time: DeviceTime::from_nanos(device_ns),
-            wall_time: None,
+            placement: Placement::Unplaced,
             seq: 0,
             value: RawValue::U16(bpm),
             quality: Quality {

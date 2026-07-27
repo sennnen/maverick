@@ -1,147 +1,190 @@
-//! SpO2 (%) from dual-wavelength PPG via ratio-of-ratios (WHOOP-P6, `[WRS]`), from the 4.0 v24
-//! paired red/IR samples. The 5.0/MG has no SpO2 path here: its optical buffer is a single
-//! AC-coupled waveform (one wavelength), not a red/IR pair, so `from_paired` only produces a value
-//! on 4.0. Uncalibrated wellness estimate, never clinical.
+//! Pulse oximetry from a dual-wavelength photoplethysmogram (WHOOP-P6, `[WRS]`).
+//!
+//! The measurement is the ratio of ratios, `R = (AC_red/DC_red) / (AC_ir/DC_ir)`, which is what the
+//! optics actually give you. Turning `R` into a saturation percentage needs an empirical curve
+//! fitted against a reference oximeter on calibrated channels; ours are raw converter counts from a
+//! strap nobody has co-oximetered, so the percentage here is explicitly `uncalibrated_percent` and
+//! the ratio is the number to trust. Wellness estimate, never clinical.
+//!
+//! Two things this module now refuses to do, both of which it used to.
+//!
+//! It will not read a channel sampled too slowly to carry a pulse. The pulsatile component sits
+//! around 1–3 Hz, so recovering it needs several times that; the 4.0's paired red/IR arrive once a
+//! second, and at 1 Hz the "AC amplitude" of a heartbeat is an aliasing artefact rather than a
+//! measurement. The 5.0/MG raw pulse-ox triad at 25 Hz is fast enough, which is what makes this
+//! path worth having at all.
+//!
+//! And it will not anchor a multi-night median to a plausible-looking number. The previous rolling
+//! readout shifted the 30-night median onto 96.5% by construction, so it reported a healthy
+//! saturation whatever the sensor said. What survives a missing calibration is *change*: tonight
+//! against the wearer's own baseline, reported as a difference and labelled as one.
 
 use crate::stats::{amplitude, mean, median};
 
-const WINDOW_SECONDS: usize = 30;
-const MIN_SAMPLES_PER_WINDOW: usize = 10;
+/// Below this, a heartbeat is not resolvable and any "AC" component is an aliasing artefact.
+/// Three times the fastest plausible pulse, which is the usual engineering margin over Nyquist.
+pub const MIN_SAMPLE_RATE_HZ: f64 = 10.0;
+/// Analysis window, in seconds. Long enough for several beats at any plausible rate.
+const WINDOW_SECONDS: f64 = 30.0;
+/// A window needs at least this many beats' worth of samples to be worth measuring.
+const MIN_SAMPLES_PER_WINDOW: usize = 64;
+/// The conventional empirical curve, `SpO2 ≈ A − B·R`. Uncalibrated on raw counts.
 const CURVE_A: f64 = 110.0;
 const CURVE_B: f64 = 25.0;
 const CLAMP_LOW: f64 = 70.0;
 const CLAMP_HIGH: f64 = 100.0;
 
-// Rolling multi-night readout.
-const ROLL_WINDOW_NIGHTS: usize = 30;
-const RECENT_NIGHTS: usize = 7;
-const ANCHOR: f64 = 96.5;
-const ROLLING_CLAMP_LOW: f64 = 88.0;
-const ROLLING_CLAMP_HIGH: f64 = 100.0;
-// Blood oxygen shows after one recovery, so a value is reported from the first night.
-const MIN_NIGHTS: usize = crate::calibration::BLOOD_OXYGEN.unlock as usize;
+/// How many trailing nights a personal baseline is taken over.
+pub const BASELINE_NIGHTS: usize = 30;
+/// The fewest nights that make a median a baseline rather than an anecdote.
+pub const MIN_BASELINE_NIGHTS: usize = 7;
 
-/// A smoothed multi-night readout: `pct` once calibrated, else `calibrating_nights` carries the
-/// count.
+/// One night's oximetry. The ratio is the measurement; the percentage is what the conventional
+/// curve makes of it on channels nobody has calibrated, and is named accordingly.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct RollingReading {
-    pub pct: Option<f64>,
-    pub calibrating_nights: Option<usize>,
+pub struct Spo2Reading {
+    pub ratio_of_ratios: f64,
+    pub uncalibrated_percent: f64,
 }
 
 pub struct Spo2;
 
 impl Spo2 {
-    /// SpO2 for a night from parallel per-sample red/IR ADC (the 4.0 v24 pair per second). `None`
-    /// if no window survives.
-    pub fn from_paired(red: &[f64], ir: &[f64]) -> Option<f64> {
-        let n = red.len().min(ir.len());
-        let mut per_window = Vec::new();
-        let mut start = 0;
-        while start < n {
-            let end = (start + WINDOW_SECONDS).min(n);
-            if end - start >= MIN_SAMPLES_PER_WINDOW {
-                if let Some(s) = window_spo2(&red[start..end], &ir[start..end]) {
-                    per_window.push(s);
-                }
-            }
-            start = end;
+    /// A night's reading from parallel red and infrared channels sampled at `sample_rate_hz`.
+    ///
+    /// `None` when the channels are too short, too slow, or carry no pulsatile component — all of
+    /// which are honest answers, and none of which is a saturation.
+    pub fn from_paired(red: &[f64], ir: &[f64], sample_rate_hz: f64) -> Option<Spo2Reading> {
+        if sample_rate_hz < MIN_SAMPLE_RATE_HZ {
+            return None;
         }
-        finish(per_window)
+        let window = ((WINDOW_SECONDS * sample_rate_hz) as usize).max(MIN_SAMPLES_PER_WINDOW);
+        let paired = red.len().min(ir.len());
+        let ratios: Vec<f64> = (0..paired)
+            .step_by(window)
+            .filter(|start| paired - start >= MIN_SAMPLES_PER_WINDOW)
+            .filter_map(|start| {
+                let end = (start + window).min(paired);
+                window_ratio(&red[start..end], &ir[start..end])
+            })
+            .collect();
+        if ratios.is_empty() {
+            return None;
+        }
+        let ratio_of_ratios = median(&ratios);
+        Some(Spo2Reading {
+            ratio_of_ratios,
+            uncalibrated_percent: (CURVE_A - CURVE_B * ratio_of_ratios)
+                .clamp(CLAMP_LOW, CLAMP_HIGH),
+        })
     }
 
-    /// Smoothed multi-night readout: soft-anchor the 30-night median to a plausible baseline
-    /// (removing an uncalibrated DC offset while preserving spread), then report the 7-night median
-    /// at that offset. `pct` is `None` while calibrating (< `MIN_NIGHTS`). `recent_nightly` is
-    /// oldest → newest.
-    pub fn rolling_reading(recent_nightly: &[f64]) -> RollingReading {
-        let window = if recent_nightly.len() > ROLL_WINDOW_NIGHTS {
-            &recent_nightly[recent_nightly.len() - ROLL_WINDOW_NIGHTS..]
-        } else {
-            recent_nightly
-        };
-        if window.len() < MIN_NIGHTS {
-            return RollingReading {
-                pct: None,
-                calibrating_nights: Some(window.len()),
-            };
+    /// Tonight against the wearer's own trailing baseline, in percentage points.
+    ///
+    /// This is what an uncalibrated sensor can honestly report: a constant offset cancels in a
+    /// difference, so a drop of two points is a drop of two points even when the absolute level is
+    /// unknown. `None` until there are enough nights for a baseline to mean anything.
+    pub fn baseline_delta(nightly_percent: &[f64]) -> Option<f64> {
+        let window = &nightly_percent[nightly_percent.len().saturating_sub(BASELINE_NIGHTS)..];
+        if window.len() < MIN_BASELINE_NIGHTS {
+            return None;
         }
-        let offset = ANCHOR - median(window);
-        let recent_count = RECENT_NIGHTS.min(window.len());
-        let recent = median(&window[window.len() - recent_count..]);
-        let clamped = (recent + offset).clamp(ROLLING_CLAMP_LOW, ROLLING_CLAMP_HIGH);
-        RollingReading {
-            pct: Some((clamped + 0.5).floor()),
-            calibrating_nights: None,
-        }
+        Some(window.last()? - median(window))
     }
 }
 
-/// One window's SpO2 via ratio-of-ratios; `None` if any DC/AC is non-positive.
-fn window_spo2(red: &[f64], ir: &[f64]) -> Option<f64> {
+/// One window's ratio of ratios; `None` unless both channels have a positive baseline and a
+/// positive pulsatile component.
+fn window_ratio(red: &[f64], ir: &[f64]) -> Option<f64> {
     let (dc_red, dc_ir) = (mean(red), mean(ir));
-    if dc_red <= 0.0 || dc_ir <= 0.0 {
-        return None;
-    }
     let (ac_red, ac_ir) = (amplitude(red), amplitude(ir));
-    if ac_red <= 0.0 || ac_ir <= 0.0 {
-        return None;
-    }
-    let ratio_ir = ac_ir / dc_ir;
-    if ratio_ir <= 0.0 {
-        return None;
-    }
-    let r = (ac_red / dc_red) / ratio_ir;
-    Some((CURVE_A - CURVE_B * r).clamp(CLAMP_LOW, CLAMP_HIGH))
-}
-
-/// The night value is the median of the surviving per-window SpO2, or `None` if none survived.
-fn finish(per_window: Vec<f64>) -> Option<f64> {
-    if per_window.is_empty() {
-        None
-    } else {
-        Some(median(&per_window))
-    }
+    let perfusion_ir = ac_ir / dc_ir;
+    (dc_red > 0.0 && dc_ir > 0.0 && ac_red > 0.0 && ac_ir > 0.0 && perfusion_ir > 0.0)
+        .then(|| (ac_red / dc_red) / perfusion_ir)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// A 20-sample window with DC = `dc` and p95−p5 amplitude ≈ `ac` (half low, half high).
-    fn win(dc: f64, ac: f64) -> Vec<f64> {
-        std::iter::repeat_n(dc - ac / 2.0, 10)
-            .chain(std::iter::repeat_n(dc + ac / 2.0, 10))
+    const RATE_HZ: f64 = 25.0;
+
+    /// A channel with baseline `dc` and a p95−p5 pulsatile amplitude of `ac`.
+    fn channel(dc: f64, ac: f64, samples: usize) -> Vec<f64> {
+        (0..samples)
+            .map(|index| {
+                if index % 2 == 0 {
+                    dc - ac / 2.0
+                } else {
+                    dc + ac / 2.0
+                }
+            })
             .collect()
     }
 
     #[test]
-    fn ratio_one_gives_the_curve_midpoint() {
-        // identical red/IR → R = 1 → 110 − 25 = 85.
-        let w = win(100.0, 4.0);
-        assert_eq!(Spo2::from_paired(&w, &w), Some(85.0));
+    fn identical_channels_give_a_ratio_of_one() {
+        let both = channel(100.0, 4.0, 256);
+        let reading = Spo2::from_paired(&both, &both, RATE_HZ).expect("a pulsatile pair reads");
+        assert!((reading.ratio_of_ratios - 1.0).abs() < 1e-9);
+        assert!((reading.uncalibrated_percent - 85.0).abs() < 1e-9);
     }
 
     #[test]
-    fn half_ratio_reads_higher() {
-        // red AC/DC 0.02, IR AC/DC 0.04 → R = 0.5 → 110 − 12.5 = 97.5.
-        let red = win(100.0, 2.0);
-        let ir = win(100.0, 4.0);
-        assert_eq!(Spo2::from_paired(&red, &ir), Some(97.5));
+    fn less_red_absorption_reads_as_a_higher_saturation() {
+        let red = channel(100.0, 2.0, 256);
+        let infrared = channel(100.0, 4.0, 256);
+        let reading = Spo2::from_paired(&red, &infrared, RATE_HZ).expect("reads");
+        assert!((reading.ratio_of_ratios - 0.5).abs() < 1e-9);
+        assert!((reading.uncalibrated_percent - 97.5).abs() < 1e-9);
+    }
+
+    /// The Nyquist refusal. A heartbeat at 1 Hz sampling is not a heartbeat, it is aliasing, and a
+    /// number derived from it is not a measurement however plausible it looks.
+    #[test]
+    fn a_channel_sampled_too_slowly_for_a_pulse_reads_nothing() {
+        let both = channel(100.0, 4.0, 256);
+        assert_eq!(Spo2::from_paired(&both, &both, 1.0), None);
+        assert_eq!(
+            Spo2::from_paired(&both, &both, MIN_SAMPLE_RATE_HZ - 0.1),
+            None
+        );
+        assert!(Spo2::from_paired(&both, &both, MIN_SAMPLE_RATE_HZ).is_some());
     }
 
     #[test]
-    fn flat_or_absent_signal_is_none() {
-        assert_eq!(Spo2::from_paired(&[], &[]), None);
-        let flat = vec![100.0; 20];
-        assert_eq!(Spo2::from_paired(&flat, &flat), None); // zero AC → no window survives
+    fn a_flat_or_absent_signal_reads_nothing() {
+        assert_eq!(Spo2::from_paired(&[], &[], RATE_HZ), None);
+        let flat = vec![100.0; 256];
+        assert_eq!(Spo2::from_paired(&flat, &flat, RATE_HZ), None);
+        let short = channel(100.0, 4.0, 8);
+        assert_eq!(Spo2::from_paired(&short, &short, RATE_HZ), None);
+    }
+
+    /// The finding this module was rewritten for. A constant calibration error must not survive
+    /// into the reported change, and a flat history must read as no change rather than as a
+    /// healthy-looking absolute number.
+    #[test]
+    fn the_baseline_reading_reports_change_and_not_a_manufactured_level() {
+        let flat = vec![90.0; 30];
+        assert_eq!(Spo2::baseline_delta(&flat), Some(0.0));
+
+        let mut dipped = vec![95.0; 29];
+        dipped.push(92.0);
+        assert_eq!(Spo2::baseline_delta(&dipped), Some(-3.0));
+
+        // The same series shifted by a constant offset reports the same change.
+        let shifted: Vec<f64> = dipped.iter().map(|value| value - 7.0).collect();
+        assert_eq!(
+            Spo2::baseline_delta(&shifted),
+            Spo2::baseline_delta(&dipped)
+        );
     }
 
     #[test]
-    fn rolling_reading_calibrates_then_reports() {
-        // Blood oxygen unlocks after one recovery: 0 nights = calibrating, 1 = reported.
-        assert_eq!(Spo2::rolling_reading(&[]).calibrating_nights, Some(0));
-        // median 96 → offset 0.5 → recent median 96 → 96.5 → round 97.
-        assert_eq!(Spo2::rolling_reading(&[96.0]).pct, Some(97.0));
+    fn too_few_nights_is_no_baseline_rather_than_a_guess() {
+        assert_eq!(Spo2::baseline_delta(&[]), None);
+        assert_eq!(Spo2::baseline_delta(&[96.0; MIN_BASELINE_NIGHTS - 1]), None);
+        assert!(Spo2::baseline_delta(&[96.0; MIN_BASELINE_NIGHTS]).is_some());
     }
 }

@@ -1,16 +1,17 @@
 //! The canonical timeline: ordering, deduplication, and clock placement. Two rules hold
 //! absolutely and are restated from docs/pipeline.md because this is the crate that enforces
 //! them: the timeline never interpolates, and it never mutates a raw device timestamp. A clock
-//! correction is a stored mapping and a flag, not an edit.
+//! correction is a stored mapping and a `Placement`, not an edit, and it is never a quality
+//! judgement — a sample whose strap clock was stale still measured what it measured.
 //!
 //! The dedup key carries the lesson this lineage learned the hard way: two equal RR intervals in
-//! the same second are two distinct heartbeats. The key is (kind, device_time, value bits, seq),
-//! and without the `seq` tiebreaker the second of two equal intervals vanishes, a zero-difference
-//! beat disappears, and RMSSD and every HRV figure built on it bias high at rest and in sleep.
+//! the same second are two distinct heartbeats. The key is (kind, device time, value, seq), and
+//! without the `seq` tiebreaker the second of two equal intervals vanishes, a zero-difference beat
+//! disappears, and RMSSD and every variability figure built on it bias high at rest and in sleep.
 #![forbid(unsafe_code)]
 
 use mav_model::raw::RawValue;
-use mav_model::stream::{RejectReason, Sample, StreamKind};
+use mav_model::stream::{Placement, Sample, StreamKind};
 use mav_model::time::{ClockMap, DeviceTime, WallTime};
 use std::collections::{HashSet, VecDeque};
 
@@ -20,19 +21,6 @@ pub enum InsertOutcome {
     /// A sample identical in every key field (kind, device time, value, seq) was already present.
     /// Normal during re-sync; the caller counts these rather than logging each one.
     Duplicate,
-}
-
-/// Where a sample's wall-clock placement came from.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Placement {
-    /// The device timestamp was plausible and was used directly.
-    DeviceClock,
-    /// The device timestamp was implausible and a clock correction covered it. Inter-sample
-    /// deltas are preserved: the whole segment shifts by one offset.
-    Corrected,
-    /// The device timestamp was implausible; the capture time was used and the sample flagged.
-    /// The caller logs this with code TIMELINE_IMPLAUSIBLE_TIMESTAMP.
-    CaptureFallback,
 }
 
 /// The grid a stale device clock is snapped to when an anchor is learned. Snapping means the same
@@ -49,7 +37,19 @@ pub fn anchor_from(device: DeviceTime, capture: WallTime) -> ClockMap {
     ClockMap::anchored(device, wall_at_start)
 }
 
-type DedupKey = (StreamKind, i64, u64, u16);
+/// The same fields the store's primary key uses, so the fast in-memory layer and the durable one
+/// cannot disagree about what a duplicate is.
+type DedupKey = (StreamKind, i64, u16, u8, u64);
+
+fn dedup_key(sample: &Sample<RawValue>) -> DedupKey {
+    (
+        sample.kind,
+        sample.device_time.as_nanos(),
+        sample.seq,
+        sample.value.tag(),
+        sample.value.key_bits(),
+    )
+}
 
 /// How many dedup keys one timeline remembers. A session is one Timeline, and a multi-day backfill
 /// pushes every banked sample through it, so the memory has to be bounded by something. 65,536 keys
@@ -88,27 +88,21 @@ impl Timeline {
         }
     }
 
-    /// Insert one sample, deduplicating on (kind, device_time, value bits, seq). Equal values at
-    /// the same instant with different `seq` are distinct on purpose; see the crate doc.
+    /// Insert one sample, deduplicating on the store's key. Equal values at the same instant with
+    /// different `seq` are distinct on purpose; see the crate doc.
     pub fn insert(&mut self, sample: Sample<RawValue>) -> InsertOutcome {
-        let key: DedupKey = (
-            sample.kind,
-            sample.device_time.as_nanos(),
-            sample.value.key_bits(),
-            sample.seq,
-        );
-        if self.seen.insert(key) {
-            self.order.push_back(key);
-            while self.order.len() > self.window {
-                if let Some(evicted) = self.order.pop_front() {
-                    self.seen.remove(&evicted);
-                }
-            }
-            self.samples.push(sample);
-            InsertOutcome::Inserted
-        } else {
-            InsertOutcome::Duplicate
+        let key = dedup_key(&sample);
+        if !self.seen.insert(key) {
+            return InsertOutcome::Duplicate;
         }
+        self.order.push_back(key);
+        while self.order.len() > self.window {
+            if let Some(evicted) = self.order.pop_front() {
+                self.seen.remove(&evicted);
+            }
+        }
+        self.samples.push(sample);
+        InsertOutcome::Inserted
     }
 
     pub fn len(&self) -> usize {
@@ -119,27 +113,22 @@ impl Timeline {
         self.samples.is_empty()
     }
 
-    /// The canonical series: ordered by device time, then seq, then kind and value bits so the
-    /// order is total and identical regardless of insertion order. The dedup memory is kept, so a
-    /// timeline can keep receiving a re-sync after a drain.
+    /// The canonical series: ordered by device time, then seq, then kind and value so the order is
+    /// total and identical regardless of insertion order. The dedup memory is kept, so a timeline
+    /// can keep receiving a re-sync after a drain.
     pub fn drain_ordered(&mut self) -> Vec<Sample<RawValue>> {
         let mut out = std::mem::take(&mut self.samples);
-        out.sort_by_key(|s| {
-            (
-                s.device_time.as_nanos(),
-                s.seq,
-                s.kind as u8,
-                s.value.key_bits(),
-            )
+        out.sort_unstable_by_key(|sample| {
+            let (kind, at, seq, tag, bits) = dedup_key(sample);
+            (at, seq, kind as u8, tag, bits)
         });
         out
     }
 }
 
 /// Place one sample on the wall clock without touching its raw device timestamp. A plausible
-/// device time is trusted as-is; an implausible one falls back to the time the phone captured
-/// the frame, and the sample carries `RejectReason::ImplausibleTimestamp` so the fallback is
-/// visible all the way to the inspector.
+/// device time is trusted as-is; an implausible one falls back to the time the phone captured the
+/// frame, and the sample's `Placement` says so all the way to the inspector.
 pub fn place_on_wall(sample: &mut Sample<RawValue>, capture: WallTime) -> Placement {
     place_on_wall_with(&ClockMap::default(), sample, capture)
 }
@@ -149,29 +138,22 @@ pub fn place_on_wall(sample: &mut Sample<RawValue>, capture: WallTime) -> Placem
 /// A plausible device time is trusted as-is. An implausible one goes through the map, which shifts
 /// the whole segment by a single offset and therefore preserves the gaps between samples — the
 /// thing the capture fallback destroys by collapsing every sample in a burst onto one instant.
-/// Only when the map covers nothing does the capture time apply. A corrected or fallen-back sample
-/// keeps `RejectReason::ImplausibleTimestamp`, so the correction is visible to the inspector.
+/// Only when the map covers nothing does the capture time apply.
 pub fn place_on_wall_with(
     map: &ClockMap,
     sample: &mut Sample<RawValue>,
     capture: WallTime,
 ) -> Placement {
     let as_wall = WallTime::from_nanos(sample.device_time.as_nanos());
-    if as_wall.is_plausible() {
-        sample.wall_time = Some(as_wall);
-        return Placement::DeviceClock;
-    }
-    sample.quality.reason = Some(RejectReason::ImplausibleTimestamp);
-    match map.to_wall(sample.device_time) {
-        Some(wall) => {
-            sample.wall_time = Some(wall);
-            Placement::Corrected
+    sample.placement = if as_wall.is_plausible() {
+        Placement::DeviceClock(as_wall)
+    } else {
+        match map.to_wall(sample.device_time) {
+            Some(wall) => Placement::Corrected(wall),
+            None => Placement::CaptureFallback(capture),
         }
-        None => {
-            sample.wall_time = Some(capture);
-            Placement::CaptureFallback
-        }
-    }
+    };
+    sample.placement
 }
 
 #[cfg(test)]
@@ -185,7 +167,7 @@ mod tests {
         Sample {
             kind: StreamKind::RrInterval,
             device_time: DeviceTime::from_nanos(device_nanos),
-            wall_time: None,
+            placement: Placement::Unplaced,
             seq,
             value: RawValue::U16(ms),
             quality: Quality::scored(1.0),
@@ -270,26 +252,26 @@ mod tests {
     }
 
     #[test]
-    fn implausible_timestamp_falls_back_and_flags() {
+    fn implausible_timestamp_falls_back_and_says_so() {
         let capture = WallTime::from_unix_seconds(1_752_600_123);
         let mut sample = rr(0, 812, 0);
-        let placement = place_on_wall(&mut sample, capture);
-        assert_eq!(placement, Placement::CaptureFallback);
-        assert_eq!(sample.wall_time, Some(capture));
         assert_eq!(
-            sample.quality.reason,
-            Some(RejectReason::ImplausibleTimestamp)
+            place_on_wall(&mut sample, capture),
+            Placement::CaptureFallback(capture)
         );
+        assert_eq!(sample.wall_time(), Some(capture));
     }
 
     #[test]
     fn plausible_timestamp_uses_the_device_clock() {
         let capture = WallTime::from_unix_seconds(1_752_600_123);
         let mut sample = rr(T0, 812, 0);
-        let placement = place_on_wall(&mut sample, capture);
-        assert_eq!(placement, Placement::DeviceClock);
-        assert_eq!(sample.wall_time, Some(WallTime::from_nanos(T0)));
-        assert_eq!(sample.quality.reason, None);
+        let at = WallTime::from_nanos(T0);
+        assert_eq!(
+            place_on_wall(&mut sample, capture),
+            Placement::DeviceClock(at)
+        );
+        assert!(sample.placement.is_trusted());
     }
 
     /// The load-bearing one. Two samples ten seconds apart under a 1970-era RTC must still be ten
@@ -302,23 +284,29 @@ mod tests {
 
         let mut first = rr(0, 812, 0);
         let mut second = rr(10 * 1_000_000_000, 812, 1);
-        assert_eq!(
-            place_on_wall_with(&map, &mut first, capture),
-            Placement::Corrected
-        );
-        assert_eq!(
-            place_on_wall_with(&map, &mut second, capture),
-            Placement::Corrected
-        );
+        for sample in [&mut first, &mut second] {
+            assert!(matches!(
+                place_on_wall_with(&map, sample, capture),
+                Placement::Corrected(_)
+            ));
+        }
 
-        let gap = second.wall_time.expect("second").as_nanos()
-            - first.wall_time.expect("first").as_nanos();
+        let gap = second.wall_time().expect("second").as_nanos()
+            - first.wall_time().expect("first").as_nanos();
         assert_eq!(gap, 10 * 1_000_000_000, "ten seconds apart, still");
-        // Both are flagged, because neither timestamp came from a trustworthy clock.
-        assert_eq!(
-            first.quality.reason,
-            Some(RejectReason::ImplausibleTimestamp)
-        );
+    }
+
+    /// A clock correction says nothing about whether the sensor read well. Fusing the two is what
+    /// made corrected samples invisible to the app: the FFI dropped anything carrying a reason.
+    #[test]
+    fn correcting_a_clock_leaves_the_value_judgement_alone() {
+        let capture = WallTime::from_unix_seconds(1_752_600_123);
+        let map = anchor_from(DeviceTime::from_nanos(0), capture);
+        let mut sample = rr(0, 812, 0);
+        place_on_wall_with(&map, &mut sample, capture);
+        assert_eq!(sample.quality, Quality::scored(1.0));
+        assert!(sample.quality.is_usable());
+        assert!(!sample.placement.is_trusted());
     }
 
     /// The anchor snaps to a five-minute grid so the same record re-syncing later corrects to the
@@ -346,12 +334,7 @@ mod tests {
         let mut sample = rr(7, 812, 0);
         assert_eq!(
             place_on_wall_with(&map, &mut sample, capture),
-            Placement::CaptureFallback
-        );
-        assert_eq!(sample.wall_time, Some(capture));
-        assert_eq!(
-            sample.quality.reason,
-            Some(RejectReason::ImplausibleTimestamp)
+            Placement::CaptureFallback(capture)
         );
     }
 
@@ -363,10 +346,8 @@ mod tests {
         let mut sample = rr(T0, 812, 0);
         assert_eq!(
             place_on_wall_with(&map, &mut sample, capture),
-            Placement::DeviceClock
+            Placement::DeviceClock(WallTime::from_nanos(T0))
         );
-        assert_eq!(sample.wall_time, Some(WallTime::from_nanos(T0)));
-        assert_eq!(sample.quality.reason, None);
     }
 
     #[test]

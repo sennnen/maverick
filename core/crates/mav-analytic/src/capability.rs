@@ -8,6 +8,8 @@ use std::collections::HashSet;
 #[serde(rename_all = "snake_case")]
 pub enum AnalyticId {
     TimeDomainHrv,
+    /// Task Force band powers over the same beats, by Lomb-Scargle periodogram.
+    FrequencyDomainHrv,
     Recovery,
     /// A sleep-quality composite. Needs staged sleep, which no admitted analytic produces yet.
     SleepPerformance,
@@ -19,48 +21,62 @@ pub enum AnalyticId {
     CyclePhase,
 }
 
+/// Beat-to-beat intervals from either physiological source. An analytic that only needs the
+/// timing of beats is served by either; one that needs them to be electrical asks for
+/// `StreamKind::RrInterval` alone.
+const ANY_INTERVAL: &[StreamKind] = &[StreamKind::RrInterval, StreamKind::PulseInterval];
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct AnalyticDescriptor {
     pub id: AnalyticId,
-    pub required_streams: &'static [StreamKind],
+    /// Streams that must all be present.
+    pub requires_all: &'static [StreamKind],
+    /// Groups within which any one stream will do. A group with nothing present is reported by
+    /// its first member, the one the analytic would rather have.
+    pub requires_any: &'static [&'static [StreamKind]],
     pub admitted: bool,
 }
 
+const fn descriptor(
+    id: AnalyticId,
+    requires_all: &'static [StreamKind],
+    requires_any: &'static [&'static [StreamKind]],
+    admitted: bool,
+) -> AnalyticDescriptor {
+    AnalyticDescriptor {
+        id,
+        requires_all,
+        requires_any,
+        admitted,
+    }
+}
+
 pub const ANALYTICS: &[AnalyticDescriptor] = &[
-    AnalyticDescriptor {
-        id: AnalyticId::TimeDomainHrv,
-        required_streams: &[StreamKind::RrInterval],
-        admitted: true,
-    },
-    AnalyticDescriptor {
-        id: AnalyticId::Recovery,
-        required_streams: &[StreamKind::RrInterval],
-        admitted: false,
-    },
-    AnalyticDescriptor {
-        id: AnalyticId::SleepPerformance,
-        required_streams: &[StreamKind::SleepStateRaw, StreamKind::HeartRate],
-        admitted: false,
-    },
-    AnalyticDescriptor {
-        id: AnalyticId::IllnessRisk,
-        required_streams: &[
+    descriptor(AnalyticId::TimeDomainHrv, &[], &[ANY_INTERVAL], true),
+    descriptor(AnalyticId::FrequencyDomainHrv, &[], &[ANY_INTERVAL], true),
+    descriptor(AnalyticId::Recovery, &[], &[ANY_INTERVAL], false),
+    descriptor(
+        AnalyticId::SleepPerformance,
+        &[StreamKind::SleepStateRaw, StreamKind::HeartRate],
+        &[],
+        false,
+    ),
+    descriptor(
+        AnalyticId::IllnessRisk,
+        &[
             StreamKind::HeartRate,
-            StreamKind::RrInterval,
             StreamKind::SkinTemp,
             StreamKind::RespRaw,
         ],
-        admitted: false,
-    },
-    AnalyticDescriptor {
-        id: AnalyticId::CyclePhase,
-        required_streams: &[
-            StreamKind::SkinTemp,
-            StreamKind::HeartRate,
-            StreamKind::RrInterval,
-        ],
-        admitted: false,
-    },
+        &[ANY_INTERVAL],
+        false,
+    ),
+    descriptor(
+        AnalyticId::CyclePhase,
+        &[StreamKind::SkinTemp, StreamKind::HeartRate],
+        &[ANY_INTERVAL],
+        false,
+    ),
 ];
 
 #[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
@@ -82,12 +98,19 @@ pub fn negotiate(streams: &[StreamKind]) -> Vec<AnalyticAvailability> {
     ANALYTICS
         .iter()
         .map(|descriptor| {
-            let missing: Vec<_> = descriptor
-                .required_streams
+            let mut missing: Vec<_> = descriptor
+                .requires_all
                 .iter()
                 .copied()
                 .filter(|stream| !streams.contains(stream))
                 .collect();
+            missing.extend(
+                descriptor
+                    .requires_any
+                    .iter()
+                    .filter(|group| !group.iter().any(|stream| streams.contains(stream)))
+                    .filter_map(|group| group.first().copied()),
+            );
             let reason = if !missing.is_empty() {
                 Some(UnavailableReason::MissingStreams { streams: missing })
             } else if !descriptor.admitted {

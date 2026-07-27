@@ -7,7 +7,7 @@ use mav_connector_abi::{
 use mav_connector_runtime::{Artifact, ConnectorInstance, LimitProfile};
 use mav_model::error::{codes, MavError, Result};
 use mav_model::ids::{DeviceId, MetadataId};
-use mav_model::raw::{RawSample, RawSampleBatch, RawValue};
+use mav_model::raw::{RawSample, RawValue};
 use mav_model::stream::StreamKind;
 use mav_model::time::{ClockMap, DeviceTime, WallTime};
 use mav_model::version::Version;

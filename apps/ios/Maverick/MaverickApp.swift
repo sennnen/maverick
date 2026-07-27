@@ -34,7 +34,9 @@ struct MaverickApp: App {
         .onAppear { repo.reload = { store.retry() } }
         .onReceive(connectors.$connection) { connection in
           model.apply(connection: connection, to: live)
+          if let device = connection.deviceID { connectors.refreshDays(deviceID: device) }
         }
+        .onReceive(connectors.$days) { history in repo.acceptDays(history) }
     }
   }
 }

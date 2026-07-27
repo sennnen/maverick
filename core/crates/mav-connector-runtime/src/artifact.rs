@@ -30,6 +30,25 @@ pub struct Artifact {
     bytes: Vec<u8>,
     signature_range: Range<usize>,
     report: InspectionReport,
+    /// The compiled module, kept once it has been built. Reconnecting a strap re-instantiates the
+    /// connector, and compiling a couple of hundred kilobytes of WebAssembly every time is work the
+    /// phone's battery pays for and nobody sees. Shared rather than cloned: a clone of an artifact
+    /// is the same bytes and therefore the same module.
+    compiled: std::sync::Arc<std::sync::OnceLock<(wasmi::Engine, wasmi::Module)>>,
+}
+
+impl Artifact {
+    /// The compiled module for this artifact, compiling it the first time it is asked for.
+    pub(crate) fn compiled(
+        &self,
+        build: impl FnOnce() -> Result<(wasmi::Engine, wasmi::Module)>,
+    ) -> Result<&(wasmi::Engine, wasmi::Module)> {
+        if let Some(ready) = self.compiled.get() {
+            return Ok(ready);
+        }
+        let built = build()?;
+        Ok(self.compiled.get_or_init(|| built))
+    }
 }
 
 #[derive(Debug)]
@@ -93,6 +112,7 @@ impl Artifact {
         Ok(Self {
             bytes,
             signature_range,
+            compiled: std::sync::Arc::default(),
             report: InspectionReport {
                 artifact_digest,
                 manifest_digest,

@@ -19,6 +19,10 @@ pub struct ConnectorInstance {
     handle: TypedFunc<(i32, i32), i64>,
     snapshot: TypedFunc<(), i64>,
     profile: LimitProfile,
+    /// The guest buffer host events are written into, kept between calls. Allocating and freeing it
+    /// per event meant two extra interpreter calls and two guest allocator runs for every strap
+    /// notification — once a second, all day, for nothing.
+    input_slot: Option<(u32, u32)>,
     usable: bool,
 }
 
@@ -30,15 +34,18 @@ impl ConnectorInstance {
                 "selected host profile differs from signed manifest profile",
             ));
         }
-        engine::preflight(artifact.bytes(), &profile)?;
-        let engine = engine::engine(&artifact.report().abi, &profile)?;
-        let module = Module::new(&engine, artifact.bytes()).map_err(|source| {
-            let code = match source.kind() {
-                ErrorKind::Limits(_) => codes::CONNECTOR_RUNTIME_MODULE_LIMIT,
-                ErrorKind::Wasm(_) => codes::CONNECTOR_RUNTIME_FEATURE_FORBIDDEN,
-                _ => codes::CONNECTOR_RUNTIME_INSTANTIATION,
-            };
-            error(code, format!("module compilation failed: {source}"))
+        let (engine, module) = artifact.compiled(|| {
+            engine::preflight(artifact.bytes(), &profile)?;
+            let engine = engine::engine(&artifact.report().abi, &profile)?;
+            let module = Module::new(&engine, artifact.bytes()).map_err(|source| {
+                let code = match source.kind() {
+                    ErrorKind::Limits(_) => codes::CONNECTOR_RUNTIME_MODULE_LIMIT,
+                    ErrorKind::Wasm(_) => codes::CONNECTOR_RUNTIME_FEATURE_FORBIDDEN,
+                    _ => codes::CONNECTOR_RUNTIME_INSTANTIATION,
+                };
+                error(code, format!("module compilation failed: {source}"))
+            })?;
+            Ok((engine, module))
         })?;
         let limits = StoreLimitsBuilder::new()
             .memory_size(profile.max_memory_bytes)
@@ -48,7 +55,7 @@ impl ConnectorInstance {
             .memories(profile.max_memories as usize)
             .trap_on_grow_failure(true)
             .build();
-        let mut store = Store::new(&engine, HostState { limits });
+        let mut store = Store::new(engine, HostState { limits });
         store.limiter(|state| &mut state.limits);
         store.set_fuel(profile.fuel_per_call).map_err(|source| {
             error(
@@ -56,9 +63,9 @@ impl ConnectorInstance {
                 format!("initial fuel setup failed: {source}"),
             )
         })?;
-        let linker = Linker::<HostState>::new(&engine);
+        let linker = Linker::<HostState>::new(engine);
         let instance = linker
-            .instantiate_and_start(&mut store, &module)
+            .instantiate_and_start(&mut store, module)
             .map_err(|source| map_wasmi(source, "module instantiation"))?;
         let memory = instance.get_memory(&store, "memory").ok_or_else(|| {
             error(
@@ -90,6 +97,7 @@ impl ConnectorInstance {
             handle,
             snapshot,
             profile,
+            input_slot: None,
             usable: true,
         })
     }
@@ -177,13 +185,10 @@ impl ConnectorInstance {
             )
         })?;
         self.reset_fuel()?;
-        let input_pointer = self
-            .alloc
-            .call(&mut self.store, input_length)
-            .map_err(|source| self.fail_wasmi(source, "mav_alloc"))?;
-        let input_pointer_bits = input_pointer as u32;
+        let input_pointer_bits = self.input_buffer(input_length)?;
         let input_range = memory::write(self.memory, &mut self.store, input_pointer_bits, &input)
             .map_err(|error| self.fail(error))?;
+        let input_pointer = input_pointer_bits as i32;
         let packed = function
             .call(&mut self.store, (input_pointer, input_length))
             .map_err(|source| self.fail_wasmi(source, "connector event call"))?;
@@ -210,13 +215,32 @@ impl ConnectorInstance {
             )));
         }
         self.deallocate(output_pointer, output_length)?;
-        self.deallocate(input_pointer_bits, input.len() as u32)?;
         decode_canonical(&output).map_err(|source| {
             self.fail(error(
                 codes::CONNECTOR_RUNTIME_OUTPUT_INVALID,
                 format!("connector action batch rejected: {source}"),
             ))
         })
+    }
+
+    /// A guest buffer of at least `length` bytes, reusing the one from the last event when it is
+    /// big enough. Grown by replacement rather than in place, because the guest allocator has no
+    /// realloc in the ABI.
+    fn input_buffer(&mut self, length: i32) -> Result<u32> {
+        let wanted = length as u32;
+        if let Some((pointer, capacity)) = self.input_slot {
+            if capacity >= wanted {
+                return Ok(pointer);
+            }
+            self.deallocate(pointer, capacity)?;
+            self.input_slot = None;
+        }
+        let pointer = self
+            .alloc
+            .call(&mut self.store, length)
+            .map_err(|source| self.fail_wasmi(source, "mav_alloc"))? as u32;
+        self.input_slot = Some((pointer, wanted));
+        Ok(pointer)
     }
 
     fn deallocate(&mut self, pointer: u32, length: u32) -> Result<()> {

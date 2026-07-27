@@ -34,6 +34,16 @@ fun auraFrac(v: Double?, b: Double?): Double? {
     return (v - b) / b
 }
 
+/**
+ * What a variability figure may be called on screen, decided by the core's own label.
+ *
+ * Only beats timed from the heart's electrical signal are heart-rate variability; an optical pulse
+ * is a different event and reads as PRV. Every surface asks this rather than deciding for itself,
+ * so the app cannot title the same number two ways on two tabs.
+ */
+fun auraVariabilityTitle(label: String?): String =
+    if (label == "heart_rate_variability") "HRV" else "PRV"
+
 // MARK: Formatting (the hub screens' shared text helpers)
 
 fun auraIntText(v: Double?): String = v?.roundToInt()?.toString() ?: "--"

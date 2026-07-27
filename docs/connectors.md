@@ -17,6 +17,25 @@ through WC-P16. The completed migration record lives in
 - No device family is named by generic core or frontend code.
 - Frontends acquire bytes; core validates, verifies, tests, installs, and activates them.
 
+## The one connector that ships with the app
+
+Exactly one artifact is shipped inside Maverick: **Generic HR Monitor**
+(`dev.maverick.generic-hr`), which speaks the Bluetooth SIG Heart Rate Service.
+
+It is an exception to "connectors are not bundled" ([ADR-011](adr/ADR-011.md)) and not a hole in
+it. Bundling a *driver* is what that decision forbids, because a driver ties a device's protocol to
+the app's release cycle. This is not a driver: 0x180D is a published standard that chest straps,
+arm bands, gym equipment and most watches all implement, so one artifact covers hardware nobody has
+to write anything for. A fresh install therefore has something to pair with before the wearer has
+found any connector at all — and, because a chest strap times its beats from the heart's electrical
+signal, it is currently the only source of genuine heart-rate variability (ADR-027).
+
+It gets no privileges for being bundled. Both apps install it through the same public path as any
+imported file — inspect, then install against the token that inspection issued — because a bundled
+artifact that skipped verification would be a second trust path, and the whole point is that there
+is only one. It is signed by the same publisher, listed in the same registry, and can be removed
+like any other.
+
 ## Trust boundaries
 
 Untrusted inputs are connector bytes, custom-section payloads, Wasm bytecode, imported source

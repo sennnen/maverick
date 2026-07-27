@@ -78,10 +78,30 @@ pub fn band(score: f64) -> &'static str {
     }
 }
 
+/// The Gaussian ratio between a standard deviation and a mean absolute deviation, which is what
+/// the EWMA spread accumulates.
+const SIGMA_PER_ABS_DEV: f64 = 1.253;
+
 /// Robust z-score using EWMA spread: (value − mean) / (1.253 × spread).
 pub fn z_score(value: f64, mean: f64, spread: f64) -> f64 {
-    let sigma = (1.253 * spread).max(1e-9);
-    (value - mean) / sigma
+    (value - mean) / (SIGMA_PER_ABS_DEV * spread).max(1e-9)
+}
+
+/// The same z-score for a strictly positive, right-skewed quantity, taken in the log domain.
+///
+/// RMSSD is log-normal: bounded below by zero with a long upper tail. Scored raw, halving it and
+/// doubling it are not equal and opposite, so an equally bad night and an equally good one land at
+/// different distances from the baseline. In logs they are symmetric, which is also the domain
+/// `readiness` already works in over the same nightly series. The baseline is read as the centre of
+/// the distribution and the spread is converted to a log-scale one by the log-normal identity, so
+/// a value sitting exactly on its baseline still scores zero.
+pub fn log_z_score(value: f64, mean: f64, spread: f64) -> f64 {
+    if value <= 0.0 || mean <= 0.0 {
+        return 0.0;
+    }
+    let variation = (SIGMA_PER_ABS_DEV * spread).max(1e-9) / mean;
+    let log_sigma = (1.0 + variation * variation).ln().sqrt().max(1e-9);
+    (value / mean).ln() / log_sigma
 }
 
 /// Overnight resting-HR DECLINE slope (bpm/hour) across the in-bed window. Negative = declining
@@ -172,7 +192,7 @@ pub fn recovery(input: &RecoveryInput) -> Option<f64> {
     let mut terms: Vec<(f64, f64)> = Vec::new(); // (z, weight)
 
     if let Some(b) = input.hrv_baseline {
-        terms.push((z_score(input.hrv, b.mean, b.spread), W_HRV));
+        terms.push((log_z_score(input.hrv, b.mean, b.spread), W_HRV));
     }
     if let Some(b) = input.rhr_baseline {
         terms.push((z_score(b.mean, input.rhr, b.spread), W_RHR));
@@ -437,5 +457,31 @@ mod tests {
         ];
         // 55, 80, and the 5.0 boundary count; None / 3 (< min) / 300 (> max) do not.
         assert_eq!(banked_nights(&nights, HRV_MIN_MS, HRV_MAX_MS), 3);
+    }
+
+    /// The distributional fix. A night at half the baseline and a night at double it are equally
+    /// far from normal for a quantity bounded below by zero; a raw z-score says the good night is
+    /// further, because it has unbounded room above and none below.
+    #[test]
+    fn halving_and_doubling_variability_score_equal_and_opposite() {
+        let (mean, spread) = (50.0, 8.0);
+        let low = log_z_score(mean / 2.0, mean, spread);
+        let high = log_z_score(mean * 2.0, mean, spread);
+        assert!((low + high).abs() < 1e-9, "{low} vs {high}");
+        assert!(low < 0.0 && high > 0.0);
+
+        let raw_low = z_score(mean / 2.0, mean, spread);
+        let raw_high = z_score(mean * 2.0, mean, spread);
+        assert!(
+            (raw_low + raw_high).abs() > 1.0,
+            "the raw score is asymmetric, which is what this replaces"
+        );
+    }
+
+    #[test]
+    fn a_night_on_its_own_baseline_still_scores_zero() {
+        assert_eq!(log_z_score(50.0, 50.0, 8.0), 0.0);
+        assert_eq!(log_z_score(0.0, 50.0, 8.0), 0.0);
+        assert_eq!(log_z_score(50.0, 0.0, 8.0), 0.0);
     }
 }

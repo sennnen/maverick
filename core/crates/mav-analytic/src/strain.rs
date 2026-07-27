@@ -103,17 +103,24 @@ pub fn zone_weight(bpm: f64, resting_hr: f64, hr_reserve: f64) -> i64 {
     0
 }
 
-/// Per-sample duration (minutes) from the first two timestamps; 1 s fallback.
+/// Per-sample duration (minutes): the median gap between consecutive readings.
+///
+/// TRIMP is a sum of *time* in each zone, so this number multiplies the whole result. Taking it
+/// from the first two timestamps assumed a series that never changes rate, and a strap that
+/// switches between one reading a second and one a minute would then have its whole session scored
+/// at whichever rate the first two samples happened to be. The median is robust to both the rate
+/// changing and to a dropout in the middle.
 pub fn sample_duration_minutes(hr: &[HrSample]) -> f64 {
-    if hr.len() < 2 {
+    let mut gaps: Vec<i64> = hr
+        .windows(2)
+        .map(|pair| (pair[1].ts - pair[0].ts).abs())
+        .filter(|gap| *gap > 0)
+        .collect();
+    if gaps.is_empty() {
         return FALLBACK_SAMPLE_MIN;
     }
-    let delta_s = (hr[1].ts - hr[0].ts).abs() as f64;
-    if delta_s > 0.0 {
-        delta_s / 60.0
-    } else {
-        FALLBACK_SAMPLE_MIN
-    }
+    gaps.sort_unstable();
+    gaps[gaps.len() / 2] as f64 / 60.0
 }
 
 pub fn edwards_trimp(
@@ -186,7 +193,7 @@ pub fn strain(
     max_hr: Option<f64>,
     resting_hr: f64,
     method: Method,
-    sex: &str,
+    sex: crate::subject::BiologicalSex,
     denominator: f64,
 ) -> Option<f64> {
     let eff_max = max_hr.unwrap_or_else(|| f64::from(default_max_hr(DEFAULT_AGE)));
@@ -207,7 +214,7 @@ pub fn strain(
     let hr_reserve = eff_max - resting_hr;
     let trimp = match method {
         Method::Banister => {
-            let b = if sex.to_lowercase().starts_with('f') {
+            let b = if sex.is_female() {
                 BANISTER_B_WOMEN
             } else {
                 BANISTER_B_MEN
@@ -222,6 +229,7 @@ pub fn strain(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::subject::BiologicalSex;
 
     const EPS: f64 = 0.01;
 
@@ -244,7 +252,7 @@ mod tests {
             Some(max_hr),
             resting_hr,
             Method::Edwards,
-            "male",
+            BiologicalSex::Male,
             STRAIN_DENOMINATOR,
         )
     }
@@ -307,7 +315,7 @@ mod tests {
             Some(184.0),
             60.0,
             Method::Banister,
-            "male",
+            BiologicalSex::Male,
             STRAIN_DENOMINATOR,
         );
         let high = strain(
@@ -315,7 +323,7 @@ mod tests {
             Some(184.0),
             60.0,
             Method::Banister,
-            "male",
+            BiologicalSex::Male,
             STRAIN_DENOMINATOR,
         );
         assert!(high.unwrap() > low.unwrap());
@@ -346,5 +354,28 @@ mod tests {
             fit_strain_denominator(&[(100.0, 50.0)]),
             Err(StrainError::TooFewPairs)
         );
+    }
+
+    /// The finding this replaced. Per-sample duration multiplies the whole TRIMP sum, and reading
+    /// it off the first two timestamps scored an entire session at whatever rate the series
+    /// happened to open at.
+    #[test]
+    fn sample_duration_follows_the_series_not_its_first_two_readings() {
+        let mut mostly_minutely = vec![HrSample { ts: 0, bpm: 120 }, HrSample { ts: 1, bpm: 120 }];
+        mostly_minutely.extend((1..40).map(|index| HrSample {
+            ts: 1 + index * 60,
+            bpm: 120,
+        }));
+        assert!((sample_duration_minutes(&mostly_minutely) - 1.0).abs() < EPS);
+
+        // A dropout in the middle must not become the whole series' cadence either.
+        let mut with_dropout = hr_every(120, 40, 1);
+        with_dropout.push(HrSample {
+            ts: 10_000,
+            bpm: 120,
+        });
+        assert!((sample_duration_minutes(&with_dropout) - 1.0 / 60.0).abs() < 1e-9);
+
+        assert_eq!(sample_duration_minutes(&[]), FALLBACK_SAMPLE_MIN);
     }
 }

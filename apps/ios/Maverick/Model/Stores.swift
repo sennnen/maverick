@@ -150,8 +150,8 @@ final class ProfileStore: ObservableObject {
   /// Manual max-heart-rate override in bpm; 0 = automatic (Tanaka).
   @Published var hrMaxOverride: Int { didSet { d.set(hrMaxOverride, forKey: "profile.hrMaxOverride") } }
 
-  /// Effective HR-max: the manual override if set, else the Tanaka estimate round(208 − 0.7·age).
-  var hrMax: Int { hrMaxOverride > 0 ? hrMaxOverride : Int((208.0 - 0.7 * Double(age)).rounded()) }
+  /// Effective HR-max, resolved by the core rather than recomputed here.
+  var hrMax: Int { AuraZoneMath.maxHr(age: age, override: hrMaxOverride) }
 
   init() {
     let age = d.integer(forKey: "profile.age")

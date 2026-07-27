@@ -15,6 +15,26 @@ enum class ConnectorImportOrigin {
     CONTENT,
     SHARE,
     REMOTE,
+
+    /** Shipped inside the app. The only connector that is: see [BundledConnector]. */
+    BUNDLED,
+}
+
+/**
+ * The one connector Maverick ships with.
+ *
+ * Everything else installs from a file, a share or the registry — that is the product invariant,
+ * and bundling drivers is what the connector architecture exists to avoid. This one is the
+ * exception because it is not a driver for a device: it speaks the Bluetooth SIG heart-rate
+ * profile, which is a published standard rather than anyone's protocol, so a brand-new install has
+ * something to pair with before the wearer has found any connector at all. It also happens to be
+ * the only source of genuine heart-rate variability, because a chest strap times its beats
+ * electrically.
+ */
+object BundledConnector {
+    const val ASSET = "generic-hr.mavconn"
+    const val DISPLAY_NAME = "Generic HR Monitor"
+    const val CONNECTOR_ID = "dev.maverick.generic-hr"
 }
 
 sealed class ConnectorAcquisitionException(message: String) : Exception(message) {
@@ -43,6 +63,7 @@ data class ConnectorAcquisition(
             val safeName = displayName.replace('\\', '/').substringAfterLast('/').ifBlank { "Connector" }
             val kind = when (origin) {
                 ConnectorImportOrigin.REMOTE -> ConnectorSourceKind.REMOTE
+                ConnectorImportOrigin.BUNDLED -> ConnectorSourceKind.BUNDLED
                 else -> ConnectorSourceKind.IMPORTED
             }
             return ConnectorAcquisition(

@@ -561,6 +561,52 @@ class AndroidConnectorManager(
             runtime = it
             it.setTimezoneSpans(TimeZone.getDefault().id, offsetSpans(TimeZone.getDefault()))
             com.sennnen.mav.ui.AuraZoneMath.runtime = it
+            com.sennnen.mav.ui.MavRepo.sharedRuntime = it
+            installBundledConnector(it)
+        }
+    }
+
+    /**
+     * Install the shipped Generic HR Monitor the first time the runtime opens, so a fresh install
+     * can pair with a chest strap before the wearer has found any connector at all.
+     *
+     * It goes through the same public path every other connector uses — inspect, then install
+     * against the approval token that inspection issued — because a bundled artifact that skipped
+     * verification would be a second trust path, and the whole point is that there is only one.
+     * Already installed is the normal case and is silent.
+     */
+    private fun installBundledConnector(open: MavRuntime) {
+        if (open.listInstalledConnectors().any { it.connectorId == BundledConnector.CONNECTOR_ID }) {
+            return
+        }
+        runCatching {
+            val bytes = appContext.assets.open(BundledConnector.ASSET).use { it.readBytes() }
+            val acquisition = ConnectorAcquisition.make(
+                bytes = bytes,
+                origin = ConnectorImportOrigin.BUNDLED,
+                displayName = BundledConnector.DISPLAY_NAME,
+                locator = BundledConnector.ASSET,
+            )
+            val now = System.currentTimeMillis()
+            val inspected = open.inspectConnectorBytes(
+                bytes = acquisition.bytes,
+                source = acquisition.source,
+                policy = policy,
+                revocations = revocations,
+                nowMs = now,
+                approvalTtlMs = 60_000,
+            )
+            open.installConnectorBytes(
+                request = ConnectorInstallRequest(
+                    bytes = acquisition.bytes,
+                    source = acquisition.source,
+                    approvalToken = inspected.approvalToken,
+                    activate = true,
+                    nowMs = now,
+                ),
+                policy = policy,
+                revocations = revocations,
+            )
         }
     }
 

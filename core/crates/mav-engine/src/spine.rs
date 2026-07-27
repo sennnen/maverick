@@ -1,44 +1,36 @@
 //! The analytic spine: stored samples in, one `DailySnapshot` per local day out.
 //!
-//! This is the path `docs/pipeline.md` always described and nothing walked. It reads samples for a
-//! device, buckets them into local days through the platform-supplied `Timezone`, computes the
-//! `mav-feature` primitives and the admitted `mav-analytic` values over each day's window, and
-//! persists the result in the derived `daily_snapshot` table.
+//! It reads only the window it is asked about. A day's heart rate and beats come from two indexed
+//! range scans, the streams a day holds come from one census query, and the longitudinal look-back
+//! reads the nightly memo rather than re-deriving two months of beats. Nothing here loads a whole
+//! stream: doing that made opening the app read every sample the device had ever produced.
 //!
 //! Two rules shape it. Availability is negotiated from the streams the day actually holds, so a
 //! metric with no evidence is reported unavailable with its reason rather than computed from
-//! nothing (ADR-005, ADR-024). And the derived table is rebuildable by construction: dropping every
-//! row and recomputing reproduces it, which is what makes an algorithm change a recompute rather
+//! nothing (ADR-005, ADR-024). And every derived row is rebuildable by construction: dropping them
+//! all and recomputing reproduces them, which is what makes an algorithm change a recompute rather
 //! than a migration.
 
 use mav_analytic::capability::{negotiate, AnalyticAvailability};
-use mav_analytic::hrv::{IntervalSource, TimeDomainHrv, HRV_ALGORITHM, HRV_VERSION};
+use mav_analytic::frequency::{band_powers, FrequencyDomainHrv};
+use mav_analytic::hrv::{time_domain, TimeDomainHrv, HRV_ALGORITHM, HRV_VERSION};
+use mav_analytic::intervals::BeatSeries;
 use mav_analytic::readiness::{HrvReadiness, HrvReadinessResult};
-use mav_analytic::time_domain;
 use mav_feature::hr::{hr_summary, HrSummary, HR_FEATURE_ALGORITHM, HR_FEATURE_VERSION};
 use mav_model::error::Result;
 use mav_model::ids::{DeviceId, MetadataId};
 use mav_model::raw::RawValue;
-use mav_model::stream::{Sample, StreamKind};
-use mav_model::time::WallTime;
+use mav_model::stream::{Placement, Quality, Sample, StreamKind};
+use mav_model::time::{DeviceTime, WallTime};
 use mav_model::version::Version;
 use mav_store::Store;
 use serde::{Deserialize, Serialize};
 
-use crate::recompute::{AffectedDays, CacheKey, LocalDay, RecomputeCache, Timezone};
+use crate::recompute::{LocalDay, Timezone};
 
-/// How many trailing days of nightly RMSSD the readiness reading looks back over. The analytic
-/// itself decides how many valid nights it needs; this only bounds how far back we read.
+/// How many trailing days of nightly variability the readiness reading looks back over. The
+/// analytic decides how many valid nights it needs; this only bounds how far back we read.
 const READINESS_WINDOW_DAYS: i64 = 60;
-
-/// The longest wall-clock gap between two interval samples that can still be the same run of
-/// beats. Real straps deliver RR in short bursts minutes apart; within a burst the samples are a
-/// second or less apart, and across bursts they are tens of seconds. Differencing across a burst
-/// boundary is differencing two beats that never followed one another.
-const BEAT_RUN_GAP_MS: i64 = 3_000;
-
-/// Every stream the spine reads. A day holding none of them produces a snapshot that says so.
-const READ_STREAMS: [StreamKind; 2] = [StreamKind::HeartRate, StreamKind::RrInterval];
 
 /// One algorithm that contributed to a snapshot, stamped so a stored row can be told from one an
 /// older build produced.
@@ -58,9 +50,12 @@ pub struct DailySnapshot {
     /// The same day as the engine's index, so a caller can request the neighbouring one.
     pub day_index: i64,
     pub heart_rate: HrSummary,
-    /// Time-domain variability, labelled HRV or PRV by its interval source. Absent when the day
-    /// held too few trustworthy intervals; `availability` says which.
+    /// Time-domain variability, labelled HRV or PRV by the stream that timed the beats. Absent
+    /// when the day held too few trustworthy intervals; `availability` says which.
     pub hrv: Option<TimeDomainHrv>,
+    /// Task Force band powers over the longest uninterrupted run of the same beats. Absent when no
+    /// run is long enough for the bands to be defined.
+    pub hrv_spectrum: Option<FrequencyDomainHrv>,
     /// The longitudinal readout over the trailing nights. Absent while calibrating.
     pub readiness: Option<HrvReadinessResult>,
     /// One entry per known analytic, carrying `UnavailableReason` for everything not served.
@@ -68,45 +63,26 @@ pub struct DailySnapshot {
     pub algorithms: Vec<AlgorithmStamp>,
 }
 
-impl DailySnapshot {
-    /// An honest empty day: no samples, so nothing computed and every analytic unavailable for the
-    /// reason that is actually true.
-    fn empty(day: LocalDay) -> Self {
-        Self {
-            day: day.to_string(),
-            day_index: day.index(),
-            heart_rate: hr_summary(&[], MetadataId::new(0)),
-            hrv: None,
-            readiness: None,
-            availability: negotiate(&[]),
-            algorithms: Vec::new(),
-        }
-    }
-}
-
 /// The recompute engine over one device's stored samples.
 pub struct Spine {
     timezone: Timezone,
-    cache: RecomputeCache<DailySnapshot>,
 }
 
 impl Spine {
     pub fn new(timezone: Timezone) -> Self {
-        Self {
-            timezone,
-            cache: RecomputeCache::new(),
-        }
+        Self { timezone }
     }
 
     pub fn timezone(&self) -> &Timezone {
         &self.timezone
     }
 
-    /// Replace the offset spans. The platforms own the zone database; a change here dirties every
-    /// cached day, because the day a sample belongs to may have moved.
-    pub fn set_timezone(&mut self, timezone: Timezone) {
+    /// Replace the offset spans. The platforms own the zone database; a change here moves day
+    /// boundaries, so every derived row is discarded rather than reinterpreted.
+    pub fn set_timezone(&mut self, store: &Store, timezone: Timezone) -> Result<()> {
         self.timezone = timezone;
-        self.cache = RecomputeCache::new();
+        store.clear_derived(None)?;
+        Ok(())
     }
 
     /// The local day a wall-clock instant falls in, under the current spans.
@@ -114,152 +90,199 @@ impl Spine {
         LocalDay::of(at, &self.timezone)
     }
 
-    /// Drop the cached snapshots for days a sync touched. The stored rows stay: they are still the
-    /// last computed answer, and `snapshot` recomputes over them on the next read.
-    pub fn invalidate(&mut self, days: &AffectedDays) -> Vec<CacheKey> {
-        self.cache.invalidate(days)
+    /// Forget the remembered nights a sync touched, so the next read re-derives them.
+    pub fn invalidate(
+        &self,
+        store: &Store,
+        device: DeviceId,
+        first: LocalDay,
+        last: LocalDay,
+    ) -> Result<()> {
+        store.forget_nightly_variability(device, first.index(), last.index())
     }
 
-    /// The snapshot for one day, from cache if it is there and from a recomputation if not. A
-    /// recomputation persists its result.
+    /// The snapshot for one day, persisted when it differs from the stored one. Recomputing is
+    /// cheap enough that there is no in-memory cache to go stale behind a sync.
     pub fn snapshot(
-        &mut self,
+        &self,
         store: &Store,
         device: DeviceId,
         day: LocalDay,
         computed_ns: i64,
     ) -> Result<DailySnapshot> {
-        let key = cache_key(day);
-        if let Some(cached) = self.cache.get(&key) {
-            return Ok(cached.clone());
-        }
         let snapshot = self.compute(store, device, day)?;
-        persist(store, device, day, &snapshot, computed_ns)?;
-        self.cache.put(key, snapshot.clone());
+        let json = to_json(&snapshot)?;
+        if store.daily_snapshot(device, day.index())?.as_deref() != Some(json.as_str()) {
+            let algorithms = to_json(&snapshot.algorithms)?;
+            store.upsert_daily_snapshot(device, day.index(), &json, &algorithms, computed_ns)?;
+        }
         Ok(snapshot)
     }
 
-    /// Compute one day from stored samples, reading and writing no cache. This is the function the
-    /// rebuildability property is about: it is a pure function of the stored samples and the spans.
+    /// Compute one day from stored samples. A pure function of the samples and the offset spans:
+    /// the nightly memo it fills in is derived from exactly the same beats.
     pub fn compute(&self, store: &Store, device: DeviceId, day: LocalDay) -> Result<DailySnapshot> {
-        let mut by_day = DayIndex::default();
-        for kind in READ_STREAMS {
-            for sample in store.samples(device, kind)? {
-                if let Some(at) = sample.wall_time {
-                    by_day.push(LocalDay::of(at, &self.timezone), sample);
-                }
-            }
-        }
+        let (from, until) = self.span(day);
+        let heart_rate = hr_summary(
+            &store.samples_between(device, StreamKind::HeartRate, from, until)?,
+            provenance(day),
+        );
+        let present = store.streams_between(device, from, until)?;
 
-        let Some(today) = by_day.get(day) else {
-            return Ok(DailySnapshot::empty(day));
-        };
-
-        let heart_rate = hr_summary(&of_kind(today, StreamKind::HeartRate), provenance(day));
-
-        // Time-domain variability is a statement about successive beats, so it is computed over the
-        // longest run of intervals that actually followed one another — not over a day of bursts,
-        // where the difference between the last beat of one burst and the first of the next is not
-        // a beat-to-beat change at all. On real hardware that mistake inflates RMSSD roughly
-        // tenfold.
-        //
-        // Optical intervals, so the analytic labels the result PRV rather than HRV. Nothing on the
-        // supported straps produces ECG intervals on this path; when something does, the source
-        // becomes a property of the stream rather than an assumption here.
-        let runs = beat_runs(&of_kind(today, StreamKind::RrInterval));
-        let hrv = runs
-            .iter()
-            .max_by_key(|run| run.len())
-            .and_then(|run| time_domain(run, IntervalSource::Ppg, provenance(day)));
-
-        // Readiness reads the trailing nights, oldest first, with a gap for every day that has no
-        // usable series. The analytic decides how many valid nights it needs before answering.
-        let nightly: Vec<Option<f64>> = ((day.index() - READINESS_WINDOW_DAYS + 1)..=day.index())
-            .map(|index| {
-                let past = LocalDay::from_index(index);
-                by_day
-                    .get(past)
-                    .map(|samples| of_kind(samples, StreamKind::RrInterval))
-                    .and_then(|rr| {
-                        // Gap-aware: squared successive differences pool within each run and never
-                        // across the break between runs.
-                        let runs = beat_runs(&rr);
-                        let beats: Vec<Vec<u16>> = runs
-                            .iter()
-                            .map(|run| {
-                                run.iter()
-                                    .map(|sample| sample.value.as_f64().round() as u16)
-                                    .collect()
-                            })
-                            .collect();
-                        HrvReadiness::rmssd_runs(beats.iter().map(Vec::as_slice))
-                    })
+        let beats = self
+            .interval_kind(&present)
+            .map(|kind| {
+                Ok::<_, mav_model::error::MavError>((
+                    kind,
+                    self.beats(store, device, kind, from, until)?,
+                ))
             })
-            .collect();
-        let readiness = HrvReadiness::evaluate(&nightly);
+            .transpose()?;
+        let hrv = beats
+            .as_ref()
+            .and_then(|(kind, beats)| time_domain(beats, *kind, provenance(day)));
+        let hrv_spectrum = beats
+            .as_ref()
+            .and_then(|(kind, beats)| spectrum(beats, *kind));
 
-        let mut present: Vec<StreamKind> = today.iter().map(|sample| sample.kind).collect();
-        present.sort_by_key(|kind| *kind as u8);
-        present.dedup();
+        let readiness = match &hrv {
+            Some(today) => {
+                HrvReadiness::evaluate(&self.trailing_nights(store, device, today.source, day)?)
+            }
+            None => None,
+        };
 
         Ok(DailySnapshot {
             day: day.to_string(),
             day_index: day.index(),
             heart_rate,
             hrv,
+            hrv_spectrum,
             readiness,
             availability: negotiate(&present),
             algorithms: stamps(),
         })
     }
-}
 
-/// Samples bucketed by the local day they fall in.
-#[derive(Default)]
-struct DayIndex {
-    days: std::collections::BTreeMap<i64, Vec<Sample<RawValue>>>,
-}
-
-impl DayIndex {
-    fn push(&mut self, day: LocalDay, sample: Sample<RawValue>) {
-        self.days.entry(day.index()).or_default().push(sample);
-    }
-
-    fn get(&self, day: LocalDay) -> Option<&[Sample<RawValue>]> {
-        self.days.get(&day.index()).map(Vec::as_slice)
-    }
-}
-
-/// Split interval samples into runs of beats that genuinely followed one another, in device-time
-/// order. A gap wider than [`BEAT_RUN_GAP_MS`] starts a new run.
-fn beat_runs(intervals: &[Sample<RawValue>]) -> Vec<Vec<Sample<RawValue>>> {
-    let mut ordered = intervals.to_vec();
-    ordered.sort_by_key(|sample| (sample.device_time.as_nanos(), sample.seq));
-
-    let mut runs: Vec<Vec<Sample<RawValue>>> = Vec::new();
-    let mut previous_ms: Option<i64> = None;
-    for sample in ordered {
-        let at_ms = sample.device_time.as_nanos().div_euclid(1_000_000);
-        let continues =
-            previous_ms.is_some_and(|last| at_ms.saturating_sub(last) <= BEAT_RUN_GAP_MS);
-        if continues {
-            if let Some(run) = runs.last_mut() {
-                run.push(sample);
+    /// The trailing nightly RMSSD series, oldest first, one slot per day. Remembered nights come
+    /// from the memo; the rest are derived from that night's beats and remembered.
+    fn trailing_nights(
+        &self,
+        store: &Store,
+        device: DeviceId,
+        kind: StreamKind,
+        day: LocalDay,
+    ) -> Result<Vec<Option<f64>>> {
+        let first = day.offset(1 - READINESS_WINDOW_DAYS);
+        let remembered = store.nightly_variability(device, kind, first.index(), day.index())?;
+        let mut nights = Vec::with_capacity(READINESS_WINDOW_DAYS as usize);
+        let mut remembered = remembered.into_iter().peekable();
+        for index in first.index()..=day.index() {
+            if let Some((_, remembered)) = remembered.next_if(|(at, _)| *at == index) {
+                nights.push(remembered);
+                continue;
             }
-        } else {
-            runs.push(vec![sample]);
+            let past = LocalDay::from_index(index);
+            let (from, until) = self.span(past);
+            let beats = self.beats(store, device, kind, from, until)?;
+            let (ordered, _) = mav_analytic::intervals::ordered_intervals(&beats, |sample| {
+                sample.kind == kind && sample.quality.is_usable()
+            });
+            let rmssd = BeatSeries::from_ordered(&ordered).rmssd_ms();
+            store.upsert_nightly_variability(device, kind, index, rmssd)?;
+            nights.push(rmssd);
         }
-        previous_ms = Some(at_ms);
+        Ok(nights)
     }
-    runs
+
+    /// Which interval stream a day's variability should be computed over, or `None` when the day
+    /// has no beats at all. Electrical wins, including when it has to be detected from a waveform,
+    /// because only electrical beats may be called heart-rate variability.
+    fn interval_kind(&self, present: &[StreamKind]) -> Option<StreamKind> {
+        let held = |kind| present.contains(&kind);
+        if held(StreamKind::RrInterval) || held(StreamKind::Ecg) {
+            Some(StreamKind::RrInterval)
+        } else {
+            held(StreamKind::PulseInterval).then_some(StreamKind::PulseInterval)
+        }
+    }
+
+    /// The interval samples of one kind inside a window. A device that streams the electrical
+    /// waveform instead of the intervals has them detected here, which is the only route from a
+    /// raw ECG to genuine heart-rate variability.
+    fn beats(
+        &self,
+        store: &Store,
+        device: DeviceId,
+        kind: StreamKind,
+        from: WallTime,
+        until: WallTime,
+    ) -> Result<Vec<Sample<RawValue>>> {
+        let stored = store.samples_between(device, kind, from, until)?;
+        if !stored.is_empty() || kind != StreamKind::RrInterval {
+            return Ok(stored);
+        }
+        let waveform = store.samples_between(device, StreamKind::Ecg, from, until)?;
+        Ok(detected_beats(&waveform))
+    }
+
+    fn span(&self, day: LocalDay) -> (WallTime, WallTime) {
+        (
+            day.start(&self.timezone),
+            day.offset(1).start(&self.timezone),
+        )
+    }
 }
 
-fn of_kind(samples: &[Sample<RawValue>], kind: StreamKind) -> Vec<Sample<RawValue>> {
-    samples
+/// Turn a stored ECG waveform into interval samples. Each carries the placement of the waveform
+/// sample its closing beat landed on, so a detected interval is exactly as well-placed in time as
+/// the signal it came from and no better.
+fn detected_beats(waveform: &[Sample<RawValue>]) -> Vec<Sample<RawValue>> {
+    let at_ms = |sample: &Sample<RawValue>| sample.device_time.as_nanos().div_euclid(1_000_000);
+    let timed: Vec<(i64, f64)> = waveform
         .iter()
-        .filter(|sample| sample.kind == kind)
-        .copied()
+        .filter(|sample| sample.quality.is_usable())
+        .map(|sample| (at_ms(sample), sample.value.as_f64()))
+        .collect();
+
+    mav_analytic::ecg::intervals_from_timed(&timed)
+        .into_iter()
+        .enumerate()
+        .map(|(index, (closing_ms, interval_ms))| Sample {
+            kind: StreamKind::RrInterval,
+            device_time: DeviceTime::from_nanos(closing_ms.saturating_mul(1_000_000)),
+            placement: waveform
+                .binary_search_by_key(&closing_ms, at_ms)
+                .map_or(Placement::Unplaced, |index| waveform[index].placement),
+            seq: index as u16,
+            value: RawValue::Converted(interval_ms),
+            quality: Quality::exact(),
+            provenance: MetadataId::new(0),
+        })
         .collect()
+}
+
+/// Band powers over the longest uninterrupted run of beats in the window. A spectrum is a
+/// statement about one continuous stretch of time, so runs are not pooled the way pooled
+/// successive differences are.
+fn spectrum(beats: &[Sample<RawValue>], kind: StreamKind) -> Option<FrequencyDomainHrv> {
+    let (ordered, _) = mav_analytic::intervals::ordered_intervals(beats, |sample| {
+        sample.kind == kind && sample.quality.is_usable()
+    });
+    let mut longest: &[(i64, f64)] = &[];
+    let mut start = 0usize;
+    for index in 0..ordered.len() {
+        let breaks = index + 1 == ordered.len()
+            || ordered[index + 1].0 - ordered[index].0 > mav_analytic::intervals::RUN_GAP_MS;
+        if breaks {
+            let run = &ordered[start..=index];
+            if run.len() > longest.len() {
+                longest = run;
+            }
+            start = index + 1;
+        }
+    }
+    band_powers(longest)
 }
 
 /// A snapshot's provenance is the day it describes: derived values point at the recomputation that
@@ -281,35 +304,13 @@ fn stamps() -> Vec<AlgorithmStamp> {
     .collect()
 }
 
-fn cache_key(day: LocalDay) -> CacheKey {
-    CacheKey {
-        metric: "daily_snapshot".to_owned(),
-        algorithm_version: HRV_VERSION,
-        first_day: day,
-        last_day: day,
-    }
-}
-
-fn persist(
-    store: &Store,
-    device: DeviceId,
-    day: LocalDay,
-    snapshot: &DailySnapshot,
-    computed_ns: i64,
-) -> Result<()> {
-    let json = serde_json::to_string(snapshot).map_err(|source| {
+fn to_json<T: Serialize>(value: &T) -> Result<String> {
+    serde_json::to_string(value).map_err(|source| {
         mav_model::error::MavError::new(
             mav_model::error::codes::INTERNAL_INVARIANT,
-            format!("daily snapshot did not serialize: {source}"),
+            format!("a derived value did not serialize: {source}"),
         )
-    })?;
-    let algorithms = serde_json::to_string(&snapshot.algorithms).map_err(|source| {
-        mav_model::error::MavError::new(
-            mav_model::error::codes::INTERNAL_INVARIANT,
-            format!("algorithm stamps did not serialize: {source}"),
-        )
-    })?;
-    store.upsert_daily_snapshot(device, day.index(), &json, &algorithms, computed_ns)
+    })
 }
 
 #[cfg(test)]

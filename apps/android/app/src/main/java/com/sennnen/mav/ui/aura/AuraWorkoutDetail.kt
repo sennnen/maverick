@@ -1,5 +1,6 @@
 package com.sennnen.mav.ui.aura
 
+import com.sennnen.mav.ui.AuraZoneMath
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -59,7 +60,7 @@ fun AuraWorkoutSummary(vm: AppViewModel, row: WorkoutRow) {
     var route by remember(row.startTs) { mutableStateOf<List<RouteMath.LatLng>>(emptyList()) }
 
     val durMin = (row.durationS ?: (row.endTs - row.startTs).toDouble()) / 60.0
-    val hrMax = if (profile.hrMaxOverride > 0) profile.hrMaxOverride else max(120, 220 - profile.age)
+    val hrMax = AuraZoneMath.maxHr(profile.age, profile.hrMaxOverride)
 
     LaunchedEffect(row.startTs) {
         // Imported per-workout zone split wins; else derive minutes from the

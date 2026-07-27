@@ -7,8 +7,6 @@ import com.sennnen.mav.MavAppState
 import com.sennnen.mav.MavSnapshot
 import com.sennnen.mav.ble.LiveState
 import com.sennnen.mav.connector.AndroidConnectorManager
-import com.sennnen.mav.data.DailyMetric
-import uniffi.mav_ffi.DailySnapshotReport
 import com.sennnen.mav.data.MetricSeriesRow
 import com.sennnen.mav.data.SleepSession
 import com.sennnen.mav.data.WorkoutRow
@@ -18,7 +16,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.sennnen.mav.data.DailyMetric
+import uniffi.mav_ffi.DailySnapshotReport
 import uniffi.mav_ffi.FfiException
+import uniffi.mav_ffi.MavRuntime
 
 /**
  * The single app-wide view model behind the Aura UI. It exposes the member surface the
@@ -172,11 +173,21 @@ internal fun liveStateOf(connection: com.sennnen.mav.connector.ConnectorConnecti
     )
 
 /**
- * Read facade returning empty results until the core exposes the matching read models. Suspend so
- * call-sites keep their coroutine shape without inventing data.
+ * Read facade over the core. The history surfaces read whole day ranges through
+ * [dailySnapshots]; everything still returning empty is a surface the core has no read model for
+ * yet, and returns nothing rather than inventing it.
  */
 @Suppress("UNUSED_PARAMETER")
 class MavRepo {
+    companion object {
+        /** Set once by the connector manager when the runtime opens. */
+        @Volatile
+        @JvmStatic
+        var sharedRuntime: MavRuntime? = null
+    }
+
+    private val runtime: MavRuntime? get() = sharedRuntime
+
     suspend fun metricSeries(
         deviceId: String,
         key: String,
@@ -184,7 +195,29 @@ class MavRepo {
         to: String,
     ): List<MetricSeriesRow> = emptyList()
 
-    suspend fun days(deviceId: String): List<DailyMetric> = emptyList()
+    /**
+     * One snapshot per local day in the window, oldest first, straight from the core. Days with no
+     * evidence come back too, carrying the reason each analytic is unavailable — a gap in the
+     * history is a fact about the recording, not a row to omit.
+     */
+    suspend fun dailySnapshots(deviceId: String, fromMs: Long, toMs: Long): List<DailySnapshotReport> =
+        runtime?.dailySnapshots(deviceId.toULongOrNull() ?: 0uL, fromMs, toMs) ?: emptyList()
+
+    /**
+     * The same window in the shape the trend and vitals surfaces read. Only the fields an admitted
+     * analytic produces are filled; the rest stay null, which is what makes the empty states honest
+     * rather than zeroed.
+     */
+    suspend fun days(deviceId: String, fromMs: Long, toMs: Long): List<DailyMetric> =
+        dailySnapshots(deviceId, fromMs, toMs).map { snapshot ->
+            DailyMetric(
+                deviceId = deviceId,
+                day = snapshot.day,
+                restingHr = null,
+                avgHrv = snapshot.hrv?.rmssdMs,
+                hrvLabel = snapshot.hrv?.label,
+            )
+        }
 
     suspend fun workouts(deviceId: String, from: Long, to: Long, limit: Int = 400): List<WorkoutRow> =
         emptyList()

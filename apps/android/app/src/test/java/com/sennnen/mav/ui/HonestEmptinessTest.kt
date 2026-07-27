@@ -13,7 +13,7 @@ class HonestEmptinessTest {
     @Test
     fun strainAndSleepInputsStayEmptyUntilTheCoreServesThem() = runTest {
         val repo = MavRepo()
-        assertTrue(repo.days("active-device").isEmpty())
+        assertTrue(repo.dailySnapshots("active-device", 0, Long.MAX_VALUE).isEmpty())
         assertTrue(repo.workouts("active-device", 0, Long.MAX_VALUE).isEmpty())
         assertTrue(repo.sleepSessionsUnion("active-device", 0, Long.MAX_VALUE).isEmpty())
         assertTrue(repo.computedSleepSessionsUnion("active-device", 0, Long.MAX_VALUE).isEmpty())

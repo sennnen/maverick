@@ -46,23 +46,14 @@ impl ConnectorHost {
                 batch_id.0,
                 index as u64,
             ));
-            let batch = RawSampleBatch {
-                device: DeviceId::new(self.config.device_id),
-                samples: vec![RawSample {
-                    kind,
-                    device_time: DeviceTime::from_nanos(ms_to_ns(device_ms)?),
-                    seq: sequence,
-                    value: RawValue::Converted(sample.value_microunits as f64 / 1_000_000.0),
-                }],
+            let raw = RawSample {
+                kind,
+                device_time: DeviceTime::from_nanos(ms_to_ns(device_ms)?),
+                seq: sequence,
+                value: RawValue::Converted(sample.value_microunits as f64 / 1_000_000.0),
             };
             self.observe_produced(Stage::Decode, 1);
-            let mut scored = mav_sqi::score_batch(&batch, metadata);
-            let mut scored = scored.pop().ok_or_else(|| {
-                error(
-                    codes::CONNECTOR_HOST_SAMPLE_INVALID,
-                    "signal-quality stage returned no connector sample",
-                )
-            })?;
+            let mut scored = mav_sqi::score_sample(&raw, metadata);
             let record = Provenance {
                 metadata,
                 source_stream: kind,
@@ -159,7 +150,15 @@ impl ConnectorHost {
 pub(super) fn stream_contract(value: &str) -> Result<(StreamKind, &'static str)> {
     match value {
         "heart-rate" => Ok((StreamKind::HeartRate, "beats-per-minute")),
+        // Two interval streams because the physiological event differs, and only the electrical
+        // one may be called heart-rate variability. A connector declaring the wrong one is
+        // mislabelling the wearer's data, so the name is part of the contract.
         "rr-interval" => Ok((StreamKind::RrInterval, "milliseconds")),
+        "pulse-interval" => Ok((StreamKind::PulseInterval, "milliseconds")),
+        "ecg" => Ok((StreamKind::Ecg, "counts")),
+        "red-ppg" => Ok((StreamKind::RedPpg, "counts")),
+        "infrared-ppg" => Ok((StreamKind::InfraredPpg, "counts")),
+        "ambient-light" => Ok((StreamKind::AmbientLight, "counts")),
         "ppg" => Ok((StreamKind::Ppg, "counts")),
         "optical-raw" => Ok((StreamKind::OpticalRaw, "counts")),
         "imu" => Ok((StreamKind::Imu, "milli-g")),

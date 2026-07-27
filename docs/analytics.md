@@ -10,22 +10,49 @@ The 1996 ESC/NASPE Task Force defines RMSSD, SDNN, NN50, and pNN50 over normal-t
 measured from cardiac beats. Its definitions are the reference for Maverick's formulas:
 [Heart rate variability: standards of measurement, physiological interpretation and clinical use](https://www.escardio.org/static-file/Escardio/Guidelines/Scientific-Statements/guidelines-Heart-Rate-Variability-FT-1996.pdf).
 
-WHOOP's RR stream is derived from optical pulse timing, not ECG R peaks. Its connectors therefore
-declare `interval_source: ppg`. That distinction matters.
-Optical pulse-rate variability can be useful, but it is not diagnostic ECG HRV and the strap does
-not expose a trustworthy normal-beat classifier. `mav-analytic` therefore requires an
-`IntervalSource` and labels a PPG result `pulse_rate_variability`. Only an ECG-derived interval
-series may be labelled `heart_rate_variability`.
+WHOOP's beats are timed from an optical pulse, not from ECG R peaks. Optical pulse-rate
+variability can be useful, but it is not diagnostic ECG HRV and the strap exposes no trustworthy
+normal-beat classifier.
+
+The distinction is carried by the stream kind rather than asserted by a caller (ADR-027).
+`StreamKind::RrInterval` means an electrical R peak and is the only kind that may be labelled
+`heart_rate_variability`; `StreamKind::PulseInterval` means an optical pulse and labels as
+`pulse_rate_variability`. A connector declares which one it produces, and reads it from the device
+where it can: the Generic HR Monitor publishes electrical intervals only when the Bluetooth SIG
+Body Sensor Location characteristic says the sensor sits on the chest.
+
+Two paths reach `RrInterval` today. A chest strap publishes the intervals directly. A device that
+exposes the waveform instead — the WHOOP MG's single-lead ECG at 100 Hz — has its R peaks detected
+by `mav-analytic::ecg`, which reproduces the Pan-Tompkins (1985) detector: band-pass, derivative,
+squaring, moving-window integration, then the paper's two-threshold decision with its refractory
+period, T-wave discrimination and search-back. The one deviation is stated in the module: the
+paper's integer filters are designed for 200 Hz, so the band-pass is a zero-phase Butterworth
+cascade computed for whatever rate the hardware actually samples at.
 
 ## The admitted calculation
 
-`time_domain` accepts scored `RrInterval` samples, orders them by `(device_time, seq)`, and computes:
+`time_domain` accepts scored interval samples of one kind, orders them by `(device_time, seq)`, and
+computes:
 
 - mean interval: arithmetic mean of accepted intervals;
 - RMSSD: square root of the mean squared difference between adjacent intervals;
 - SDNN: sample standard deviation of accepted intervals;
 - NN50: adjacent pairs whose absolute difference is greater than 50 ms;
-- pNN50: NN50 divided by the number of adjacent pairs, expressed as a percentage.
+- pNN50: NN50 divided by the number of adjacent pairs, expressed as a percentage;
+- SD1 and SD2: the Poincaré descriptors, which Brennan, Palaniswami and Kamen (2001) showed are
+  exact functions of the measures above rather than a second estimate;
+- DFA α1: the short-term detrended fluctuation exponent (Peng et al. 1995), the one measure here
+  that describes the correlation structure of the beats rather than their spread.
+
+Frequency-domain band powers are a separate analytic over the same beats. Beats do not arrive on an
+even grid, and the usual workaround is to resample before an FFT — which invents values the heart
+never produced, and this pipeline does not interpolate. `mav-analytic::frequency` uses the
+Lomb-Scargle periodogram (Lomb 1976; Scargle 1982), a least-squares fit of sinusoids directly to
+unevenly sampled data; Laguna, Moody and Mark (1998) showed it estimates HRV spectra more
+accurately than resampling for exactly that reason. It is the right transform for this data rather
+than a compromise. The spectrum is scaled so its integral equals the variance of the series, which
+makes the band powers millisecond-squared; the normalised units and the LF/HF ratio are free of
+that convention and are what a display should prefer.
 
 The `seq` tiebreaker is load-bearing. Two equal RR intervals in one second are two beats; collapsing
 them removes a zero difference and biases RMSSD upward.
@@ -60,23 +87,38 @@ That status changes only when one of these exists:
 Analytics declare required streams and admission state as data in `mav-analytic`. The UI receives
 an availability result; it does not hardcode device-family checks.
 
-- Time-domain interval variability requires `RrInterval` and is admitted.
-- Recovery requires `RrInterval` but is not admitted.
-- With no RR stream, both report `missing_streams: [rr_interval]`.
-- With RR present, variability is available and Recovery reports `algorithm_not_admitted`.
+- Time-domain and frequency-domain variability require either interval stream, and are admitted.
+- Recovery requires either interval stream but is not admitted.
+- With no interval stream, all three report `missing_streams: [rr_interval]` — the kind they would
+  rather have.
+- With intervals present, both variability analytics are available and Recovery reports
+  `algorithm_not_admitted`.
 
 This is a deliberate refusal to fill missing science with product theatre.
 
 ### Cleaning before variability
 
-`time_domain` applies the range band **and** the Malik local-median ectopic rejection before it
-computes anything, and counts every rejected beat in `excluded_count`. Both halves are needed: a
-missed or doubled beat lands inside 300–2000 ms and still produces one enormous successive
-difference, and RMSSD is the root mean square of those, so a single artefact dominates the result.
+Every variability measure is built on one shared core, `mav-analytic::intervals`. There used to be
+three implementations of RMSSD with three different artefact policies; there is now one, and
+everything else calls it.
 
-The spine feeds it the longest run of genuinely successive beats rather than a whole day's
-intervals, because a strap delivers them in bursts minutes apart. Both facts came from the first
-live capture; `docs/protocol/whoop.md` records the numbers.
+It applies the range band and then the local-median filter of Karlsson et al. (2012), which rejects
+an interval differing from the median of its neighbourhood by more than 20%. It is a local test on
+purpose: a resting series drifting slowly is not artefact, while a doubled or dropped beat lands far
+from its neighbours however slowly the series is drifting. Every rejected beat is counted in
+`excluded_count`. Both halves are needed — a missed or doubled beat lands inside 300–2000 ms and
+still produces one enormous successive difference, and RMSSD is the root mean square of those.
+
+A rejected beat is marked, never replaced, and the two differences that touched it disappear with
+it. Deleting a beat and then differencing its neighbours manufactures a change spanning two real
+beats, which is the same mistake as interpolating and was what the earlier filter did.
+
+Differences never cross a gap in the recording either. A strap delivers beats in bursts minutes
+apart, and the difference between the last beat of one burst and the first of the next is not a
+beat-to-beat change; against the first live capture that mistake inflated RMSSD roughly tenfold.
+Runs are split on the gap and their differences pooled, so every burst in a day contributes — the
+earlier design took only the longest run and discarded the rest. `docs/protocol/whoop.md` records
+the numbers.
 
 ### The DailySnapshot
 
@@ -115,6 +157,21 @@ so the apps render the core's reason rather than a blank card or a locally compu
 None of the deleted scorers was reachable: `AppViewModel.days()` returned an empty list and the
 signals flow was never published, so every one of them was already computing over nothing. Deleting
 them removed no working feature — it removed the possibility of a second answer appearing later.
+
+## What changed in the ported library, and why
+
+Several imported modules were reviewed against their own stated references and corrected:
+
+| Module | What it claimed | What it does now |
+|---|---|---|
+| `spo2` | A 30-night median soft-anchored onto 96.5% | The ratio of ratios, with an explicitly `uncalibrated_percent` beside it, and a change against the wearer's own baseline instead of a manufactured level. Refuses a channel sampled below 10 Hz, where a pulse is not resolvable and the "AC amplitude" is aliasing. |
+| `strain` | Per-sample duration from the first two timestamps | The median gap across the series. That number multiplies the whole TRIMP sum, so reading it off two samples scored a whole session at whatever rate it happened to open at. |
+| `stress` | A Baevsky histogram anchored to the series minimum | Baevsky's absolute 50 ms grid. Anchoring to the minimum made the modal bin, and so the index, depend on the single shortest beat in the window. |
+| `respiratory_rate` | A time axis rebuilt from the cumulative interval sum | The recorded beat times, split into runs on a real gap. The reconstruction silently deleted every dropout and then interpolated a breathing waveform across the hole. |
+| `recovery` | A raw z-score of RMSSD against a Gaussian spread | A log-domain z-score for the variability term, so halving and doubling are equal and opposite — and the same domain `readiness` already worked in. |
+| `readiness` | A minimum night count taken from the vendor's unlock schedule | Its own statistical minimum: a seven-night baseline needs seven nights. `calibration` holds display schedules and is no longer read as an estimator gate. |
+| `vo2max` / `strain` | Two different string parsers for the same profile field | One `BiologicalSex` type. `"F"` scored as a woman in one module and a man in the other. |
+| `vo2max` | A strain-to-activity-index mapping with no reference | Deleted. The published HUNT index takes measured weekly aggregates, and inventing a second input to a fitted regression is not applying it. |
 
 ## The ported algorithm library (WHOOP-P6/P8)
 

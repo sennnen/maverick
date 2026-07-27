@@ -16,18 +16,29 @@ pub(crate) fn engine(abi: &AbiDescriptor, profile: &LimitProfile) -> Result<Engi
     let bulk_memory = abi.wasm_features.contains(&WasmFeature::BulkMemory);
     let mut config = Config::default();
     config
+        // Eager, deliberately. Lazy translation moves the work into the first call of each
+        // function, where it is charged to that event's fuel — the activation event measured
+        // fifteen times its eager cost, and a connector's fuel budget would then depend on which
+        // code paths a session happened to reach. `Artifact::compiled` is where the repeated cost
+        // is avoided instead: compile once, instantiate many times.
         .compilation_mode(CompilationMode::Eager)
         .consume_fuel(true)
         .ignore_custom_sections(true)
         .set_max_recursion_depth(profile.max_recursion_depth)
         .set_max_stack_height(profile.max_value_stack_height)
-        .set_max_cached_stacks(0)
+        // One instance makes one call at a time, so one cached stack is reused for every event
+        // instead of allocating a fresh one per notification.
+        .set_max_cached_stacks(1)
         .wasm_mutable_global(mutable_globals)
         .wasm_sign_extension(sign_extension)
         .wasm_bulk_memory(bulk_memory)
         .wasm_saturating_float_to_int(false)
         .wasm_multi_value(false)
         .wasm_multi_memory(false)
+        // Enabled for the *encoding* only: LLVM emits the reference-types form of `call_indirect`
+        // and the funcref element segments that go with it, and a decoder without the proposal
+        // rejects those bytes outright. Every reference-type declaration and operator is still
+        // refused by `preflight`, which runs before this engine ever sees the module.
         .wasm_reference_types(true)
         .wasm_tail_call(false)
         .wasm_extended_const(false)

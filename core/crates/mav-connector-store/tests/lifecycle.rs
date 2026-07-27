@@ -102,6 +102,9 @@ fn inspection_install_and_restart_preserve_activation_source_and_state() {
         assert_eq!(installed.len(), 1);
         assert!(installed[0].active);
         assert_eq!(installed[0].source.display_name, "Imported file");
+        // The imported file's name and the publisher's name for the connector are different
+        // facts, and a list that shows a wearer the connector id is showing them an address.
+        assert_eq!(installed[0].display_name, "Store Test");
         let loaded = repository
             .load_state(&state("device-a", 1, b"", 0).namespace)
             .expect("load state")
@@ -664,4 +667,44 @@ fn key_rotation_and_revocation_disable_active_connector() {
         [CONNECTOR]
     );
     assert!(!repository.list_connectors().unwrap()[0].active);
+}
+
+/// A store that recorded the display-name column but never filled it must still recover the names.
+/// Adding a column and populating it are two pieces of work, and a database that already stamped
+/// itself at the version that only did the first would otherwise never see the second.
+#[test]
+fn display_names_are_recovered_for_artifacts_installed_before_the_column() {
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock")
+        .as_nanos();
+    let path = std::env::temp_dir().join(format!("mav-connector-backfill-{nonce}.sqlite"));
+    {
+        let mut repository = ConnectorRepository::open(&path).expect("open repository");
+        install(
+            &mut repository,
+            signed_artifact("1.0.0", 1, true),
+            "Imported file",
+            true,
+            10,
+        );
+    }
+    {
+        // Rewind to the state the column-only migration left behind.
+        let connection = rusqlite::Connection::open(&path).expect("open raw");
+        connection
+            .execute_batch(
+                "UPDATE connector_artifact SET display_name = NULL;
+                 UPDATE connector_store_meta SET value = 2 WHERE key = 'schema_version';",
+            )
+            .expect("rewind");
+    }
+    {
+        let repository = ConnectorRepository::open(&path).expect("reopen repository");
+        assert_eq!(
+            repository.list_connectors().expect("list")[0].display_name,
+            "Store Test"
+        );
+    }
+    fs::remove_file(path).expect("remove test database");
 }

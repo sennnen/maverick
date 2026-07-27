@@ -1,13 +1,18 @@
-# WHOOP 5.0 / MG raw AFE stream (ECG + PPG)
+# WHOOP raw AFE stream (ECG + PPG) — gen4 and gen5
 
 The raw analog-front-end (AFE) stream carries the WHOOP MG's single-lead **ECG** and the **optical
 PPG** channels straight off the sensor, undecimated. No public source had decoded it; the docs, this
 project's own connector, and the `whoop-rs` oracle all chased the wrong command. This document is the
 result of cracking it on live hardware.
 
+**Both generations have it.** The body of this document describes gen5 (5.0 / MG); WHOOP 4.0 answers
+the same trigger with a different channel layout and no ECG — see *WHOOP 4.0 (gen4) also has a raw
+AFE stream* below.
+
 **Confidence:** `[HW]` — verified against a worn WHOOP MG, strap `MGB0261172`, firmware **50.33.2.0**,
-over Bluetooth from a standalone Android tool bonded to the strap. Captures and the tool live outside
-this repo (`whoop-mg-android/`); a memory note records the paths.
+and separately against a worn WHOOP 4.0, over Bluetooth from a standalone Android tool bonded to each
+strap. Captures and the tool live outside this repo (`whoop-mg-android/`); a memory note records the
+paths.
 
 ---
 
@@ -125,6 +130,36 @@ wavelength would need a *directional* green source, which the available kit (an 
 UV/red/blue torch) lacks. **There is no evidence of a dedicated yellow channel** in the firmware
 strings or on the wire; on an RGB screen "yellow" is red+green light, so any yellow response is just
 the sum of the red and green channels.
+
+## WHOOP 4.0 (gen4) also has a raw AFE stream
+
+An earlier revision of this document said the raw stream was a gen5 feature. **That was wrong.**
+WHOOP 4.0 exposes the same type-43 stream, started by the **same opcode `63` with the same `[0x01]`
+revision byte**, on the gen4 service `61080001-8d6d-82b8-614a-1c8cb0f8dcc6` (4-byte envelope,
+CRC-8 poly `0x07`). `[HW]` — verified on a worn WHOOP 4.0.
+
+The subtypes are *not* byte-identical to gen5:
+
+| | WHOOP 4.0 (gen4) | 5.0 / MG (gen5) |
+|---|---|---|
+| v0a channels | three 100-sample `u16` at `0x055` / `0x11d` / `0x1e5` — **same offsets** | same |
+| v0a middle channel | **optical** (gen4 has no ECG electrode) | **ECG** |
+| v0b channels | **two** 50-sample `i32`: red `0x026`, IR `0x0ee`, contiguous | three 25-sample `i32` |
+| v0b rate | **50 Hz** | 25 Hz |
+| ambient reference | **absent** (`0x6b9` reads 0) | present at `0x6b9` |
+
+**Channel identity, same lighting controls as gen5.** Both v0b channels rail *negative* in open air
+(red → ~0, IR → ~−147 000) and are positive on skin, so both are reflective LED PPG; both clip at
+**524 287 = 2¹⁹−1** under a saturating white light, confirming a ~20-bit signed ADC. An infrared
+source inverts their ratio to IR/red ≈ 2.2 against a worn baseline of 0.69, and a red source drives
+the red channel up while IR sits negative — so **`0x026` is red and `0x0ee` is IR**, the same
+ordering as gen5. The IR discrimination rests on a single strong frame, so treat the red/IR
+assignment as well-evidenced rather than exhaustively proven.
+
+**Practical gotchas.** The official WHOOP app holds the strap's single connection slot — a competing
+`connectGatt` returns `status=133` until that app is stopped. And a phone may carry several WHOOP
+bonds (a renamed strap keeps its old bond record too), so target the strap by its exact bonded name
+and log the discovered service before trusting a capture.
 
 ## The firmware config table (14 keys)
 

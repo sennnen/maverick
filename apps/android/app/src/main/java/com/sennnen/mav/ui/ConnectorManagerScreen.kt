@@ -361,9 +361,9 @@ private fun InstalledConnectorCard(
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth()) {
                 Column {
-                    Text(record.connectorId, style = AuraType.label, color = palette.ink)
+                    Text(record.displayName, style = AuraType.label, color = palette.ink)
                     Text(
-                        "v${record.version} · ${record.publisherKeyId}",
+                        "${record.connectorId} · v${record.version} · ${record.publisherKeyId}",
                         style = AuraType.caption,
                         color = palette.ink.copy(alpha = 0.52f),
                     )

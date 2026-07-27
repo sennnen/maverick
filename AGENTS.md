@@ -46,6 +46,7 @@ maverick/
   connectors/             development-only fixtures; connector source/releases live in the
                           separate sennnen/maverick-connectors repo (ADR-017)
   fixtures/               golden fixtures, versioned; see fixtures/README for the naming rules
+                          (also the Generic HR Monitor artifact the apps ship — see docs/connectors.md)
   apps/ios, apps/android  thin native apps; migration/release work lives in platform plan
   tools/                  check_docs.sh and check_deps.py, the mechanical gates
 ```

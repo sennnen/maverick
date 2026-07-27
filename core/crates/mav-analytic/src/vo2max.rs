@@ -38,12 +38,10 @@ struct Coeffs {
     pai: f64,
 }
 
-fn is_female(sex: &str) -> bool {
-    sex.eq_ignore_ascii_case("female")
-}
+use crate::subject::BiologicalSex;
 
-fn coeffs(sex: &str) -> &'static Coeffs {
-    if is_female(sex) {
+fn coeffs(sex: BiologicalSex) -> &'static Coeffs {
+    if sex.is_female() {
         &WOMEN
     } else {
         &MEN
@@ -60,13 +58,19 @@ pub fn bmi(weight_kg: f64, height_cm: f64) -> f64 {
 }
 
 /// Nes waist-variant VO2max (ml/kg/min). Needs a waist measurement.
-pub fn estimate_vo2max(age: f64, sex: &str, waist_cm: f64, resting_hr: f64, pa_index: f64) -> f64 {
+pub fn estimate_vo2max(
+    age: f64,
+    sex: BiologicalSex,
+    waist_cm: f64,
+    resting_hr: f64,
+    pa_index: f64,
+) -> f64 {
     let c = coeffs(sex);
     c.intercept - c.age * age + c.pai * pa_index - c.wc * waist_cm - c.rhr * resting_hr
 }
 
 /// Self-consistent Fitness Age (years, clamped `[MIN_AGE, MAX_AGE]`). The waist term cancels.
-pub fn fitness_age(age: f64, sex: &str, resting_hr: f64, pa_index: f64) -> f64 {
+pub fn fitness_age(age: f64, sex: BiologicalSex, resting_hr: f64, pa_index: f64) -> f64 {
     let c = coeffs(sex);
     let fa = age
         + (c.rhr * (resting_hr - RESTING_HR_REFERENCE) - c.pai * (pa_index - PAI_REFERENCE))
@@ -113,19 +117,6 @@ pub fn physical_activity_index(
     frequency * intensity * duration
 }
 
-/// PA-index (0-15) from mean active-day strain — strain already folds intensity × duration.
-pub fn physical_activity_index_from_strain(
-    active_days_per_week: i32,
-    mean_active_strain: f64,
-) -> f64 {
-    let frequency = frequency_factor(active_days_per_week);
-    if frequency == 0.0 {
-        return 0.0;
-    }
-    let intensity_duration = (mean_active_strain / 30.0).clamp(0.0, 3.0);
-    frequency * intensity_duration
-}
-
 /// A computed Fitness Age with the inputs to present it. `vo2max` is filled only with a waist.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FitnessAgeResult {
@@ -140,7 +131,7 @@ pub struct FitnessAgeResult {
 /// Full Fitness Age. `None` only if RHR or age is missing.
 pub fn compute(
     age: f64,
-    sex: &str,
+    sex: BiologicalSex,
     resting_hr: f64,
     pa_index: f64,
     waist_cm: Option<f64>,
@@ -154,14 +145,14 @@ pub fn compute(
         Some(w) if w > 0.0 => Some(estimate_vo2max(age, sex, w, resting_hr, pa_index)),
         _ => None,
     };
-    let nb = !sex.eq_ignore_ascii_case("male") && !sex.eq_ignore_ascii_case("female");
+    let extrapolated = sex.is_extrapolated();
     Some(FitnessAgeResult {
         vo2max: vo2,
         fitness_age: fa,
         chrono_age: age,
         delta_years: age - fa,
         band_years: DISPLAY_BAND_YEARS,
-        lower_confidence: lower_confidence || nb,
+        lower_confidence: lower_confidence || extrapolated,
     })
 }
 
@@ -175,13 +166,17 @@ mod tests {
 
     #[test]
     fn vo2max_men() {
-        approx(estimate_vo2max(40.0, "male", 90.0, 65.0, 5.0), 46.275, 1e-3);
+        approx(
+            estimate_vo2max(40.0, BiologicalSex::Male, 90.0, 65.0, 5.0),
+            46.275,
+            1e-3,
+        );
     }
 
     #[test]
     fn vo2max_women() {
         approx(
-            estimate_vo2max(40.0, "female", 80.0, 65.0, 5.0),
+            estimate_vo2max(40.0, BiologicalSex::Female, 80.0, 65.0, 5.0),
             37.72,
             1e-3,
         );
@@ -194,28 +189,52 @@ mod tests {
 
     #[test]
     fn reference_fit_person_equals_chrono_age() {
-        approx(fitness_age(40.0, "male", 65.0, 5.0), 40.0, 1e-9);
-        approx(fitness_age(55.0, "female", 65.0, 5.0), 55.0, 1e-9);
+        approx(
+            fitness_age(40.0, BiologicalSex::Male, 65.0, 5.0),
+            40.0,
+            1e-9,
+        );
+        approx(
+            fitness_age(55.0, BiologicalSex::Female, 65.0, 5.0),
+            55.0,
+            1e-9,
+        );
     }
 
     #[test]
     fn fitter_is_younger() {
-        approx(fitness_age(40.0, "male", 50.0, 10.0), 28.33, 0.05);
+        approx(
+            fitness_age(40.0, BiologicalSex::Male, 50.0, 10.0),
+            28.33,
+            0.05,
+        );
     }
 
     #[test]
     fn unfitter_is_older() {
-        approx(fitness_age(40.0, "male", 80.0, 2.0), 50.15, 0.05);
+        approx(
+            fitness_age(40.0, BiologicalSex::Male, 80.0, 2.0),
+            50.15,
+            0.05,
+        );
     }
 
     #[test]
     fn clamp_high() {
-        approx(fitness_age(75.0, "male", 120.0, 0.0), 80.0, 1e-9);
+        approx(
+            fitness_age(75.0, BiologicalSex::Male, 120.0, 0.0),
+            80.0,
+            1e-9,
+        );
     }
 
     #[test]
     fn clamp_low() {
-        approx(fitness_age(25.0, "male", 35.0, 15.0), 20.0, 1e-9);
+        approx(
+            fitness_age(25.0, BiologicalSex::Male, 35.0, 15.0),
+            20.0,
+            1e-9,
+        );
     }
 
     #[test]
@@ -234,16 +253,8 @@ mod tests {
     }
 
     #[test]
-    fn pai_from_strain() {
-        approx(physical_activity_index_from_strain(0, 0.0), 0.0, 1e-9);
-        approx(physical_activity_index_from_strain(7, 90.0), 15.0, 1e-9);
-        approx(physical_activity_index_from_strain(3, 45.0), 3.75, 1e-9);
-        approx(physical_activity_index_from_strain(4, 60.0), 5.0, 1e-9);
-    }
-
-    #[test]
     fn compute_reference_person() {
-        let r = compute(40.0, "male", 65.0, 5.0, None, false).unwrap();
+        let r = compute(40.0, BiologicalSex::Male, 65.0, 5.0, None, false).unwrap();
         approx(r.fitness_age, 40.0, 1e-9);
         approx(r.delta_years, 0.0, 1e-9);
         assert!(r.vo2max.is_none());
@@ -252,27 +263,27 @@ mod tests {
 
     #[test]
     fn compute_with_waist_fills_vo2max() {
-        let r = compute(40.0, "male", 65.0, 5.0, Some(90.0), false).unwrap();
+        let r = compute(40.0, BiologicalSex::Male, 65.0, 5.0, Some(90.0), false).unwrap();
         approx(r.vo2max.unwrap(), 46.275, 1e-3);
     }
 
     #[test]
     fn compute_non_binary_lower_confidence() {
-        let r = compute(40.0, "nonbinary", 60.0, 6.0, None, false).unwrap();
+        let r = compute(40.0, BiologicalSex::Unstated, 60.0, 6.0, None, false).unwrap();
         assert!(r.lower_confidence);
     }
 
     #[test]
     fn compute_nil_no_rhr() {
-        assert!(compute(40.0, "male", 0.0, 7.5, None, false).is_none());
+        assert!(compute(40.0, BiologicalSex::Male, 0.0, 7.5, None, false).is_none());
     }
 
     #[test]
     fn vo2max_tracks_declining_fitness() {
-        let base = estimate_vo2max(40.0, "male", 90.0, 55.0, 5.0);
+        let base = estimate_vo2max(40.0, BiologicalSex::Male, 90.0, 55.0, 5.0);
         let mut prev = base;
         for rhr in [60.0, 65.0, 70.0, 75.0] {
-            let v = estimate_vo2max(40.0, "male", 90.0, rhr, 5.0);
+            let v = estimate_vo2max(40.0, BiologicalSex::Male, 90.0, rhr, 5.0);
             assert!(v < prev, "rhr {rhr}: {v} !< {prev}");
             prev = v;
         }

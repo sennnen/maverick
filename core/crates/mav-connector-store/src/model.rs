@@ -101,6 +101,9 @@ pub struct InstallRequest {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InstalledConnector {
     pub connector_id: String,
+    /// What the publisher calls it. Falls back to the id for rows installed before the store kept
+    /// it, so an old install reads as it always did rather than as an empty name.
+    pub display_name: String,
     pub version: String,
     pub publisher_key_id: String,
     pub state_schema: u32,

@@ -17,6 +17,10 @@ data class DailyMetric(
     val disturbances: Int? = null,
     val restingHr: Int? = null,
     val avgHrv: Double? = null,
+    /// What the core is willing to call the variability figure: `heart_rate_variability` only when
+    /// the beats were timed electrically, `pulse_rate_variability` when they came from an optical
+    /// pulse. The display titles the vital from this rather than assuming.
+    val hrvLabel: String? = null,
     val recovery: Double? = null,
     val strain: Double? = null,
     val exerciseCount: Int? = null,
@@ -41,6 +45,10 @@ data class SleepSession(
     val efficiency: Double? = null,
     val restingHr: Int? = null,
     val avgHrv: Double? = null,
+    /// What the core is willing to call the variability figure: `heart_rate_variability` only when
+    /// the beats were timed electrically, `pulse_rate_variability` when they came from an optical
+    /// pulse. The display titles the vital from this rather than assuming.
+    val hrvLabel: String? = null,
     val stagesJSON: String? = null,
     val userEdited: Boolean = false,
     val startTsAdjusted: Long? = null,

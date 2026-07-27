@@ -180,7 +180,11 @@ fun AuraTodayScreen(
                     // Levels are 0 when the vital is absent — never a fabricated bar.
                     AuraDarkCard(padding = 20.dp) {
                         VitalsGridRow(
-                            AuraMini(auraIntText(hrv), "ms", "HRV", (hrv ?: 0.0) / 140, AuraFamily.CHARGE.glow),
+                            AuraMini(
+                                auraIntText(hrv), "ms",
+                                auraVariabilityTitle((anchor ?: vitalsDay)?.hrvLabel),
+                                (hrv ?: 0.0) / 140, AuraFamily.CHARGE.glow,
+                            ),
                             AuraMini(rhr?.toString() ?: "--", "bpm", "Resting HR", rhr?.let { 1 - it / 100.0 } ?: 0.0, AuraFamily.HEART.glow),
                         )
                         Spacer(Modifier.padding(top = 22.dp))

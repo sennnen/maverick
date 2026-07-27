@@ -11,7 +11,7 @@ use mav_ffi::{
 };
 use mav_model::ids::{DeviceId, MetadataId};
 use mav_model::raw::RawValue;
-use mav_model::stream::{Quality, Sample, StreamKind};
+use mav_model::stream::{Placement, Quality, Sample, StreamKind};
 use mav_model::time::{DeviceTime, WallTime};
 use sha2::{Digest, Sha256};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -376,12 +376,13 @@ fn drive_one_packaged_connector(bytes: Vec<u8>) {
         .first()
         .expect("device family declares a service")
         .clone();
+    // A family may identify itself by advertised name, by service, or by both — a connector that
+    // covers a whole standard profile has no vendor name to match on.
     let advertised_name = family
         .name_prefixes
         .iter()
         .min_by_key(|prefix| prefix.len())
-        .expect("device family declares a name prefix")
-        .clone();
+        .cloned();
     let connector_id = inspection.connector_id.clone();
     runtime
         .open_connector_session(
@@ -407,7 +408,7 @@ fn drive_one_packaged_connector(bytes: Vec<u8>) {
             rssi: -30,
             service_uuids: vec![advertised_service.clone()],
             manufacturer_data: Vec::new(),
-            name: Some(advertised_name.clone()),
+            name: advertised_name.clone(),
         },
     ];
     let mut subscriptions = Vec::new();
@@ -462,13 +463,15 @@ fn drive_one_packaged_connector(bytes: Vec<u8>) {
             )
             .expect("every subscription callback is valid");
     }
-    assert_eq!(
-        runtime
-            .connector_telemetry(1_700_000_000_123)
-            .expect("telemetry")
-            .lifecycle,
-        ConnectorLifecycleState::Configuring
-    );
+    // A connector that has to configure its device reports Configuring; one that speaks a standard
+    // profile has nothing to write and is streaming already. Both are correct, and the host
+    // contract is the same either way: every callback is delivered and the connector ends up
+    // Streaming.
+    let configures = runtime
+        .connector_telemetry(1_700_000_000_123)
+        .expect("telemetry")
+        .lifecycle
+        == ConnectorLifecycleState::Configuring;
     let mut configured_writes = 0;
     for sequence in 0..32 {
         let actions = runtime
@@ -499,11 +502,10 @@ fn drive_one_packaged_connector(bytes: Vec<u8>) {
                 .expect("configuration write callback is valid");
         }
     }
-    // How many writes a connector's configuration takes is its own business; the host contract is
-    // that every write callback is delivered and the connector then reports Streaming.
+    // How many writes a connector's configuration takes is its own business.
     assert!(
-        configured_writes >= 1,
-        "connector issued no configuration write"
+        configured_writes >= usize::from(configures),
+        "a configuring connector issued no configuration write"
     );
     assert_eq!(
         runtime
@@ -568,7 +570,10 @@ fn packaged_connectors_share_one_publisher_identity_and_trust_policy() {
             .expect("packaged connector installs under shared policy");
     }
 
-    assert_eq!(runtime.list_installed_connectors().unwrap().len(), 2);
+    assert_eq!(
+        runtime.list_installed_connectors().unwrap().len(),
+        packaged_artifacts().len()
+    );
     let _ = std::fs::remove_file(path);
 }
 
@@ -626,7 +631,9 @@ fn active_session_exposes_exact_persisted_connector_telemetry() {
                 &Sample {
                     kind,
                     device_time: DeviceTime::from_nanos(sequence * 1_000_000),
-                    wall_time: Some(WallTime::from_nanos(1_700_000_000_123_000_000)),
+                    placement: Placement::DeviceClock(WallTime::from_nanos(
+                        1_700_000_000_123_000_000,
+                    )),
                     seq: sequence as u16,
                     value,
                     quality: Quality::exact(),
@@ -731,7 +738,7 @@ fn telemetry_survives_the_quality_stage_it_actually_passes_through() {
     assert_eq!(scored.len(), 3);
     let store = mav_engine::Store::open(&path).expect("open evidence store");
     for mut sample in scored {
-        sample.wall_time = Some(WallTime::from_nanos(1_700_000_000_123_000_000));
+        sample.placement = Placement::DeviceClock(WallTime::from_nanos(1_700_000_000_123_000_000));
         store
             .insert_sample(DeviceId::new(7), &sample)
             .expect("persist sample");
@@ -1043,7 +1050,7 @@ fn the_daily_snapshot_crosses_the_boundary_with_a_stable_hash() {
                         &Sample {
                             kind,
                             device_time: DeviceTime::from_nanos(when),
-                            wall_time: Some(WallTime::from_nanos(when)),
+                            placement: Placement::DeviceClock(WallTime::from_nanos(when)),
                             seq,
                             value,
                             quality: Quality::scored(1.0),
@@ -1061,15 +1068,15 @@ fn the_daily_snapshot_crosses_the_boundary_with_a_stable_hash() {
             for beat in 0..4i64 {
                 let interval = if beat % 2 == 0 { 900u16 } else { 950 };
                 write(
-                    StreamKind::RrInterval,
+                    StreamKind::PulseInterval,
                     RawValue::U16(interval),
                     (minute * 4 + beat) as u16,
                     at + beat * 1_000_000_000,
                 );
             }
         }
-        // One sustained run of successive beats. Variability is computed from this, not from the
-        // scattered bursts above — see the spine's beat-run split.
+        // One sustained run of successive beats. Every burst above contributes too: differences
+        // pool within each run and never across the silence between them.
         let run_start = midnight_ns + 3_600 * 1_000_000_000;
         for beat in 0..60i64 {
             let interval = if beat % 2 == 0 { 900u16 } else { 950 };
@@ -1078,9 +1085,11 @@ fn the_daily_snapshot_crosses_the_boundary_with_a_stable_hash() {
                 .insert_sample(
                     device,
                     &Sample {
-                        kind: StreamKind::RrInterval,
+                        kind: StreamKind::PulseInterval,
                         device_time: DeviceTime::from_nanos(run_start + beat * 1_000_000_000),
-                        wall_time: Some(WallTime::from_nanos(run_start + beat * 1_000_000_000)),
+                        placement: Placement::DeviceClock(WallTime::from_nanos(
+                            run_start + beat * 1_000_000_000,
+                        )),
                         seq: 0,
                         value: RawValue::U16(interval),
                         quality: Quality::scored(1.0),
@@ -1115,15 +1124,16 @@ fn the_daily_snapshot_crosses_the_boundary_with_a_stable_hash() {
         .expect("a day of intervals has variability");
     assert_eq!(hrv.rmssd_ms, 50.0);
     assert_eq!(
-        hrv.interval_count, 60,
-        "variability comes from the sustained run, not the scattered bursts"
+        hrv.interval_count,
+        30 * 4 + 60,
+        "every burst contributes; only the differences across the silence are dropped"
     );
     assert_eq!(
         hrv.label, "pulse_rate_variability",
         "optical intervals must never be labelled HRV"
     );
     assert_eq!(
-        snapshot.snapshot_hash, "70f978c5c613f04b",
+        snapshot.snapshot_hash, "6764124e87a287cc",
         "the cross-platform parity hash changed; if an algorithm moved, repin here and on both apps"
     );
 
@@ -1159,5 +1169,64 @@ fn the_daily_snapshot_crosses_the_boundary_with_a_stable_hash() {
         .set_timezone_spans("UTC".to_owned(), Vec::new())
         .is_err());
 
+    let _ = std::fs::remove_file(path);
+}
+
+/// The history surfaces read a range, and every day in it has to come back — including the empty
+/// ones, which are what an honest gap looks like.
+#[test]
+fn a_day_range_returns_one_snapshot_per_day_oldest_first() {
+    let (runtime, path) = runtime();
+    let device = DeviceId::new(23);
+    let midnight_ms = 1_752_624_000_000i64;
+
+    {
+        let store = mav_engine::Store::open(&path).expect("seed store");
+        for day in 0..3i64 {
+            let at_ns = (midnight_ms + day * 86_400_000) * 1_000_000;
+            store
+                .insert_sample(
+                    device,
+                    &Sample {
+                        kind: StreamKind::HeartRate,
+                        device_time: DeviceTime::from_nanos(at_ns),
+                        placement: Placement::DeviceClock(WallTime::from_nanos(at_ns)),
+                        seq: 0,
+                        value: RawValue::U8(60 + day as u8),
+                        quality: Quality::exact(),
+                        provenance: MetadataId::new(1),
+                    },
+                )
+                .expect("seed sample");
+        }
+    }
+
+    runtime
+        .set_timezone_spans(
+            "UTC".to_owned(),
+            vec![mav_ffi::TimezoneSpan {
+                start_unix_seconds: i64::MIN / 2,
+                offset_seconds: 0,
+            }],
+        )
+        .expect("set spans");
+
+    let days = runtime
+        .daily_snapshots(device.get(), midnight_ms, midnight_ms + 4 * 86_400_000)
+        .expect("range read");
+    assert_eq!(
+        days.iter().map(|day| day.day.as_str()).collect::<Vec<_>>(),
+        [
+            "2025-07-16",
+            "2025-07-17",
+            "2025-07-18",
+            "2025-07-19",
+            "2025-07-20"
+        ]
+    );
+    assert_eq!(
+        days.iter().map(|day| day.current_bpm).collect::<Vec<_>>(),
+        [Some(60), Some(61), Some(62), None, None]
+    );
     let _ = std::fs::remove_file(path);
 }

@@ -32,9 +32,30 @@ allowed to revise it. Tier two is what our current code thinks the device meant.
 our current algorithms make of that. A bug in tier three costs a recompute; a bug in tier two costs
 a re-decode; only losing tier one loses anything at all.
 
+## How a sample is stored, and how it is read back
+
+Every column of the `sample` table is an integer (ADR-029). `StreamKind` and `RejectReason` have
+durable codes — the declaration index, pinned by a test that spells the pairs out so a reordering
+cannot silently relabel rows already on disk — and a `RawValue` encodes as `(tag, bits)`, which is
+lossless for every width. The primary key is that tuple, and it is exactly what `mav-timeline`
+deduplicates on, so the fast in-memory layer and the durable one cannot disagree about what a
+duplicate is.
+
+The reads that matter are windows, not streams. `sample_by_wall` indexes `(device, stream,
+wall_time_ns)`, and the spine asks for a day: `samples_between` for the beats, `streams_between`
+for the census the capability graph negotiates against. Nothing loads a whole stream to render a
+day — doing that meant opening the app read every sample the device had ever produced.
+
+A `nightly_variability` memo holds one RMSSD per device, day and interval stream, so a sixty-night
+look-back reads sixty small rows instead of re-deriving two months of beats. It is tier three by
+every rule below: dropping it and recomputing reproduces it, and a sync that lands new beats forgets
+the days it touched.
+
 ## Migrations
 
-Migrations are forward-only, numbered, and applied automatically when the database is opened. The
+Migrations are forward-only, numbered, and applied automatically when the database is opened. Most
+are a string of SQL; a step that has to re-encode stored values is a Rust function instead, because
+reshaping a row means decoding it and SQLite cannot decode our value types. The
 current schema version lives in a schema-version pragma. There are no down-migrations: a migration
 that turns out to be wrong is corrected by the next numbered migration, not by rolling back, because
 a rollback that has to un-transform data is a data-loss mechanism wearing a safety costume. If the

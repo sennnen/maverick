@@ -593,11 +593,13 @@ fun auraUnavailableReason(entry: AnalyticAvailabilityReport?): String = when {
 private fun auraStreamNames(streams: List<String>): String {
     val friendly = streams.map { stream ->
         when (stream) {
-            "rrinterval" -> "beat intervals"
-            "heartrate" -> "heart rate"
-            "skintemp" -> "skin temperature"
-            "respraw" -> "respiration"
-            "sleepstateraw" -> "sleep state"
+            "rr_interval" -> "electrical beat intervals"
+            "pulse_interval" -> "optical beat intervals"
+            "ecg" -> "an ECG trace"
+            "heart_rate" -> "heart rate"
+            "skin_temp" -> "skin temperature"
+            "resp_raw" -> "respiration"
+            "sleep_state_raw" -> "sleep state"
             else -> stream.replace('_', ' ')
         }
     }

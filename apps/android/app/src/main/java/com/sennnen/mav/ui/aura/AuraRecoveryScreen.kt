@@ -264,12 +264,19 @@ private fun buildVitals(
 
     return listOf(
         AuraVital(
-            "hrv", "HRV", AuraFamily.CHARGE, hrv, hrvB, ::intDisplay, "ms", 0,
+            // The core decides whether these beats may be called HRV at all; an optical pulse is
+            // pulse-rate variability and saying otherwise is the one claim this app must not make.
+            "hrv",
+            auraVariabilityTitle(anchor?.hrvLabel),
+            AuraFamily.CHARGE, hrv, hrvB, ::intDisplay, "ms", 0,
             // A DROP below baseline is the warning direction.
             if (hrv == null) AuraStatus.NONE
             else AuraStatus.deviation(auraFrac(hrv, hrvB)?.let { min(it, 0.0) }, tolerance = 0.12),
             hrvPts,
-            "Beat-to-beat variability while you sleep, recovery's leading input. Higher than your baseline is good.",
+            if (anchor?.hrvLabel == "heart_rate_variability")
+                "Beat-to-beat variability from your heart's electrical signal while you sleep. Higher than your baseline is good."
+            else
+                "Beat-to-beat variability timed from your pulse while you sleep. Related to HRV but not the same measurement. Higher than your baseline is good.",
             (hrv ?: 0.0) / 140,
         ),
         AuraVital(

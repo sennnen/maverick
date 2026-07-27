@@ -625,7 +625,7 @@ pub(super) fn a_stale_device_clock_keeps_the_intervals_inside_a_burst() {
     assert_eq!(stored.len(), 3);
     let walls = stored
         .iter()
-        .map(|sample| sample.wall_time.expect("placed").as_nanos())
+        .map(|sample| sample.wall_time().expect("placed").as_nanos())
         .collect::<Vec<_>>();
     assert_eq!(walls[1] - walls[0], 10_000 * 1_000_000);
     assert_eq!(walls[2] - walls[1], 15_000 * 1_000_000);
@@ -739,4 +739,45 @@ fn a_tap_sees_the_commit_boundaries_in_pipeline_order() {
     let seen = recorder.0.lock().expect("recorded").clone();
     assert_eq!(seen.last(), Some(&(mav_obs::Stage::Store, 0)));
     assert_eq!(replay.duplicate, 3);
+}
+
+/// A stream kind nothing can name is a stream kind no connector can emit. This caught the ECG
+/// case, where the decoder, the model and the hardware documentation all existed while the wire
+/// contract had no arm for it, so the whole path was unreachable by construction. The table is
+/// spelled out here on purpose: it is the second opinion that makes the check worth running.
+#[test]
+fn every_stream_kind_has_a_wire_name() {
+    const WIRE: [(StreamKind, &str, &str); 24] = [
+        (StreamKind::HeartRate, "heart-rate", "beats-per-minute"),
+        (StreamKind::RrInterval, "rr-interval", "milliseconds"),
+        (StreamKind::PulseInterval, "pulse-interval", "milliseconds"),
+        (StreamKind::Ecg, "ecg", "counts"),
+        (StreamKind::RedPpg, "red-ppg", "counts"),
+        (StreamKind::InfraredPpg, "infrared-ppg", "counts"),
+        (StreamKind::AmbientLight, "ambient-light", "counts"),
+        (StreamKind::Ppg, "ppg", "counts"),
+        (StreamKind::OpticalRaw, "optical-raw", "counts"),
+        (StreamKind::Imu, "imu", "milli-g"),
+        (StreamKind::Gyro, "gyro", "milli-degrees-per-second"),
+        (StreamKind::Gravity, "gravity", "milli-g"),
+        (StreamKind::SkinTemp, "skin-temp", "degrees-celsius"),
+        (StreamKind::SkinTempRaw, "skin-temp-raw", "counts"),
+        (StreamKind::Spo2Raw, "spo2-raw", "counts"),
+        (StreamKind::Spo2Percent, "spo2-percent", "percent"),
+        (StreamKind::RespRaw, "resp-raw", "counts"),
+        (StreamKind::BatterySoc, "battery-soc", "percent"),
+        (StreamKind::StepCount, "step-count", "count"),
+        (StreamKind::ActivityClass, "activity-class", "code"),
+        (StreamKind::SkinContact, "skin-contact", "boolean"),
+        (StreamKind::SignalQuality, "signal-quality", "percent"),
+        (StreamKind::WristState, "wrist-state", "boolean"),
+        (StreamKind::SleepStateRaw, "sleep-state-raw", "code"),
+    ];
+    for kind in mav_model::stream::STREAM_KINDS {
+        let (_, name, unit) = WIRE
+            .iter()
+            .find(|(named, _, _)| *named == kind)
+            .unwrap_or_else(|| panic!("{kind:?} has no wire name"));
+        assert_eq!(stream_contract(name).expect("parses"), (kind, *unit));
+    }
 }

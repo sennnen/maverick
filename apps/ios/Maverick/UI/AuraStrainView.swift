@@ -343,7 +343,7 @@ struct AuraWorkoutSummary: View {
       .padding(.horizontal, 4)
   }
 
-  private var hrMax: Int { profile.hrMaxOverride > 0 ? profile.hrMaxOverride : max(120, 220 - profile.age) }
+  private var hrMax: Int { profile.hrMax }
 
   private func load() async {
     // Imported per-workout zone split wins; else derive minutes from the

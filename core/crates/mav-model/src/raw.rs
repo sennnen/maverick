@@ -38,17 +38,44 @@ impl RawValue {
     }
 
     /// A stable bit pattern for dedup keys, so two samples with equal values key equally and a
-    /// float value never trips over NaN-inequality.
-    pub fn key_bits(self) -> u64 {
+    /// float value never trips over NaN-inequality. Paired with [`RawValue::tag`] it is also the
+    /// store's lossless encoding: two integers instead of a JSON string in a primary key.
+    pub const fn key_bits(self) -> u64 {
         match self {
-            RawValue::U8(v) => u64::from(v),
-            RawValue::U16(v) => u64::from(v),
-            RawValue::U32(v) => u64::from(v),
+            RawValue::U8(v) => v as u64,
+            RawValue::U16(v) => v as u64,
+            RawValue::U32(v) => v as u64,
             RawValue::I16(v) => v as u16 as u64,
             RawValue::I32(v) => v as u32 as u64,
-            RawValue::F32(v) => u64::from(v.to_bits()),
+            RawValue::F32(v) => v.to_bits() as u64,
             RawValue::Converted(v) => v.to_bits(),
         }
+    }
+
+    /// Which width the bits are to be read back as. Frozen: the pair is on disk.
+    pub const fn tag(self) -> u8 {
+        match self {
+            RawValue::U8(_) => 0,
+            RawValue::U16(_) => 1,
+            RawValue::U32(_) => 2,
+            RawValue::I16(_) => 3,
+            RawValue::I32(_) => 4,
+            RawValue::F32(_) => 5,
+            RawValue::Converted(_) => 6,
+        }
+    }
+
+    pub const fn from_parts(tag: u8, bits: u64) -> Option<Self> {
+        Some(match tag {
+            0 => RawValue::U8(bits as u8),
+            1 => RawValue::U16(bits as u16),
+            2 => RawValue::U32(bits as u32),
+            3 => RawValue::I16(bits as u16 as i16),
+            4 => RawValue::I32(bits as u32 as i32),
+            5 => RawValue::F32(f32::from_bits(bits as u32)),
+            6 => RawValue::Converted(f64::from_bits(bits)),
+            _ => return None,
+        })
     }
 }
 
@@ -87,6 +114,27 @@ mod tests {
     fn key_bits_handles_nan_stably() {
         let nan = RawValue::F32(f32::NAN);
         assert_eq!(nan.key_bits(), nan.key_bits());
+    }
+
+    /// The store keeps values as `(tag, bits)` so the sample table's key is all integers. The pair
+    /// has to be lossless for every width, including the sign-extending and float ones.
+    #[test]
+    fn every_width_survives_the_two_integer_encoding() {
+        for value in [
+            RawValue::U8(u8::MAX),
+            RawValue::U16(812),
+            RawValue::U32(u32::MAX),
+            RawValue::I16(i16::MIN),
+            RawValue::I32(-1),
+            RawValue::F32(-1.5),
+            RawValue::Converted(36.5),
+        ] {
+            assert_eq!(
+                RawValue::from_parts(value.tag(), value.key_bits()),
+                Some(value)
+            );
+        }
+        assert_eq!(RawValue::from_parts(7, 0), None);
     }
 
     #[test]

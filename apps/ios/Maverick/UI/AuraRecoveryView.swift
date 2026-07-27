@@ -179,12 +179,18 @@ struct AuraRecoveryView: View {
     let hrvB = baselineOf(hrvPts), rhrB = baselineOf(rhrPts), respB = baselineOf(respPts)
 
     return [
-      Vital(id: "hrv", label: "HRV", family: .charge, value: hrv, baseline: hrvB,
+      // The core decides whether these beats may be called HRV at all; an optical pulse is
+      // pulse-rate variability, and saying otherwise is the one claim this app must not make.
+      Vital(id: "hrv",
+            label: auraVariabilityTitle((day ?? vitalsDay)?.hrvLabel),
+            family: .charge, value: hrv, baseline: hrvB,
             display: { "\(Int($0.rounded()))" }, unit: "ms", decimals: 0,
             // A DROP below baseline is the warning direction.
             status: hrv == nil ? .none : .deviation(frac(hrv, hrvB).map { Swift.min($0, 0) }, tolerance: 0.12),
             points: hrvPts,
-            caption: "Beat-to-beat variability while you sleep, recovery's leading input. Higher than your baseline is good.",
+            caption: (day ?? vitalsDay)?.hrvLabel == "heart_rate_variability"
+              ? "Beat-to-beat variability from your heart's electrical signal while you sleep. Higher than your baseline is good."
+              : "Beat-to-beat variability timed from your pulse while you sleep. Related to HRV but not the same measurement. Higher than your baseline is good.",
             level: (hrv ?? 0) / 140),
       Vital(id: "rhr", label: "Resting HR", family: .heart, value: rhr, baseline: rhrB,
             display: { "\(Int($0.rounded()))" }, unit: "bpm", decimals: 0,

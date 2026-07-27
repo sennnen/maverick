@@ -85,7 +85,8 @@ struct AuraTrendsView: View {
       Metric(id: "rest", title: "Rest", family: .rest, unit: "%", points: Array(restSeries.suffix(n))),
       Metric(id: "str", title: "Effort", family: .effort, unit: "",
              points: pts(\.strain).map { ($0.day, $0.value * UnitPrefs.currentEffortDisplayFactor()) }),
-      Metric(id: "hrv", title: "HRV", family: .charge, unit: "ms", points: pts(\.avgHrv)),
+      Metric(id: "hrv", title: auraVariabilityTitle(repo.days.suffix(n).last(where: { $0.hrvLabel != nil })?.hrvLabel),
+             family: .charge, unit: "ms", points: pts(\.avgHrv)),
       Metric(id: "rhr", title: "Resting HR", family: .heart, unit: "bpm", points: rhr),
     ]
   }

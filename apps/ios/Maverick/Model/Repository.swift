@@ -16,6 +16,17 @@ final class Repository: ObservableObject {
   /// Set by the app shell: re-reads the core snapshot (pull-to-refresh, tab reselect).
   var reload: @MainActor () -> Void = {}
 
+  /// Replace the day history from a core range read. Only the fields an admitted analytic
+  /// produces are filled; the rest stay nil, which is what keeps the empty states honest.
+  func acceptDays(_ snapshots: [DailySnapshotReport]) {
+    days = snapshots.map { snapshot in
+      DailyMetric(
+        day: snapshot.day, restingHr: nil, avgHrv: snapshot.hrv?.rmssdMs,
+        hrvLabel: snapshot.hrv?.label)
+    }
+    refreshSeq += 1
+  }
+
   func refresh() async {
     reload()
     refreshSeq += 1

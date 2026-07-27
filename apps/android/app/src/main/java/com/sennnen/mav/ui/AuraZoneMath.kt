@@ -26,6 +26,9 @@ object AuraZoneMath {
         runtime?.let { it.heartRateZones(age.toDouble(), null).maxHr.roundToInt() }
             ?: (208.0 - 0.7 * age).roundToInt()
 
+    /** The effective ceiling: a manual override when the wearer has set one, else the estimate. */
+    fun maxHr(age: Int, override: Int): Int = if (override > 0) override else tanakaMaxHr(age)
+
     /** The zone (1..5) a reading falls in; 0 below zone one. */
     fun zone(bpm: Int, age: Int, maxHrOverride: Int?): Int =
         runtime?.let {

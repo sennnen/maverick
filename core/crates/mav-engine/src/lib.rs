@@ -1,4 +1,4 @@
-//! Orchestration for the runtime-loaded connector event/action loop and recompute cache. Device
+//! Orchestration for the runtime-loaded connector event/action loop and the analytic spine. Device
 //! protocol, framing, retry, and historical state machines execute inside signed artifacts.
 #![forbid(unsafe_code)]
 
@@ -11,5 +11,5 @@ pub use connector_host::{
     ConnectorTransportAction, ConnectorTransportRequest,
 };
 pub use mav_store::Store;
-pub use recompute::{AffectedDays, CacheKey, LocalDay, OffsetSpan, RecomputeCache, Timezone};
+pub use recompute::{LocalDay, OffsetSpan, Timezone};
 pub use spine::{AlgorithmStamp, DailySnapshot, Spine};

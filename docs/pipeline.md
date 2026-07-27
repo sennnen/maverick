@@ -133,8 +133,12 @@ interpolates, and it never mutates a raw timestamp.
 A plausible device timestamp is trusted directly. An implausible one is placed through the session's
 `ClockMap`, which shifts a whole segment by one learned offset and so preserves the gaps between
 samples; only when no correction covers the sample does the capture instant apply (ADR-022). All
-three cases are distinguishable, and the second and third carry
-`RejectReason::ImplausibleTimestamp`, because neither came from a clock worth trusting.
+three cases are distinguishable, because the sample carries a `Placement` that names which one
+happened and holds the instant inside it — `DeviceClock`, `Corrected` or `CaptureFallback`.
+
+Placement is not a quality judgement and does not touch `Quality` (ADR-028). A sample whose strap
+clock was stale still measured exactly what it measured, and conflating the two made every
+clock-corrected reading invisible to both apps.
 
 The distinction matters because the fallback is destructive: a burst of samples ten seconds apart in
 device time, all placed at one capture instant, has had every interval inside it set to zero — and
@@ -242,7 +246,8 @@ traceable to the ids the snapshot was built from.
 
 Not every device produces every stream, and an analytic that needs a stream the device does not
 produce should be visibly unavailable rather than quietly missing. Each analytic declares the
-stream kinds it requires as data, for example `requires: [RrInterval]`. When a device connects, the
+stream kinds it requires as data — all of some, any of others, so an analytic that only needs the
+timing of beats is served by either interval stream. When a device connects, the
 engine intersects the stream kinds the device's manifest says it produces with the requirements
 each analytic declared, and produces an availability set. The UI reads that set. Nothing downstream
 hardcodes a device check.
