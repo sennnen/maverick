@@ -143,6 +143,11 @@ jobs:
       - run: test -f apps/ios/build/mav-core/MavCore.xcframework/Info.plist
       - run: test -f apps/ios/build/mav-core/Sources/mav_ffi.swift
       - run: test -f apps/ios/build/mav-core/SHA256SUMS
+      - name: Verify the iOS model bundle
+        if: github.event_name == 'push'
+        run: >-
+          python3 tools/check_model_assets.py
+          --ios-app apps/ios/build/release/Build/Products/Release-iphoneos/Mav.app
       - name: Archive iOS release app
         if: github.event_name == 'push'
         run: |
@@ -216,6 +221,13 @@ jobs:
       - run: test -f apps/android/build/mav-core/Sources/uniffi/mav_ffi/mav_ffi.kt
       - run: test -f apps/android/build/mav-core/SHA256SUMS
       - run: test -f apps/android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Verify the Android release model bundle
+        run: |
+          apk=apps/android/app/build/outputs/apk/release/app-release.apk
+          if [ ! -f "$apk" ]; then
+            apk=apps/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          fi
+          python3 tools/check_model_assets.py --android-apk "$apk"
       - name: Verify signed Android release APK
         if: github.event_name == 'push'
         run: |

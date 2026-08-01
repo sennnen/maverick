@@ -1,68 +1,347 @@
 {
-  "$comment": "The single source of the Aura theme. tools/gen_design_tokens.py generates the Swift and Kotlin constants from this file; CI regenerates and fails on a diff. Colours are RGB hex without alpha. Anything a platform genuinely owns - font families, the type ramp's weight names - stays in the hand-written theme file.",
+  "$comment": "The single source of the Terrain theme. tools/gen_design_tokens.py generates the Swift and Kotlin constants from this file; CI regenerates and fails on a diff. Colours are RGB hex without alpha. The palette is MONOCHROMATIC: one hue - a stone teal, around 174 degrees - and everything on screen is a step of it. A metric's identity is its step: charge sits lightest, cycle darkest, and the seven are evenly spaced so a row is recognisable before it is read. Status is NOT a colour; it is the baseline bar and the word beside it. iOS renders this file directly; Android derives its scheme from Material You and uses these values as the fallback (see docs/platform.md).",
   "schema": "aura-tokens/v1",
   "colors": {
-    "bg": { "dark": "000000", "light": "F5F4F1" },
-    "card": { "dark": "141416", "light": "EDECE8" },
-    "cardEdge": { "dark": "0B0B0C", "light": "F4F3F0" },
-    "ink": { "dark": "FFFFFF", "light": "0C0C0D" },
-    "accentInk": { "dark": "E7FE55", "light": "74731A" },
-    "good": { "dark": "3DE383", "light": "1F9E57" },
-    "fair": { "dark": "F5B840", "light": "C4841A" },
-    "bad": { "dark": "FF5A66", "light": "D83A44" }
-  },
-  "fixedColors": {
-    "$comment": "Starship is the one interactive hue and is the same in both schemes by design.",
-    "accent": "E7FE55"
+    "$comment": "card is the standard surface, cardEdge the raised one, sunken the recessed one. Every neutral carries the same cool cast as the hue. The light scheme is NOT a mirror of the dark one: an earlier pass set bg and card four values apart and the whole screen read as one flat pale field with no depth. focus is the focus ring and is deliberately not the accent.",
+    "bg": {
+      "dark": "070B0B",
+      "light": "E7EDED"
+    },
+    "card": {
+      "dark": "101617",
+      "light": "FFFFFF"
+    },
+    "cardEdge": {
+      "dark": "182021",
+      "light": "F3F7F7"
+    },
+    "sunken": {
+      "dark": "040707",
+      "light": "DAE3E3"
+    },
+    "ink": {
+      "dark": "E4EDED",
+      "light": "0E1516"
+    },
+    "accentInk": {
+      "dark": "7BAEA8",
+      "light": "2F5B56"
+    },
+    "good": {
+      "dark": "7BAEA8",
+      "light": "2F5B56"
+    },
+    "bad": {
+      "dark": "E08585",
+      "light": "A83232"
+    },
+    "focus": {
+      "dark": "E4EDED",
+      "light": "16211F"
+    }
   },
   "alphaColors": {
-    "hairline": { "dark": ["FFFFFF", 0.08], "light": ["0C0C0D", 0.1] },
-    "scrim": { "dark": ["000000", 0.28], "light": ["FFFFFF", 0.6] },
-    "grid": { "dark": ["FFFFFF", 0.07], "light": ["0C0C0D", 0.08] }
+    "$comment": "inkSecondary is the only ink weight below full and clears 4.5:1 on every surface, including every metric wash and the photo veil. The seven metric washes are the same teal at descending alpha - identity, not judgement. photoScrim tints and darkens a landscape carrying white copy; photoVeil tints one back far enough that ordinary ink sits on it, and is checked against a worst-case photograph. Both carry the hue, so a photograph belongs to the palette rather than sitting outside it. bloomTop and bloomBottom are the atmosphere behind a tab root, and the light alphas are roughly double the dark ones on purpose - a tint over a near-white canvas needs far more of itself to read than a glow over near-black does - two soft blooms of the hue that keep a scrolling screen from being a flat void without putting a photograph behind every one.",
+    "hairline": {
+      "dark": [
+        "E4EDED",
+        0.16
+      ],
+      "light": [
+        "0E1516",
+        0.15
+      ]
+    },
+    "hairlineStrong": {
+      "dark": [
+        "E4EDED",
+        0.28
+      ],
+      "light": [
+        "0E1516",
+        0.22
+      ]
+    },
+    "inkSecondary": {
+      "dark": [
+        "E4EDED",
+        0.76
+      ],
+      "light": [
+        "0E1516",
+        0.72
+      ]
+    },
+    "glass": {
+      "dark": [
+        "E4EDED",
+        0.1
+      ],
+      "light": [
+        "FAFCFC",
+        0.76
+      ]
+    },
+    "glassLine": {
+      "dark": [
+        "E4EDED",
+        0.22
+      ],
+      "light": [
+        "0E1516",
+        0.14
+      ]
+    },
+    "scrim": {
+      "dark": [
+        "000000",
+        0.58
+      ],
+      "light": [
+        "0E1516",
+        0.3
+      ]
+    },
+    "photoScrim": {
+      "dark": [
+        "0F3733",
+        0.72
+      ],
+      "light": [
+        "0F3733",
+        0.68
+      ]
+    },
+    "photoVeil": {
+      "dark": [
+        "081413",
+        0.85
+      ],
+      "light": [
+        "DEEBE9",
+        0.87
+      ]
+    },
+    "bloomTop": {
+      "dark": [
+        "7BAEA8",
+        0.18
+      ],
+      "light": [
+        "5FB3A8",
+        0.3
+      ]
+    },
+    "bloomBottom": {
+      "dark": [
+        "7BAEA8",
+        0.1
+      ],
+      "light": [
+        "5FB3A8",
+        0.17
+      ]
+    },
+    "grid": {
+      "dark": [
+        "E4EDED",
+        0.12
+      ],
+      "light": [
+        "0E1516",
+        0.1
+      ]
+    },
+    "tintCharge": {
+      "dark": [
+        "7BAEA8",
+        0.16
+      ],
+      "light": [
+        "2F5B56",
+        0.115
+      ]
+    },
+    "tintRest": {
+      "dark": [
+        "7BAEA8",
+        0.135
+      ],
+      "light": [
+        "2F5B56",
+        0.098
+      ]
+    },
+    "tintEffort": {
+      "dark": [
+        "7BAEA8",
+        0.112
+      ],
+      "light": [
+        "2F5B56",
+        0.082
+      ]
+    },
+    "tintHeart": {
+      "dark": [
+        "7BAEA8",
+        0.09
+      ],
+      "light": [
+        "2F5B56",
+        0.066
+      ]
+    },
+    "tintEnergy": {
+      "dark": [
+        "7BAEA8",
+        0.07
+      ],
+      "light": [
+        "2F5B56",
+        0.052
+      ]
+    },
+    "tintVitals": {
+      "dark": [
+        "7BAEA8",
+        0.052
+      ],
+      "light": [
+        "2F5B56",
+        0.038
+      ]
+    },
+    "tintCycle": {
+      "dark": [
+        "7BAEA8",
+        0.036
+      ],
+      "light": [
+        "2F5B56",
+        0.026
+      ]
+    },
+    "tintNeutral": {
+      "dark": [
+        "E4EDED",
+        0.04
+      ],
+      "light": [
+        "0E1516",
+        0.035
+      ]
+    }
   },
   "families": {
-    "$comment": "Metric identity hues. glow is the luminous centre, edge the tint it blooms out of.",
-    "order": ["charge", "rest", "effort", "heart", "energy", "vitals"],
+    "$comment": "One hue, seven steps. A metric's colour is its identity and never its verdict: charge is the lightest step and cycle the darkest. The steps stay inside a band that is vivid at both ends - an earlier ramp ran too far into the dark and a 4pt arc in the last two steps read as grey rather than as the hue. Every step clears 3:1 on its scheme's card, which tools/check_a11y.py asserts, and all seven sit within a couple of degrees of each other so none of them becomes a second colour. glow is the mark; edge is the deep wash it sits on.",
+    "order": [
+      "charge",
+      "rest",
+      "effort",
+      "heart",
+      "energy",
+      "vitals",
+      "cycle"
+    ],
     "charge": {
-      "glow": { "dark": "14C078", "light": "6FD3A2" },
-      "edge": { "dark": "05241A", "light": "DDF0E6" }
+      "glow": {
+        "dark": "8FD6CE",
+        "light": "2E7F76"
+      },
+      "edge": {
+        "dark": "16211F",
+        "light": "DDE9E7"
+      }
     },
     "rest": {
-      "glow": { "dark": "3E7BFF", "light": "8FB2FB" },
-      "edge": { "dark": "061634", "light": "E2EAFC" }
+      "glow": {
+        "dark": "7BCEC5",
+        "light": "2B776F"
+      },
+      "edge": {
+        "dark": "141F1E",
+        "light": "DDE9E7"
+      }
     },
     "effort": {
-      "glow": { "dark": "F52E9C", "light": "FB7EC2" },
-      "edge": { "dark": "2A0A1E", "light": "FCE2F0" }
+      "glow": {
+        "dark": "66C5BB",
+        "light": "286F67"
+      },
+      "edge": {
+        "dark": "121D1C",
+        "light": "DDE9E7"
+      }
     },
     "heart": {
-      "glow": { "dark": "F5476A", "light": "FB8194" },
-      "edge": { "dark": "2A0912", "light": "FCE4E8" }
+      "glow": {
+        "dark": "52BDB2",
+        "light": "256760"
+      },
+      "edge": {
+        "dark": "111B1A",
+        "light": "DDE9E7"
+      }
     },
     "energy": {
-      "glow": { "dark": "E0A81E", "light": "F3CE5A" },
-      "edge": { "dark": "241C06", "light": "FAF0D8" }
+      "glow": {
+        "dark": "47ADA3",
+        "light": "225F58"
+      },
+      "edge": {
+        "dark": "0F1918",
+        "light": "DDE9E7"
+      }
     },
     "vitals": {
-      "glow": { "dark": "12AEBE", "light": "76D3DF" },
-      "edge": { "dark": "042426", "light": "DFF3F6" }
+      "glow": {
+        "dark": "409C93",
+        "light": "1F5751"
+      },
+      "edge": {
+        "dark": "0E1716",
+        "light": "DDE9E7"
+      }
+    },
+    "cycle": {
+      "glow": {
+        "dark": "398B83",
+        "light": "1C4F4A"
+      },
+      "edge": {
+        "dark": "0D1514",
+        "light": "DDE9E7"
+      }
     }
   },
   "spacing": {
+    "$comment": "sectionGap is deliberately far larger than cardSpacing. Sections must read as separate territories rather than as more cards, and the previous 26 against 12 was not enough of a difference to do that.",
     "screenMargin": 20,
     "cardSpacing": 12,
-    "sectionGap": 24,
-    "tilePadding": 20
+    "sectionGap": 40,
+    "tilePadding": 18,
+    "railGap": 8
   },
   "radii": {
-    "card": 32,
-    "tile": 28
+    "card": 24,
+    "tile": 20,
+    "pill": 16,
+    "chip": 12
   },
   "typeScale": {
-    "$comment": "Point sizes only. The family and weight for each role are platform-owned: Helvetica Neue on iOS, the platform sans on Android.",
-    "title": 19,
+    "$comment": "Point sizes at the default content size. The ramp is deliberately wide: the previous one put title at 18 and body at 15, which is not enough separation for a heading to read as a heading. Each step is now a clear jump, and the chrome roles sit well below the content roles. Serif is reserved for rare editorial headlines; scores, metrics, controls, labels and navigation use the platform sans.",
+    "displayLarge": 34,
+    "display": 29,
+    "numeralXL": 54,
+    "numeralLarge": 42,
+    "numeralMedium": 24,
+    "numeralSmall": 19,
+    "title": 22,
     "label": 15,
-    "sub": 14,
-    "caption": 12
+    "body": 14,
+    "sub": 13,
+    "caption": 11,
+    "eyebrow": 10
   }
 }

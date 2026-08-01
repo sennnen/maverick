@@ -29,3 +29,7 @@
 - [ADR-028](ADR-028.md) — Clock placement is not a quality judgement
 - [ADR-029](ADR-029.md) — An all-integer sample table, indexed by wall time
 - [ADR-030](ADR-030.md) — Power mode is a host policy the connector obeys
+- [ADR-031](ADR-031.md) — Connectors declare their own device controls
+- [ADR-032](ADR-032.md) — Haptics are a connector-declared capability, not a device call
+- [ADR-033](ADR-033.md) — Captured waveforms are session capabilities with host-owned experiences
+- [ADR-034](ADR-034.md) — A calibrated ECG, shown as a waveform

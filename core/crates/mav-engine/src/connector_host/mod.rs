@@ -5,8 +5,9 @@ use mav_connector_abi::{
     Validate, WireSample, MAX_STATE_BYTES,
 };
 use mav_connector_runtime::{Artifact, ConnectorInstance, LimitProfile};
+use mav_model::ecg::{EcgInferenceEvidence, EcgResult};
 use mav_model::error::{codes, MavError, Result};
-use mav_model::ids::{DeviceId, MetadataId};
+use mav_model::ids::{DeviceId, EcgCaptureId, MetadataId};
 use mav_model::raw::{RawSample, RawValue};
 use mav_model::stream::StreamKind;
 use mav_model::time::{ClockMap, DeviceTime, WallTime};
@@ -18,6 +19,10 @@ use mav_timeline::{
 };
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::Arc;
+
+use crate::ecg_capture::{
+    EcgCaptureController, EcgCapturePhase, EcgCaptureSnapshot, EcgInferenceRequest,
+};
 
 const MAX_CHAINED_EVENTS: usize = 32;
 const MAX_SESSION_OPERATIONS: usize = 4_096;
@@ -73,6 +78,15 @@ pub struct ConnectorLifecycleSnapshot {
     pub samples_duplicate: u64,
 }
 
+/// A signed captured stream that is also active for the currently connected hardware.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ConnectorCaptureCapability {
+    pub stream: String,
+    pub unit: String,
+    pub minimum_sample_rate_hz: u16,
+    pub maximum_sample_rate_hz: u16,
+}
+
 /// What one `EmitSamples` batch actually did. `emitted` is what the connector handed over and what
 /// it is acknowledged for; the rest is what happened to those samples afterwards.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -80,6 +94,7 @@ struct CommitAccounting {
     emitted: usize,
     persisted: usize,
     duplicate: usize,
+    stop_capture: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -193,6 +208,13 @@ pub struct ConnectorHost {
     /// Host power policy, mirrored to the connector as `PowerModeChanged` (ADR-030). Host-side, not
     /// connector state: a reinstalled or resumed connector is told again rather than remembering.
     low_power: bool,
+    /// The device-specific subset the connector declared after identifying this hardware session.
+    active_capabilities: BTreeSet<String>,
+    /// Only one host-owned capture may drive transport commands at a time.
+    active_capture: Option<String>,
+    /// ECG orchestration remains in the host so every ECG-capable connector gets the same
+    /// calibration, exact duration, native inference contract and history semantics.
+    ecg_capture: Option<EcgCaptureController>,
 }
 
 mod actions;
@@ -268,6 +290,9 @@ impl ConnectorHost {
             samples_duplicate: 0,
             duplicates_journalled_at: 0,
             low_power: false,
+            active_capabilities: BTreeSet::new(),
+            active_capture: None,
+            ecg_capture: None,
         })
     }
 
@@ -322,6 +347,172 @@ impl ConnectorHost {
         self.low_power
     }
 
+    /// Signed capture declarations intersected with the active connected-hardware capabilities.
+    pub fn available_captures(&self) -> Vec<ConnectorCaptureCapability> {
+        self.manifest
+            .captures
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .filter(|capture| self.active_capabilities.contains(&capture.stream))
+            .map(|capture| ConnectorCaptureCapability {
+                stream: capture.stream.clone(),
+                unit: capture.unit.clone(),
+                minimum_sample_rate_hz: capture.minimum_sample_rate_hz,
+                maximum_sample_rate_hz: capture.maximum_sample_rate_hz,
+            })
+            .collect()
+    }
+
+    /// Ask the connector to begin a generic captured stream. Device commands remain connector
+    /// knowledge; this method only names a signed, session-active stream.
+    pub fn start_capture(&mut self, stream: &str, wall_time_ms: Option<i64>) -> Result<()> {
+        if self.lifecycle != ConnectorLifecycle::Streaming {
+            return Err(host_state(
+                "capture can start only while the connector is streaming",
+            ));
+        }
+        if self.active_capture.is_some() {
+            return Err(host_state("another connector capture is already active"));
+        }
+        let capture = self
+            .available_captures()
+            .into_iter()
+            .find(|capture| capture.stream == stream);
+        let Some(capture) = capture else {
+            return Err(undeclared(
+                "capture stream is not signed and active for this session",
+            ));
+        };
+        let ecg_controller = if stream == "ecg" {
+            if capture.minimum_sample_rate_hz != capture.maximum_sample_rate_hz {
+                return Err(host_state(
+                    "ECG capture requires one declared session sample rate",
+                ));
+            }
+            let now_ms =
+                wall_time_ms.ok_or_else(|| host_state("ECG capture requires host wall time"))?;
+            Some(EcgCaptureController::begin(
+                EcgCaptureId::new(metadata_id(
+                    self.config.session_id,
+                    self.event_sequence.saturating_add(1),
+                    u64::MAX,
+                )),
+                DeviceId::new(self.config.device_id),
+                u32::from(capture.minimum_sample_rate_hz),
+                capture.unit,
+                now_ms,
+            )?)
+        } else {
+            None
+        };
+        self.dispatch(
+            EventBody::CaptureStart {
+                stream: stream.to_owned(),
+            },
+            wall_time_ms,
+            false,
+            0,
+        )?;
+        self.active_capture = Some(stream.to_owned());
+        if ecg_controller.is_some() {
+            self.ecg_capture = ecg_controller;
+        }
+        Ok(())
+    }
+
+    pub fn stop_capture(&mut self, stream: &str, wall_time_ms: Option<i64>) -> Result<()> {
+        if self.active_capture.as_deref() != Some(stream) {
+            return Err(host_state("capture stop does not match the active stream"));
+        }
+        self.dispatch(
+            EventBody::CaptureStop {
+                stream: stream.to_owned(),
+            },
+            wall_time_ms,
+            false,
+            0,
+        )?;
+        self.active_capture = None;
+        if stream == "ecg" {
+            if let Some(capture) = self.ecg_capture.as_mut() {
+                if !matches!(
+                    capture.snapshot().phase,
+                    EcgCapturePhase::Analysing | EcgCapturePhase::Result
+                ) {
+                    capture.cancel();
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn active_capture(&self) -> Option<&str> {
+        self.active_capture.as_deref()
+    }
+
+    pub fn ecg_capture_snapshot(&self) -> Option<EcgCaptureSnapshot> {
+        self.ecg_capture
+            .as_ref()
+            .map(EcgCaptureController::snapshot)
+    }
+
+    /// The capture state, having first expired a calibration whose deadline has passed.
+    ///
+    /// A capture that stalls before its first sample has no arriving batch to notice the deadline
+    /// on, so the expiry has to ride the read the screen is already making. When it fires the raw
+    /// stream is stopped as if the wearer had cancelled: leaving it running is what would keep a
+    /// dead capture draining the strap.
+    pub fn ecg_capture_snapshot_at(
+        &mut self,
+        wall_time_ms: Option<i64>,
+    ) -> Result<Option<EcgCaptureSnapshot>> {
+        let expired = wall_time_ms.is_some_and(|now_ms| {
+            self.ecg_capture
+                .as_mut()
+                .is_some_and(|capture| capture.expire_stalled(now_ms))
+        });
+        if expired && self.active_capture.as_deref() == Some("ecg") {
+            self.active_capture = None;
+            self.dispatch(
+                EventBody::CaptureStop {
+                    stream: "ecg".to_owned(),
+                },
+                wall_time_ms,
+                false,
+                0,
+            )?;
+        }
+        Ok(self.ecg_capture_snapshot())
+    }
+
+    pub fn ecg_inference_request(&self) -> Option<EcgInferenceRequest> {
+        self.ecg_capture
+            .as_ref()
+            .and_then(EcgCaptureController::inference_request)
+    }
+
+    pub fn submit_ecg_inference(
+        &mut self,
+        capture_id: EcgCaptureId,
+        predictions: Vec<[f32; 3]>,
+        model_sha256: String,
+        now_ms: i64,
+    ) -> Result<EcgResult> {
+        let capture = self
+            .ecg_capture
+            .as_mut()
+            .ok_or_else(|| host_state("there is no ECG analysis awaiting inference"))?;
+        let (evidence, result): (EcgInferenceEvidence, EcgResult) =
+            capture.submit_inference(capture_id, predictions, model_sha256, now_ms)?;
+        self.store.in_transaction(|store| {
+            store.insert_ecg_inference(&evidence)?;
+            store.upsert_ecg_result(&result)?;
+            Ok(())
+        })?;
+        Ok(result)
+    }
+
     pub fn apply(
         &mut self,
         mut body: EventBody,
@@ -357,6 +548,15 @@ impl ConnectorHost {
         self.outstanding.clear();
         self.pending_timers.clear();
         self.staged_state.clear();
+        // A capture owns an open device raw stream. Give the connector a semantic stop under the
+        // new cancellation generation before cancellation itself, so its stop write cannot be
+        // mistaken for stale work or cleared from the queue.
+        if let Some(stream) = self.active_capture.take() {
+            self.dispatch(EventBody::CaptureStop { stream }, wall_time_ms, false, 0)?;
+        }
+        if let Some(capture) = self.ecg_capture.as_mut() {
+            capture.cancel();
+        }
         self.lifecycle = ConnectorLifecycle::Suspending;
         self.dispatch(EventBody::Cancel { reason }, wall_time_ms, false, 0)?;
         if !self

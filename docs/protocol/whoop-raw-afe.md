@@ -209,14 +209,13 @@ which this stream now provides — so BP is a downstream signal-timing problem, 
 
 `maverick-connectors/crates/whoop-protocol/src/realtime_raw.rs` decodes the **v0a** frame
 (`decode_realtime_raw` → `RawAfeFrame`) and defines `START_AFE_RAW` (63). The whoop5 connector emits
-`ecg` / `ppg-raw-a` / `ppg-raw-b` samples from it, behind the `ecg-probe` feature so release builds
-never stream raw (battery/bandwidth) and their signed artifacts stay byte-identical. The decoder is
-general to gen5, so the PPG path is expected to work on a non-MG WHOOP 5.0 as well (untested — no
-such unit available).
+the middle `ecg` channel in release builds only during a host-owned manifest-v2 capture. It
+positively gates the session on an `MGB…` hello serial, starts with opcode 63 `[0x01]`, stops with
+opcode 82 `[0x01]`, and drops type-43 frames outside that lifetime. The optional `ecg-probe` build
+also emits the two optical v0x0a channels for lab diagnostics; it does not start raw AFE during
+configuration.
 
-The **v0b** pulse-ox triad above is documented but **not yet decoded in code** — the connector still
-routes only v0a. Adding it would be a small extension of `realtime_raw.rs` (three signed `i32`
-channels at the offsets in the table), gated behind the same `ecg-probe` feature; it is left until
-there is a consumer for raw SpO2 channels, per the standing rule of not surfacing raw streams that no
-host stage reads yet. Hardware notes and captures for all of the above live in the standalone
-`whoop-mg-android` lab tool, outside this repo.
+The **v0b** pulse-ox triad is decoded by the pure protocol crate but remains exposed only by the
+`ecg-probe` connector build. Release capture intentionally emits ECG alone because no product stage
+consumes the raw red/IR/ambient channels. Hardware notes and captures for all of the above live in
+the standalone `whoop-mg-android` lab tool, outside this repo.

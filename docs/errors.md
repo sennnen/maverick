@@ -67,6 +67,9 @@ fails the build.
 | 5003 | STORAGE_NEWER_SCHEMA | the database schema version is newer than the code understands |
 | 5004 | STORAGE_QUERY | a storage read or write failed |
 | 5005 | STORAGE_SERIALIZE | a value could not be serialised for storage or read back |
+| 8001 | ML_ECG_CAPTURE_STATE | an ECG capture command or transition is invalid for the current phase |
+| 8002 | ML_ECG_INFERENCE_INVALID | native ECG inference returned the wrong count, shape, range, order, hash, or a non-finite value |
+| 8003 | ML_ECG_PREPROCESSING | a captured ECG could not be converted into the admitted model tensor |
 | 9001 | FFI_RUNTIME_STATE | a host-runtime operation was called in a state where it is not valid |
 | 9002 | FFI_ACTION_QUEUE_FULL | a host-runtime transport action could not be queued without exceeding the fixed capacity |
 | 9003 | FFI_CONNECTOR_NOT_FOUND | a host-runtime operation named a connector that is not registered |

@@ -13,7 +13,7 @@ mod connector;
 pub use connector::*;
 
 use mav_model::error::MavError;
-use mav_model::ids::DeviceId;
+use mav_model::ids::{DeviceId, EcgCaptureId};
 use mav_model::stream::{Sample, StreamKind};
 use std::sync::{Arc, Mutex, MutexGuard};
 
@@ -196,6 +196,92 @@ pub struct ReportBundle {
     pub recent_stages: Vec<ObservedStage>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct EcgCaptureReport {
+    pub capture_id: u64,
+    /// `calibrating`, `recording`, `analysing`, `result`, `failed`, or `cancelled`.
+    pub phase: String,
+    pub progress_milli: u16,
+    pub quality_milli: u16,
+    pub quality_reason: Option<String>,
+    pub recorded_samples: u32,
+    pub target_samples: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct EcgTensor {
+    pub values: Vec<f32>,
+}
+
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct EcgInferenceRequest {
+    pub capture_id: u64,
+    /// Baseline first, then six ordered five-second occlusions.
+    pub tensors: Vec<EcgTensor>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, uniffi::Record)]
+pub struct EcgPrediction {
+    pub sinus_rhythm: f32,
+    pub atrial_fibrillation: f32,
+    pub other_abnormal_rhythm: f32,
+}
+
+/// One at-a-glance finding. `passed` is true when the reassuring reading is the correct one, so a
+/// screen can render a tick without re-deriving what "good" means for each check.
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct EcgCheck {
+    /// `afib`, `high_heart_rate`, `low_heart_rate`, or `sinus_rhythm`.
+    pub id: String,
+    pub passed: bool,
+    /// False when the reading cannot support the check — no rate means no rate verdict.
+    pub known: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct EcgExplanation {
+    pub start_second: u8,
+    pub end_second: u8,
+    pub importance_milli: u16,
+}
+
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct EcgResultReport {
+    pub capture_id: u64,
+    pub device_id: u64,
+    pub started_ns: i64,
+    pub ended_ns: i64,
+    pub source_rate_hz: u32,
+    pub sample_count: u32,
+    /// `sinus_rhythm`, `atrial_fibrillation`, or `other_abnormal_rhythm`.
+    pub rhythm: String,
+    pub sinus_probability: f32,
+    pub atrial_fibrillation_probability: f32,
+    pub other_abnormal_probability: f32,
+    pub confidence_milli: u16,
+    pub quality_milli: u16,
+    /// Mean rate over the recording, absent when too few beats were found to average.
+    pub mean_heart_rate_bpm: Option<u16>,
+    /// The at-a-glance checks both apps render, in a fixed order. Derived in the core so the two
+    /// platforms cannot disagree about what the same result means.
+    pub checks: Vec<EcgCheck>,
+    pub explanation: Vec<EcgExplanation>,
+    pub raw_sha256: String,
+    pub tensor_sha256: String,
+    pub preprocessing_sha256: String,
+    pub model_sha256: String,
+    pub algorithm_id: String,
+    pub algorithm_version: String,
+    pub provisional: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct EcgReportPayload {
+    pub result: EcgResultReport,
+    pub source_unit: String,
+    pub waveform: Vec<f32>,
+}
+
 #[uniffi::export]
 impl MavRuntime {
     #[uniffi::constructor]
@@ -254,6 +340,20 @@ impl MavRuntime {
                 mav_connector_abi::Permission::Ble => "Bluetooth device access".to_owned(),
             })
             .collect();
+        let captures = approval
+            .report
+            .manifest
+            .captures
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .map(|capture| ConnectorCaptureCapability {
+                stream: capture.stream.clone(),
+                unit: capture.unit.clone(),
+                minimum_sample_rate_hz: capture.minimum_sample_rate_hz,
+                maximum_sample_rate_hz: capture.maximum_sample_rate_hz,
+            })
+            .collect();
         let device_families = approval
             .report
             .manifest
@@ -274,6 +374,7 @@ impl MavRuntime {
             description: approval.report.manifest.description,
             publisher_key_id: approval.report.manifest.publisher_key_id,
             capabilities,
+            captures,
             permissions,
             device_families,
             state_schema: approval.report.manifest.state_schema,
@@ -540,6 +641,153 @@ impl MavRuntime {
         let session = self.connector_session_lock()?;
         let host = session.as_ref().ok_or_else(no_connector_session)?;
         Ok(host.lifecycle_snapshot().into())
+    }
+
+    /// Signed capture declarations intersected with the capabilities active for this hardware.
+    pub fn connector_capture_capabilities(
+        &self,
+    ) -> Result<Vec<ConnectorCaptureCapability>, FfiError> {
+        let session = self.connector_session_lock()?;
+        let host = session.as_ref().ok_or_else(no_connector_session)?;
+        Ok(host
+            .available_captures()
+            .into_iter()
+            .map(|capture| ConnectorCaptureCapability {
+                stream: capture.stream,
+                unit: capture.unit,
+                minimum_sample_rate_hz: capture.minimum_sample_rate_hz,
+                maximum_sample_rate_hz: capture.maximum_sample_rate_hz,
+            })
+            .collect())
+    }
+
+    pub fn start_connector_capture(&self, stream: String, now_ms: i64) -> Result<(), FfiError> {
+        let mut session = self.connector_session_lock()?;
+        let host = session.as_mut().ok_or_else(no_connector_session)?;
+        host.start_capture(&stream, Some(now_ms))?;
+        Ok(())
+    }
+
+    pub fn stop_connector_capture(&self, stream: String, now_ms: i64) -> Result<(), FfiError> {
+        let mut session = self.connector_session_lock()?;
+        let host = session.as_mut().ok_or_else(no_connector_session)?;
+        host.stop_capture(&stream, Some(now_ms))?;
+        Ok(())
+    }
+
+    /// The live capture state. `now_ms` is the host wall clock the calibration deadline is judged
+    /// against, so a capture whose stream never arrived fails visibly instead of calibrating for
+    /// as long as the screen stays open.
+    pub fn ecg_capture_state(&self, now_ms: i64) -> Result<Option<EcgCaptureReport>, FfiError> {
+        let mut session = self.connector_session_lock()?;
+        let host = session.as_mut().ok_or_else(no_connector_session)?;
+        Ok(host
+            .ecg_capture_snapshot_at(Some(now_ms))?
+            .map(ecg_capture_report))
+    }
+
+    pub fn ecg_inference_request(&self) -> Result<Option<EcgInferenceRequest>, FfiError> {
+        let session = self.connector_session_lock()?;
+        let host = session.as_ref().ok_or_else(no_connector_session)?;
+        Ok(host
+            .ecg_inference_request()
+            .map(|request| EcgInferenceRequest {
+                capture_id: request.capture_id.get(),
+                tensors: request
+                    .tensors
+                    .into_iter()
+                    .map(|values| EcgTensor { values })
+                    .collect(),
+            }))
+    }
+
+    pub fn submit_ecg_inference(
+        &self,
+        capture_id: u64,
+        predictions: Vec<EcgPrediction>,
+        model_sha256: String,
+        now_ms: i64,
+    ) -> Result<EcgResultReport, FfiError> {
+        let predictions = predictions
+            .into_iter()
+            .map(|values| {
+                [
+                    values.sinus_rhythm,
+                    values.atrial_fibrillation,
+                    values.other_abnormal_rhythm,
+                ]
+            })
+            .collect();
+        let mut session = self.connector_session_lock()?;
+        let host = session.as_mut().ok_or_else(no_connector_session)?;
+        host.submit_ecg_inference(
+            EcgCaptureId::new(capture_id),
+            predictions,
+            model_sha256,
+            now_ms,
+        )
+        .map(ecg_result_report)
+        .map_err(Into::into)
+    }
+
+    pub fn ecg_results(
+        &self,
+        device_id: u64,
+        limit: u32,
+    ) -> Result<Vec<EcgResultReport>, FfiError> {
+        let store = self.reader_lock()?;
+        let device = DeviceId::new(device_id);
+        // Reinterpret any capture whose result went missing while its evidence survived. Older
+        // installs cleared results as if they were derived from samples, so a wearer's history can
+        // arrive here as evidence with nothing to show for it; interpretation is deterministic, so
+        // rebuilding is a repair rather than a new claim.
+        for capture_id in store.ecg_evidence_without_result(device)? {
+            if let Some(evidence) = store.ecg_inference(capture_id)? {
+                store
+                    .upsert_ecg_result(&mav_engine::ecg_capture::interpret_evidence(&evidence)?)?;
+            }
+        }
+        store
+            .ecg_results(device, limit as usize)
+            .map(|results| results.into_iter().map(ecg_result_report).collect())
+            .map_err(Into::into)
+    }
+
+    /// Forget one reading entirely: result, evidence and the samples behind it.
+    pub fn delete_ecg_capture(&self, capture_id: u64) -> Result<bool, FfiError> {
+        let store = self.reader_lock()?;
+        store
+            .delete_ecg_capture(EcgCaptureId::new(capture_id))
+            .map_err(Into::into)
+    }
+
+    pub fn ecg_report_payload(
+        &self,
+        capture_id: u64,
+    ) -> Result<Option<EcgReportPayload>, FfiError> {
+        let store = self.reader_lock()?;
+        let capture_id = EcgCaptureId::new(capture_id);
+        let Some(evidence) = store.ecg_inference(capture_id)? else {
+            return Ok(None);
+        };
+        let Some(result) = store.ecg_result(capture_id)? else {
+            return Ok(None);
+        };
+        let waveform = store
+            .samples_between(
+                evidence.device_id,
+                StreamKind::Ecg,
+                mav_model::time::WallTime::from_nanos(evidence.started_ns),
+                mav_model::time::WallTime::from_nanos(evidence.ended_ns),
+            )?
+            .into_iter()
+            .map(|sample| sample.value.as_f64() as f32)
+            .collect();
+        Ok(Some(EcgReportPayload {
+            result: ecg_result_report(result),
+            source_unit: evidence.source_unit,
+            waveform,
+        }))
     }
 
     /// Replace the timezone the analytics bucket days by. The platform owns the zone database and
@@ -880,6 +1128,93 @@ fn bounded_sample(
         return None;
     }
     Some(value.round() as u32)
+}
+
+fn ecg_capture_report(snapshot: mav_engine::ecg_capture::EcgCaptureSnapshot) -> EcgCaptureReport {
+    EcgCaptureReport {
+        capture_id: snapshot.capture_id.get(),
+        phase: snapshot.phase.name().to_owned(),
+        progress_milli: snapshot.progress_milli,
+        quality_milli: snapshot.quality_milli,
+        quality_reason: snapshot.quality_reason,
+        recorded_samples: snapshot.recorded_samples,
+        target_samples: snapshot.target_samples,
+    }
+}
+
+/// The four at-a-glance checks, derived once in the core.
+///
+/// The rate thresholds are the range this classifier was validated over; outside it the rhythm
+/// call is not something the model has earned, which is why the rate checks are separate findings
+/// rather than folded into the rhythm. A reading with no measurable rate reports both rate checks
+/// as unknown rather than passing them by default.
+fn ecg_checks(result: &mav_model::ecg::EcgResult) -> Vec<EcgCheck> {
+    use mav_model::ecg::EcgRhythmClass;
+    const LOW_BPM: u16 = 50;
+    const HIGH_BPM: u16 = 120;
+    let rate = result.mean_heart_rate_bpm;
+    vec![
+        EcgCheck {
+            id: "afib".to_owned(),
+            passed: result.rhythm != EcgRhythmClass::AtrialFibrillation,
+            known: true,
+        },
+        EcgCheck {
+            id: "high_heart_rate".to_owned(),
+            passed: rate.is_some_and(|bpm| bpm <= HIGH_BPM),
+            known: rate.is_some(),
+        },
+        EcgCheck {
+            id: "low_heart_rate".to_owned(),
+            passed: rate.is_some_and(|bpm| bpm >= LOW_BPM),
+            known: rate.is_some(),
+        },
+        EcgCheck {
+            id: "sinus_rhythm".to_owned(),
+            passed: result.rhythm == EcgRhythmClass::SinusRhythm,
+            known: true,
+        },
+    ]
+}
+
+fn ecg_result_report(result: mav_model::ecg::EcgResult) -> EcgResultReport {
+    EcgResultReport {
+        capture_id: result.capture_id.get(),
+        device_id: result.device_id.get(),
+        started_ns: result.started_ns,
+        ended_ns: result.ended_ns,
+        source_rate_hz: result.source_rate_hz,
+        sample_count: result.sample_count,
+        rhythm: match result.rhythm {
+            mav_model::ecg::EcgRhythmClass::SinusRhythm => "sinus_rhythm",
+            mav_model::ecg::EcgRhythmClass::AtrialFibrillation => "atrial_fibrillation",
+            mav_model::ecg::EcgRhythmClass::OtherAbnormalRhythm => "other_abnormal_rhythm",
+        }
+        .to_owned(),
+        sinus_probability: result.probabilities[0],
+        atrial_fibrillation_probability: result.probabilities[1],
+        other_abnormal_probability: result.probabilities[2],
+        confidence_milli: result.confidence_milli,
+        mean_heart_rate_bpm: result.mean_heart_rate_bpm,
+        checks: ecg_checks(&result),
+        quality_milli: result.quality_milli,
+        explanation: result
+            .explanation
+            .into_iter()
+            .map(|segment| EcgExplanation {
+                start_second: segment.start_second,
+                end_second: segment.end_second,
+                importance_milli: segment.importance_milli,
+            })
+            .collect(),
+        raw_sha256: result.raw_sha256,
+        tensor_sha256: result.tensor_sha256,
+        preprocessing_sha256: result.preprocessing_sha256,
+        model_sha256: result.model_sha256,
+        algorithm_id: result.algorithm_id,
+        algorithm_version: result.algorithm_version,
+        provisional: result.provisional,
+    }
 }
 
 impl MavRuntime {

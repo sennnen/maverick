@@ -18,6 +18,7 @@ pub const MAX_DEVICE_FAMILIES: usize = 32;
 pub const MAX_SERVICES: usize = 32;
 pub const MAX_CHARACTERISTICS: usize = 128;
 pub const MAX_CAPABILITIES: usize = 64;
+pub const MAX_CAPTURES: usize = 8;
 pub const MAX_SCAN_FILTERS: usize = 32;
 pub const MAX_TIMER_DELAY_MS: u64 = 86_400_000;
 

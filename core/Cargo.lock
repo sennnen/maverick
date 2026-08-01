@@ -577,6 +577,7 @@ version = "0.1.0"
 dependencies = [
  "mav-model",
  "serde",
+ "sha2",
 ]
 
 [[package]]
@@ -654,6 +655,7 @@ dependencies = [
  "mav-timeline",
  "serde",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]

@@ -10,6 +10,7 @@
 //! (`version`), and the one error type the whole core returns (`error`).
 #![forbid(unsafe_code)]
 
+pub mod ecg;
 pub mod error;
 pub mod ids;
 pub mod raw;
@@ -18,7 +19,7 @@ pub mod time;
 pub mod version;
 
 pub use error::{Category, MavError, Result, Severity};
-pub use ids::{DeviceId, FrameId, MetadataId, SessionId, StreamId};
+pub use ids::{DeviceId, EcgCaptureId, FrameId, MetadataId, SessionId, StreamId};
 pub use raw::{RawSample, RawSampleBatch, RawValue};
 pub use stream::{Quality, RejectReason, Sample, StreamKind};
 pub use time::{ClockMap, ClockSegment, DeviceTime, WallTime};

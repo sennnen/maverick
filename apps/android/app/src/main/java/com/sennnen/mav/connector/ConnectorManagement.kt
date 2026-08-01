@@ -143,6 +143,7 @@ data class ConnectorScanDevice(
     val id: String,
     val name: String,
     val rssi: Int,
+    val paired: Boolean = false,
 )
 
 internal class ConnectorScanCatalog {

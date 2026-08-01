@@ -67,6 +67,7 @@ Before a commit, every one of these has to pass:
     cargo clippy --workspace --all-targets -- -D warnings
     tools/check_docs.sh          links resolve, CLAUDE.md == AGENTS.md, plans indexed
     tools/check_deps.py          crate dependency edges match architecture.md
+    tools/check_a11y.py          every ink weight clears its contrast ratio in both schemes
 
 Skills, loaded when the task calls for them:
 

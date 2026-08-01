@@ -1,0 +1,40 @@
+; mav:manifest payload v2. V1 fields retain their integer keys; capture declarations are additive.
+manifest = {
+  0: "mavconn-manifest/v2",
+  1: tstr .size (1..128),                   ; reverse-DNS connector id
+  2: tstr .size (1..64),                    ; SemVer, no build metadata
+  3: tstr .size (1..128),                   ; display name
+  4: tstr .size (1..1024),                  ; description
+  5: tstr .size (1..64),                    ; publisher key id
+  6: {0: 1, 1: uint, 2: uint},              ; ABI range: major/min/max minor
+  7: {0: tstr, ? 1: tstr},                  ; core SemVer range
+  8: uint,                                  ; state schema
+  9: tstr .size (1..64),                    ; host limits profile id
+  10: [1*32 device-family],
+  11: [1*32 service],
+  12: [1*64 capability],
+  13: [0],                                  ; v1 permission: BLE
+  14: {0: "mav_abi_version", 1: "mav_alloc", 2: "mav_dealloc",
+       3: "mav_init", 4: "mav_handle", 5: "mav_snapshot"},
+  15: bstr .size 32,                         ; fixture-set hash
+  16: {0: tstr .size (1..64), 1: 0..1},     ; channel and downgrade policy
+  17: [1*8 capture]
+}
+
+device-family = {
+  0: tstr .size (1..64),
+  1: [* tstr .size (1..128)],
+  2: [* tstr .size (1..64)],
+  ? 3: uint,
+  4: bstr .size (0..64),
+  5: bstr .size (0..64)
+}
+service = {0: tstr .size (1..64), 1: tstr .size (1..64), 2: [1*128 characteristic]}
+characteristic = {0: tstr .size (1..64), 1: tstr .size (1..64), 2: [* 0..4], 3: bool, 4: bool}
+capability = {0: tstr .size (1..64), 1: [* 0..6]}
+capture = {
+  0: tstr .size (1..64),                   ; stream
+  1: tstr .size (1..64),                   ; unit
+  2: 1..4096,                              ; minimum sample rate, Hz
+  3: 1..4096                               ; maximum sample rate, Hz
+}

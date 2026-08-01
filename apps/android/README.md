@@ -39,6 +39,14 @@ secrets are `ANDROID_KEYSTORE_BASE64` (single-line Base64 JKS), `ANDROID_KEYSTOR
 the frozen decoder tests and presentation helper tests (logical day, widget anchor, stage segments,
 zone parsing) run in the same gate.
 
+`assembleField` is the local physical-hardware variant. It inherits the minified release behaviour,
+contains no synthetic dashboard data, and keeps the production model asset set, but explicitly
+trusts the committed development connector publisher so a TEST-signed `.mavconn` can be exercised
+against a real strap. Its application id is `com.sennnen.mav.field`, it is locally signed, and it
+must never be distributed as a production build. `MAV_SHOW_SYNTHETIC_DATA` and
+`MAV_ALLOW_DEVELOPMENT_CONNECTORS` are separate build fields so accepting a development connector
+does not silently turn sample biometrics back on.
+
 ## Building the core for Android
 
 Install the pinned NDK once:

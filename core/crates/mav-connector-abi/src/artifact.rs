@@ -4,6 +4,7 @@ use crate::{
 use minicbor::{Decode, Encode};
 
 pub const MANIFEST_SCHEMA: &str = "mavconn-manifest/v1";
+pub const MANIFEST_SCHEMA_V2: &str = "mavconn-manifest/v2";
 pub const ABI_SCHEMA: &str = "mavconn-abi/v1";
 pub const FIXTURES_SCHEMA: &str = "mavconn-fixtures/v1";
 pub const SIGNATURE_SCHEMA: &str = "mavconn-signature/v1";
@@ -20,6 +21,10 @@ pub const FIXTURES_V1_SCHEMA_HASH: [u8; 32] = [
 pub const MANIFEST_V1_SCHEMA_HASH: [u8; 32] = [
     0x4e, 0xbe, 0xb1, 0x26, 0xd4, 0xc1, 0x7e, 0xea, 0xcc, 0xda, 0xb6, 0x93, 0x20, 0xcb, 0x6d, 0x08,
     0x5d, 0x3b, 0x06, 0x0a, 0x3d, 0x41, 0x3c, 0x1e, 0x3b, 0xc8, 0xc8, 0x36, 0x2e, 0xc7, 0x91, 0x2b,
+];
+pub const MANIFEST_V2_SCHEMA_HASH: [u8; 32] = [
+    0xd0, 0x37, 0x91, 0x90, 0x69, 0xeb, 0x87, 0xec, 0x4c, 0xab, 0x2c, 0x31, 0xdc, 0x64, 0x50, 0xf8,
+    0x14, 0xfa, 0x77, 0x0c, 0x00, 0x96, 0xe0, 0xb4, 0xb7, 0xa6, 0x59, 0xdb, 0x6a, 0x31, 0xf1, 0xcc,
 ];
 pub const SIGNATURE_V1_SCHEMA_HASH: [u8; 32] = [
     0xbe, 0x85, 0x08, 0xdc, 0xc5, 0xfb, 0x10, 0x89, 0x82, 0x8d, 0xdb, 0x7b, 0xeb, 0x9f, 0xdc, 0xd5,
@@ -278,6 +283,37 @@ impl Validate for CapabilityDecl {
     }
 }
 
+/// A user-initiated bounded recording the host may request from a connector.
+///
+/// This is maximum signed authority. The host exposes it only while `DeclareCapabilities` also
+/// names the stream for the connected hardware session (ADR-033).
+#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[cbor(map)]
+pub struct CaptureDecl {
+    #[n(0)]
+    pub stream: String,
+    #[n(1)]
+    pub unit: String,
+    #[n(2)]
+    pub minimum_sample_rate_hz: u16,
+    #[n(3)]
+    pub maximum_sample_rate_hz: u16,
+}
+
+impl Validate for CaptureDecl {
+    fn validate(&self) -> Result<(), WireError> {
+        logical(&self.stream, "capture stream")?;
+        logical(&self.unit, "capture unit")?;
+        if self.minimum_sample_rate_hz == 0
+            || self.minimum_sample_rate_hz > self.maximum_sample_rate_hz
+            || self.maximum_sample_rate_hz > 4_096
+        {
+            return Err(WireError::Schema("capture sample-rate range"));
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[cbor(map)]
 pub struct Entrypoints {
@@ -355,11 +391,16 @@ pub struct Manifest {
     pub fixture_set_hash: [u8; 32],
     #[n(16)]
     pub update: UpdatePolicy,
+    /// Absent in v1 manifests. A v2 manifest may declare a bounded set of user-initiated streams.
+    #[n(17)]
+    pub captures: Option<Vec<CaptureDecl>>,
 }
 
 impl Validate for Manifest {
     fn validate(&self) -> Result<(), WireError> {
-        schema(&self.schema, MANIFEST_SCHEMA, "manifest schema")?;
+        if self.schema != MANIFEST_SCHEMA && self.schema != MANIFEST_SCHEMA_V2 {
+            return Err(WireError::Schema("manifest schema"));
+        }
         self.connector_id.validate()?;
         version(&self.version, "connector version")?;
         bounds::text(&self.display_name, bounds::MAX_LABEL_BYTES, "display name")?;
@@ -391,6 +432,20 @@ impl Validate for Manifest {
             return Err(WireError::Schema("capabilities"));
         }
         bounds::all(&self.capabilities)?;
+        let captures = self.captures.as_deref().unwrap_or_default();
+        if self.schema == MANIFEST_SCHEMA && !captures.is_empty() {
+            return Err(WireError::Schema("manifest v1 capture declarations"));
+        }
+        bounds::count(captures.len(), bounds::MAX_CAPTURES, "capture declarations")?;
+        bounds::all(captures)?;
+        for capture in captures {
+            if !self.capabilities.iter().any(|capability| {
+                capability.stream == capture.stream
+                    && capability.transport.contains(&TransportCapability::Write)
+            }) {
+                return Err(WireError::Schema("capture stream capability"));
+            }
+        }
         if self.permissions != [Permission::Ble] {
             return Err(WireError::Schema("manifest permissions"));
         }

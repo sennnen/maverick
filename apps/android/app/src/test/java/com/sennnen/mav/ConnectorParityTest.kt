@@ -14,20 +14,27 @@ class ConnectorParityTest {
                 "generic_hr",
                 "dev.maverick.generic-hr",
                 3,
-                "33a7c5141295ef9d5c030cb0706963291c2ce432f9c82a1375367056730c26f2",
+                "17f1ee6eee7eea6cd2a03fbcb8c9eada80ae0f4a5a39cab708a949ff5251041a",
                 setOf("chest-strap-reports-electrical-intervals"),
             ),
             Expected(
                 "whoop4",
                 "dev.maverick.whoop4",
                 16,
-                "a51540d872b3262aa47ef64197f1c36d5cec5838d48cd47239294da6ec0d0f28",
+                "e5f625b8cd4645cb0b09e69ae9ef5ce496293bab5e944d102284ab4af2a45989",
             ),
             Expected(
                 "whoop5",
                 "dev.maverick.whoop5",
-                14,
-                "ac613682a7835833602c646ace549515c3ce80dd458fbb8feccedb56923a1944",
+                16,
+                "3062689f5278ae2c2d0c6a744a854badae7f91d172da518670394aa8fee83632",
+                setOf(
+                    "history-cursor-retry",
+                    "state-restart",
+                    "malformed-frame",
+                    "mg-ecg-capture",
+                    "non-mg-ecg-fails-closed",
+                ),
             ),
         )
         expected.forEach { value ->

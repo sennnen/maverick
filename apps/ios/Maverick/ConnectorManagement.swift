@@ -430,8 +430,13 @@ final class ConnectorManager: ObservableObject {
   @Published private(set) var discoveredDevices: [ConnectorScanDevice] = []
   /// The trailing day history the trend and vitals surfaces read, straight from the core.
   @Published private(set) var days: [DailySnapshotReport] = []
+  @Published private(set) var ecgCapabilities: [ConnectorCaptureCapability] = []
+  @Published private(set) var ecgCapture: EcgCaptureReport?
+  @Published private(set) var ecgResults: [EcgResultReport] = []
+  @Published private(set) var ecgError: String?
 
   private let worker: ConnectorRuntimeWorker
+  private var ecgInferenceInFlight: UInt64?
 
   /// Battery saver (ADR-030). Routed to the core, which applies it to the live session and to any
   /// session started afterwards.
@@ -457,6 +462,7 @@ final class ConnectorManager: ObservableObject {
     if !restoreRegistryIfAvailable() { refreshRegistry() }
     installBundledConnectorIfMissing()
     refreshInstalled()
+    refreshEcgHistory()
     DispatchQueue.main.async { [weak self] in self?.resumeIfNeeded() }
   }
 
@@ -468,6 +474,10 @@ final class ConnectorManager: ObservableObject {
   /// verification would be a second trust path, and the whole point is that there is only one.
   /// Already installed is the normal case and is silent.
   private func installBundledConnectorIfMissing() {
+    // Read the policy on the actor that owns it and carry the value into the callback. Reaching
+    // for `self.releasePolicy` from inside a Sendable completion is a data race the compiler now
+    // rejects, and it was always one.
+    let policy = releasePolicy
     worker.list { [weak self] result in
       guard let self,
         case let .success(records) = result,
@@ -478,7 +488,6 @@ final class ConnectorManager: ObservableObject {
           locator: BundledConnector.resource)
       else { return }
 
-      let policy = self.releasePolicy
       self.worker.inspect(acquisition: acquisition, policy: policy) { inspected in
         guard case let .success(inspection) = inspected else { return }
         self.worker.install(acquisition: acquisition, inspection: inspection, policy: policy) {
@@ -736,6 +745,66 @@ final class ConnectorManager: ObservableObject {
     bluetooth.selectDevice(id)
   }
 
+  func startEcgCapture() {
+    guard ecgCapabilities.contains(where: { $0.stream == "ecg" }) else {
+      ecgError = "This connected device has not positively declared ECG capture."
+      return
+    }
+    ecgError = nil
+    worker.startCapture(stream: "ecg") { [weak self] result in
+      Task { @MainActor in
+        guard let self else { return }
+        switch result {
+        case .success: self.refreshEcgState()
+        case let .failure(error): self.ecgError = Self.message(error)
+        }
+      }
+    }
+  }
+
+  func stopEcgCapture() {
+    worker.stopCapture(stream: "ecg") { [weak self] result in
+      Task { @MainActor in
+        guard let self else { return }
+        switch result {
+        case .success: self.refreshEcgState()
+        case let .failure(error): self.ecgError = Self.message(error)
+        }
+      }
+    }
+  }
+
+  func refreshEcgHistory() {
+    worker.ecgResults(deviceID: 1, limit: 50) { [weak self] result in
+      Task { @MainActor in
+        if case let .success(results) = result { self?.ecgResults = results }
+      }
+    }
+  }
+
+  /// Forget one reading. The history reloads from the store rather than being patched.
+  func removeEcgResult(captureID: UInt64) {
+    worker.deleteEcgCapture(captureID: captureID) { [weak self] result in
+      Task { @MainActor in
+        switch result {
+        case .success: self?.refreshEcgHistory()
+        case let .failure(error): self?.ecgError = error.localizedDescription
+        }
+      }
+    }
+  }
+
+  func ecgReportPayload(captureID: UInt64) async throws -> EcgReportPayload {
+    try await withCheckedThrowingContinuation { continuation in
+      worker.ecgReportPayload(captureID: captureID) { result in
+        continuation.resume(with: result.flatMap { payload in
+          payload.map(Result.success)
+            ?? .failure(ConnectorAcquisitionError.transport("ECG report evidence is unavailable."))
+        })
+      }
+    }
+  }
+
   private func inspect(_ payload: ConnectorAcquisition) {
     machine.beginInspection()
     worker.inspect(acquisition: payload, policy: releasePolicy) { [weak self] result in
@@ -880,6 +949,7 @@ final class ConnectorManager: ObservableObject {
         case let .success(actions):
           actions.forEach(self.bluetooth.execute)
           self.refreshTelemetry()
+          self.refreshEcgState()
         case let .failure(error): self.failConnection(error)
         }
       }
@@ -897,6 +967,78 @@ final class ConnectorManager: ObservableObject {
             self.bluetooth.checkpoint = nil
           }
         case let .failure(error): self.failConnection(error)
+        }
+      }
+    }
+  }
+
+  private func refreshEcgState() {
+    worker.captureCapabilities { [weak self] result in
+      Task { @MainActor in
+        if case let .success(capabilities) = result {
+          self?.ecgCapabilities = capabilities
+        }
+      }
+    }
+    worker.ecgState { [weak self] result in
+      Task { @MainActor in
+        guard let self else { return }
+        switch result {
+        case let .success(state):
+          self.ecgCapture = state
+          if state?.phase == "analysing" { self.requestEcgInference() }
+        case let .failure(error):
+          self.ecgError = Self.message(error)
+        }
+      }
+    }
+  }
+
+  private func requestEcgInference() {
+    worker.ecgInferenceRequest { [weak self] result in
+      Task { @MainActor in
+        guard let self, case let .success(request?) = result,
+          self.ecgInferenceInFlight != request.captureId
+        else { return }
+        self.ecgInferenceInFlight = request.captureId
+        do {
+          let predictions = try await Task.detached(priority: .userInitiated) {
+            let classifier = try MavEcgClassifier(bundle: .main)
+            return try classifier.predictBatch(request.tensors.map(\.values)).map { values in
+              EcgPrediction(
+                sinusRhythm: values[0],
+                atrialFibrillation: values[1],
+                otherAbnormalRhythm: values[2]
+              )
+            }
+          }.value
+          self.worker.submitEcgInference(
+            captureID: request.captureId,
+            predictions: predictions,
+            modelSHA256: MavEcgClassifier.admittedModelSHA256
+          ) { [weak self] submitted in
+            Task { @MainActor in
+              guard let self else { return }
+              self.ecgInferenceInFlight = nil
+              switch submitted {
+              case let .success(result):
+                self.ecgCapture = EcgCaptureReport(
+                  captureId: result.captureId,
+                  phase: "result",
+                  progressMilli: 1_000,
+                  qualityMilli: result.qualityMilli,
+                  qualityReason: nil,
+                  recordedSamples: result.sampleCount,
+                  targetSamples: result.sampleCount
+                )
+                self.refreshEcgHistory()
+              case let .failure(error): self.ecgError = Self.message(error)
+              }
+            }
+          }
+        } catch {
+          self.ecgInferenceInFlight = nil
+          self.ecgError = Self.message(error)
         }
       }
     }
@@ -1089,6 +1231,76 @@ private final class ConnectorRuntimeWorker: @unchecked Sendable {
     completion: @escaping @Sendable (Result<[ConnectorTransportAction], Error>) -> Void
   ) {
     perform(completion) { try $0.drainConnectorActions(limit: 64) }
+  }
+
+  func captureCapabilities(
+    completion: @escaping @Sendable (Result<[ConnectorCaptureCapability], Error>) -> Void
+  ) {
+    perform(completion) { try $0.connectorCaptureCapabilities() }
+  }
+
+  func startCapture(
+    stream: String,
+    completion: @escaping @Sendable (Result<Void, Error>) -> Void
+  ) {
+    perform(completion) { try $0.startConnectorCapture(stream: stream, nowMs: Self.nowMs) }
+  }
+
+  func stopCapture(
+    stream: String,
+    completion: @escaping @Sendable (Result<Void, Error>) -> Void
+  ) {
+    perform(completion) { try $0.stopConnectorCapture(stream: stream, nowMs: Self.nowMs) }
+  }
+
+  func ecgState(
+    completion: @escaping @Sendable (Result<EcgCaptureReport?, Error>) -> Void
+  ) {
+    perform(completion) { try $0.ecgCaptureState(nowMs: Self.nowMs) }
+  }
+
+  func ecgInferenceRequest(
+    completion: @escaping @Sendable (Result<EcgInferenceRequest?, Error>) -> Void
+  ) {
+    perform(completion) { try $0.ecgInferenceRequest() }
+  }
+
+  func submitEcgInference(
+    captureID: UInt64,
+    predictions: [EcgPrediction],
+    modelSHA256: String,
+    completion: @escaping @Sendable (Result<EcgResultReport, Error>) -> Void
+  ) {
+    perform(completion) {
+      try $0.submitEcgInference(
+        captureId: captureID,
+        predictions: predictions,
+        modelSha256: modelSHA256,
+        nowMs: Self.nowMs
+      )
+    }
+  }
+
+  func ecgResults(
+    deviceID: UInt64,
+    limit: UInt32,
+    completion: @escaping @Sendable (Result<[EcgResultReport], Error>) -> Void
+  ) {
+    perform(completion) { try $0.ecgResults(deviceId: deviceID, limit: limit) }
+  }
+
+  func ecgReportPayload(
+    captureID: UInt64,
+    completion: @escaping @Sendable (Result<EcgReportPayload?, Error>) -> Void
+  ) {
+    perform(completion) { try $0.ecgReportPayload(captureId: captureID) }
+  }
+
+  func deleteEcgCapture(
+    captureID: UInt64,
+    completion: @escaping @Sendable (Result<Bool, Error>) -> Void
+  ) {
+    perform(completion) { try $0.deleteEcgCapture(captureId: captureID) }
   }
 
   /// Hand the core the platform's own zone table. Rust holds no tzdata (ADR-024): iOS has a correct

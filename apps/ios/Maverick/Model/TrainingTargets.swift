@@ -38,9 +38,15 @@ enum TrainingTargets {
         // Behaviour adjustment: grey-zone bias → more Z2 in the plan.
         let totalAll = recentWeeks.flatMap { $0 }.reduce(0, +)
         if totalAll > 0 {
-            let greyShare = recentWeeks.reduce(0.0) { acc, week in
-                acc + (week[safe: 2] ?? 0) + (week[safe: 3] ?? 0)
-            } / totalAll
+            // Split out rather than written as one expression: the single-expression form pushed
+            // the type-checker past its budget on Swift 6.2 and failed the build outright.
+            var greyMinutes = 0.0
+            for week in recentWeeks {
+                let zone3: Double = week.indices.contains(2) ? week[2] : 0
+                let zone4: Double = week.indices.contains(3) ? week[3] : 0
+                greyMinutes += zone3 + zone4
+            }
+            let greyShare: Double = greyMinutes / totalAll
             if greyShare > 0.3 {
                 share[1] += 0.08          // push Z2
                 share[2] -= 0.05          // pull the grey zone back

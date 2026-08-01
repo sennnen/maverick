@@ -1,0 +1,81 @@
+{
+  "schema": "mav/ecg-model-corpus/v1",
+  "warning": "Synthetic software regression fixtures only; not clinical simulations or evidence of diagnostic performance.",
+  "sample_rate_hz": 256,
+  "sample_count": 7680,
+  "classes": ["N", "A", "O"],
+  "cases": [
+    {
+      "id": "n_regular_55",
+      "family": "regular",
+      "expected": "N",
+      "heart_rate_bpm": 55,
+      "coreml_fp16": [0.79246384, 0.000000486, 0.20753567],
+      "tflite_fp16": [0.79226351, 0.000000489, 0.20773600]
+    },
+    {
+      "id": "n_regular_72",
+      "family": "regular",
+      "expected": "N",
+      "heart_rate_bpm": 72,
+      "coreml_fp16": [0.68636626, 0.000005511, 0.31362826],
+      "tflite_fp16": [0.68659717, 0.000005520, 0.31339732]
+    },
+    {
+      "id": "n_regular_90",
+      "family": "regular",
+      "expected": "N",
+      "heart_rate_bpm": 90,
+      "coreml_fp16": [0.73939908, 0.000031596, 0.26056933],
+      "tflite_fp16": [0.74006021, 0.000031760, 0.25990805]
+    },
+    {
+      "id": "a_irregular_70",
+      "family": "irregular",
+      "expected": "A",
+      "heart_rate_bpm": 70,
+      "coreml_fp16": [0.00240310, 0.88100046, 0.11659650],
+      "tflite_fp16": [0.00239665, 0.88093311, 0.11667023]
+    },
+    {
+      "id": "a_irregular_90",
+      "family": "irregular",
+      "expected": "A",
+      "heart_rate_bpm": 90,
+      "coreml_fp16": [0.00291955, 0.88387841, 0.11320204],
+      "tflite_fp16": [0.00292554, 0.88357776, 0.11349673]
+    },
+    {
+      "id": "a_irregular_110",
+      "family": "irregular",
+      "expected": "A",
+      "heart_rate_bpm": 110,
+      "coreml_fp16": [0.00433656, 0.88659954, 0.10906395],
+      "tflite_fp16": [0.00434179, 0.88659811, 0.10906009]
+    },
+    {
+      "id": "o_tachy_120",
+      "family": "tachy",
+      "expected": "O",
+      "heart_rate_bpm": 120,
+      "coreml_fp16": [0.05925940, 0.00672545, 0.93401521],
+      "tflite_fp16": [0.05935000, 0.00669361, 0.93395638]
+    },
+    {
+      "id": "o_brady_40",
+      "family": "brady",
+      "expected": "O",
+      "heart_rate_bpm": 40,
+      "coreml_fp16": [0.07619104, 0.00013327, 0.92367566],
+      "tflite_fp16": [0.07616003, 0.00013333, 0.92370665]
+    },
+    {
+      "id": "o_bigeminy_80",
+      "family": "bigeminy",
+      "expected": "O",
+      "heart_rate_bpm": 80,
+      "coreml_fp16": [0.000006493, 0.01504356, 0.98494995],
+      "tflite_fp16": [0.000006431, 0.01490980, 0.98508376]
+    }
+  ]
+}

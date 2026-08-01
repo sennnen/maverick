@@ -12,7 +12,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import com.sennnen.mav.ui.AppViewModel
 import com.sennnen.mav.ui.AppearancePrefs
-import com.sennnen.mav.ui.aura.AuraRootScreen
+import com.sennnen.mav.ui.mav.MavRootScreen
 
 class MainActivity : ComponentActivity() {
     private val model: AppViewModel by viewModels()
@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
         model.connectors.handleIntent(intent)
         enableEdgeToEdge()
         setContent {
-            AuraRootScreen(
+            MavRootScreen(
                 viewModel = model,
                 onChooseConnectorFile = {
                     connectorDocument.launch(arrayOf("application/vnd.maverick.connector", "application/octet-stream"))

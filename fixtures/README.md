@@ -20,3 +20,7 @@ with the Milestone 1 packets, generated from captured WHOOP traffic.
 
 `connectors/` holds signed development artifacts and generated native-versus-Wasm parity reports;
 its README records their hashes, provenance, and regeneration contract.
+
+`ecg/` holds versioned model-boundary fixtures. The first pair is a deterministic synthetic
+software-regression signal plus an expected tensor hash produced by the independently recovered
+Python reference. It proves conversion consistency only; it is not a clinical ECG fixture.

@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 pub mod connector_host;
+pub mod ecg_capture;
 pub mod recompute;
 pub mod spine;
 

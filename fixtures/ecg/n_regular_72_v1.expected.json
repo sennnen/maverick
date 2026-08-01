@@ -1,0 +1,36 @@
+{
+  "schema": "mav/ecg-preprocessing-fixture/v1",
+  "fixture": "n_regular_72",
+  "status": "conversion-consistency-only",
+  "source": {
+    "file": "n_regular_72_v1.csv",
+    "sha256": "546ec18a1fc352164367c227a6549509d37a51cdaf0ac4619a77f796dc9ad0c4",
+    "unit": "mV",
+    "sample_rate_hz": 256,
+    "sample_count": 7680,
+    "provenance": "galaxy-ecg-xai-recovery deterministic synthetic corpus"
+  },
+  "algorithm": {
+    "id": "nao_full_v2_ecg_preprocessing",
+    "version": "1.0.0",
+    "reference": "recovered Python implementation, not the Rust implementation under test"
+  },
+  "expected": {
+    "tensor_dtype": "float32-le",
+    "tensor_shape": [1, 7680, 1],
+    "tensor_sha256": "1480c4ac65402ce3d87870f869513404961b410671f9ecb0fe9bccf776db9af0",
+    "checkpoint_bits": {
+      "0": "be3d7c4f",
+      "1": "bea4fc26",
+      "2": "becc4609",
+      "255": "bee51acc",
+      "256": "bee873e6",
+      "1024": "3d8365cb",
+      "3839": "3e0035a7",
+      "3840": "3d884e9c",
+      "7677": "be0a6c11",
+      "7678": "bd7b7663",
+      "7679": "bc3c426b"
+    }
+  }
+}

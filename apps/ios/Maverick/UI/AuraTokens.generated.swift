@@ -4,51 +4,78 @@ import CoreGraphics
 
 enum AuraTokens {
   // Colours: (dark, light) as RGB hex.
-  static let bg: (dark: UInt32, light: UInt32) = (0x000000, 0xF5F4F1)
-  static let card: (dark: UInt32, light: UInt32) = (0x141416, 0xEDECE8)
-  static let cardEdge: (dark: UInt32, light: UInt32) = (0x0B0B0C, 0xF4F3F0)
-  static let ink: (dark: UInt32, light: UInt32) = (0xFFFFFF, 0x0C0C0D)
-  static let accentInk: (dark: UInt32, light: UInt32) = (0xE7FE55, 0x74731A)
-  static let good: (dark: UInt32, light: UInt32) = (0x3DE383, 0x1F9E57)
-  static let fair: (dark: UInt32, light: UInt32) = (0xF5B840, 0xC4841A)
-  static let bad: (dark: UInt32, light: UInt32) = (0xFF5A66, 0xD83A44)
-
-  // Colours identical in both schemes.
-  static let accent: UInt32 = 0xE7FE55
+  static let bg: (dark: UInt32, light: UInt32) = (0x070B0B, 0xE7EDED)
+  static let card: (dark: UInt32, light: UInt32) = (0x101617, 0xFFFFFF)
+  static let cardEdge: (dark: UInt32, light: UInt32) = (0x182021, 0xF3F7F7)
+  static let sunken: (dark: UInt32, light: UInt32) = (0x040707, 0xDAE3E3)
+  static let ink: (dark: UInt32, light: UInt32) = (0xE4EDED, 0x0E1516)
+  static let accentInk: (dark: UInt32, light: UInt32) = (0x7BAEA8, 0x2F5B56)
+  static let good: (dark: UInt32, light: UInt32) = (0x7BAEA8, 0x2F5B56)
+  static let bad: (dark: UInt32, light: UInt32) = (0xE08585, 0xA83232)
+  static let focus: (dark: UInt32, light: UInt32) = (0xE4EDED, 0x16211F)
 
   // Colours carrying an alpha per scheme.
-  static let hairline: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0xFFFFFF, 0.08), (0x0C0C0D, 0.1))
-  static let scrim: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0x000000, 0.28), (0xFFFFFF, 0.6))
-  static let grid: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0xFFFFFF, 0.07), (0x0C0C0D, 0.08))
+  static let hairline: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0xE4EDED, 0.16), (0x0E1516, 0.15))
+  static let hairlineStrong: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0xE4EDED, 0.28), (0x0E1516, 0.22))
+  static let inkSecondary: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0xE4EDED, 0.76), (0x0E1516, 0.72))
+  static let glass: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0xE4EDED, 0.1), (0xFAFCFC, 0.76))
+  static let glassLine: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0xE4EDED, 0.22), (0x0E1516, 0.14))
+  static let scrim: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0x000000, 0.58), (0x0E1516, 0.3))
+  static let photoScrim: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0x0F3733, 0.72), (0x0F3733, 0.68))
+  static let photoVeil: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0x081413, 0.85), (0xDEEBE9, 0.87))
+  static let bloomTop: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0x7BAEA8, 0.18), (0x5FB3A8, 0.3))
+  static let bloomBottom: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0x7BAEA8, 0.1), (0x5FB3A8, 0.17))
+  static let grid: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0xE4EDED, 0.12), (0x0E1516, 0.1))
+  static let tintCharge: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0x7BAEA8, 0.16), (0x2F5B56, 0.115))
+  static let tintRest: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0x7BAEA8, 0.135), (0x2F5B56, 0.098))
+  static let tintEffort: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0x7BAEA8, 0.112), (0x2F5B56, 0.082))
+  static let tintHeart: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0x7BAEA8, 0.09), (0x2F5B56, 0.066))
+  static let tintEnergy: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0x7BAEA8, 0.07), (0x2F5B56, 0.052))
+  static let tintVitals: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0x7BAEA8, 0.052), (0x2F5B56, 0.038))
+  static let tintCycle: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0x7BAEA8, 0.036), (0x2F5B56, 0.026))
+  static let tintNeutral: (dark: (UInt32, CGFloat), light: (UInt32, CGFloat)) = ((0xE4EDED, 0.04), (0x0E1516, 0.035))
 
-  // Metric family hues: glow centre and the edge it blooms out of.
-  static let chargeGlow: (dark: UInt32, light: UInt32) = (0x14C078, 0x6FD3A2)
-  static let chargeEdge: (dark: UInt32, light: UInt32) = (0x05241A, 0xDDF0E6)
-  static let restGlow: (dark: UInt32, light: UInt32) = (0x3E7BFF, 0x8FB2FB)
-  static let restEdge: (dark: UInt32, light: UInt32) = (0x061634, 0xE2EAFC)
-  static let effortGlow: (dark: UInt32, light: UInt32) = (0xF52E9C, 0xFB7EC2)
-  static let effortEdge: (dark: UInt32, light: UInt32) = (0x2A0A1E, 0xFCE2F0)
-  static let heartGlow: (dark: UInt32, light: UInt32) = (0xF5476A, 0xFB8194)
-  static let heartEdge: (dark: UInt32, light: UInt32) = (0x2A0912, 0xFCE4E8)
-  static let energyGlow: (dark: UInt32, light: UInt32) = (0xE0A81E, 0xF3CE5A)
-  static let energyEdge: (dark: UInt32, light: UInt32) = (0x241C06, 0xFAF0D8)
-  static let vitalsGlow: (dark: UInt32, light: UInt32) = (0x12AEBE, 0x76D3DF)
-  static let vitalsEdge: (dark: UInt32, light: UInt32) = (0x042426, 0xDFF3F6)
+  // Semantic metric families; every value resolves to the monochrome ink/wash.
+  static let chargeGlow: (dark: UInt32, light: UInt32) = (0x8FD6CE, 0x2E7F76)
+  static let chargeEdge: (dark: UInt32, light: UInt32) = (0x16211F, 0xDDE9E7)
+  static let restGlow: (dark: UInt32, light: UInt32) = (0x7BCEC5, 0x2B776F)
+  static let restEdge: (dark: UInt32, light: UInt32) = (0x141F1E, 0xDDE9E7)
+  static let effortGlow: (dark: UInt32, light: UInt32) = (0x66C5BB, 0x286F67)
+  static let effortEdge: (dark: UInt32, light: UInt32) = (0x121D1C, 0xDDE9E7)
+  static let heartGlow: (dark: UInt32, light: UInt32) = (0x52BDB2, 0x256760)
+  static let heartEdge: (dark: UInt32, light: UInt32) = (0x111B1A, 0xDDE9E7)
+  static let energyGlow: (dark: UInt32, light: UInt32) = (0x47ADA3, 0x225F58)
+  static let energyEdge: (dark: UInt32, light: UInt32) = (0x0F1918, 0xDDE9E7)
+  static let vitalsGlow: (dark: UInt32, light: UInt32) = (0x409C93, 0x1F5751)
+  static let vitalsEdge: (dark: UInt32, light: UInt32) = (0x0E1716, 0xDDE9E7)
+  static let cycleGlow: (dark: UInt32, light: UInt32) = (0x398B83, 0x1C4F4A)
+  static let cycleEdge: (dark: UInt32, light: UInt32) = (0x0D1514, 0xDDE9E7)
 
   // spacing
   static let screenMargin: CGFloat = 20
   static let cardSpacing: CGFloat = 12
-  static let sectionGap: CGFloat = 24
-  static let tilePadding: CGFloat = 20
+  static let sectionGap: CGFloat = 40
+  static let tilePadding: CGFloat = 18
+  static let railGap: CGFloat = 8
 
   // radii
-  static let cardRadius: CGFloat = 32
-  static let tileRadius: CGFloat = 28
+  static let cardRadius: CGFloat = 24
+  static let tileRadius: CGFloat = 20
+  static let pillRadius: CGFloat = 16
+  static let chipRadius: CGFloat = 12
 
   // typeScale
-  static let title: CGFloat = 19
+  static let displayLarge: CGFloat = 34
+  static let display: CGFloat = 29
+  static let numeralXL: CGFloat = 54
+  static let numeralLarge: CGFloat = 42
+  static let numeralMedium: CGFloat = 24
+  static let numeralSmall: CGFloat = 19
+  static let title: CGFloat = 22
   static let label: CGFloat = 15
-  static let sub: CGFloat = 14
-  static let caption: CGFloat = 12
+  static let body: CGFloat = 14
+  static let sub: CGFloat = 13
+  static let caption: CGFloat = 11
+  static let eyebrow: CGFloat = 10
 
 }

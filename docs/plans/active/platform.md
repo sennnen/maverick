@@ -217,6 +217,11 @@ More complete per-field presentation state lands with the admitted analytics.
 
 ## Packet PL-P6: Migrate the Aura design system and four-hub shell
 
+> **Superseded by the [UX lane](ux-overhaul.md).** Everything this packet preserved about *behaviour*
+> stands. Its presentation spec does not: the four hubs, the Aura palette, and the component and chart
+> kit it migrated are all in that lane's deletion inventory, replaced by three tabs and the Terrain
+> language. Read the contract below as the record of what was migrated, not as a spec to build to.
+
 **Owns:** native design tokens, reusable components, tab shell, settings presentation shell, and
 visual regression fixtures. It may copy and rewrite the corresponding Aura files.
 

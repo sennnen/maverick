@@ -52,7 +52,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val activeWorkout: StateFlow<ActiveWorkout?> = mutableActiveWorkout.asStateFlow()
 
     /** A manual workout in progress (strain-hub live banner). Never set until live sessions land. */
-    data class ActiveWorkout(val startMs: Long, val liveStrain: Double = 0.0)
+    /**
+     * A manual workout in progress. `sport` is carried rather than looked up because the live
+     * screen has to name the activity, and the session does not exist in the store until it ends.
+     */
+    data class ActiveWorkout(
+        val startMs: Long,
+        val sport: String,
+        val liveStrain: Double = 0.0,
+    )
 
     private val mutableSyncNote = MutableStateFlow<String?>(null)
     /** The core's `historical-status/v1` progress as a display line; null when idle or unknown. */
@@ -113,16 +121,32 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         // No workout source in the core yet; the flow stays empty on purpose.
     }
 
-    /** Wrist haptics — no transport wiring in the host yet, so these are inert. */
-    @Suppress("UNUSED_PARAMETER")
+    /** Starts the local live-session surface. Persistence waits for the frozen workout contract. */
+    fun startWorkout(sport: String) {
+        if (mutableActiveWorkout.value == null) {
+            mutableActiveWorkout.value =
+                ActiveWorkout(startMs = System.currentTimeMillis(), sport = sport)
+        }
+    }
+
+    /** Ends the local live-session surface without inventing a stored workout row. */
+    fun stopWorkout() {
+        mutableActiveWorkout.value = null
+    }
+
     /**
      * Trade data density for battery on both the phone and the strap (ADR-030). The core keeps the
      * setting across sessions, so a reconnect does not quietly return to full power.
+     *
+     * The runtime handle lives on `MavRepo.sharedRuntime`, not on this class; reaching for a bare
+     * `runtime` here is what left the tree uncompilable after the battery-saver commit.
      */
     fun setLowPower(on: Boolean) {
-        runtime?.setLowPower(on, System.currentTimeMillis())
+        MavRepo.sharedRuntime?.setLowPower(on, System.currentTimeMillis())
     }
 
+    /** Wrist haptics — no transport wiring in the host yet, so these are inert. */
+    @Suppress("UNUSED_PARAMETER")
     fun buzz(loops: Int = 2) {}
 
     fun buzzStrapOnce() {}

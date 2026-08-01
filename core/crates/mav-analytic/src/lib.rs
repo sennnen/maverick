@@ -18,6 +18,8 @@
 pub mod calibration;
 pub mod capability;
 pub mod ecg;
+pub mod ecg_model;
+pub mod ecg_quality;
 pub mod frequency;
 pub mod hr_anomaly;
 pub mod hr_zones;

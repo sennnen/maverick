@@ -81,6 +81,12 @@ Both are recorded as legitimate survivors in `docs/platform.md`.
   and nothing was silently normalised. The lane's stated value was the audit; the audit's answer was
   that the drift had not happened yet, so the pipeline's value from here is that the next one fails
   CI instead of shipping.
-- **The type scale is split on purpose.** Sizes are tokens; families and weights are not. Helvetica
-  Neue on iOS against the platform sans on Android is a deliberate platform choice, and generating a
-  font family would have forced one platform to be wrong.
+- **The type scale is split on purpose.** Sizes are tokens; families and weights are not. A platform
+  serif and sans pair on each side is a deliberate platform choice, and generating a font family
+  would have forced one platform to be wrong.
+- **The audit's answer expired.** "No divergence found" was true of the Aura values, and the
+  [UX lane](ux-overhaul.md)'s UX-P1 packet replaces every one of them with the Terrain palette in
+  both schemes and grows the schema (surface/raised, status tints, focus, the photography scrim, a
+  seventh `cycle` family). The pipeline, the `--check` gate, and the families-are-platform-owned rule
+  are unchanged and are exactly what makes that rewrite a one-file change. This lane's audit finding
+  should be read as history from that packet onward, not as a current statement about the values.

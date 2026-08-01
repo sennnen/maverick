@@ -2,10 +2,10 @@
 
 use ed25519_dalek::{Signer, SigningKey};
 use mav_ffi::{
-    ConnectorApplyOutcome, ConnectorCancelReason, ConnectorInspection, ConnectorInstallRequest,
-    ConnectorKeyScope, ConnectorKeyStatus, ConnectorLifecycleState, ConnectorPublisherKey,
-    ConnectorRegistryRoot, ConnectorRemovalMode, ConnectorRevocationRecord, ConnectorSessionConfig,
-    ConnectorSourceKind, ConnectorSourceMetadata, ConnectorTransportEvent,
+    ConnectorApplyOutcome, ConnectorCancelReason, ConnectorCaptureCapability, ConnectorInspection,
+    ConnectorInstallRequest, ConnectorKeyScope, ConnectorKeyStatus, ConnectorLifecycleState,
+    ConnectorPublisherKey, ConnectorRegistryRoot, ConnectorRemovalMode, ConnectorRevocationRecord,
+    ConnectorSessionConfig, ConnectorSourceKind, ConnectorSourceMetadata, ConnectorTransportEvent,
     ConnectorTransportRequest, ConnectorTrustPolicy, ConnectorTrustRevocations,
     InstalledConnectorRecord, MavRuntime, RuntimeConfig,
 };
@@ -177,6 +177,7 @@ fn platform_neutral_connector_boundary_types_exist() {
     let _ = std::mem::size_of::<ConnectorTrustPolicy>();
     let _ = std::mem::size_of::<ConnectorTrustRevocations>();
     let _ = std::mem::size_of::<ConnectorInspection>();
+    let _ = std::mem::size_of::<ConnectorCaptureCapability>();
     let _ = std::mem::size_of::<InstalledConnectorRecord>();
     let _ = std::mem::size_of::<ConnectorTransportEvent>();
     let _ = std::mem::size_of::<ConnectorTransportRequest>();
@@ -826,6 +827,26 @@ fn exact_bytes_inspect_install_list_and_stale_token_errors_round_trip() {
     );
     assert_eq!(category, "connector");
     assert!(!safe_message.contains(path.to_string_lossy().as_ref()));
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn inspection_exposes_signed_capture_authority_without_inventing_session_availability() {
+    let (runtime, path) = runtime();
+    let bytes = common::signed_capture_artifact("1.0.0", 1);
+    let (policy, revocations) = trust(1);
+    let inspection = runtime
+        .inspect_connector_bytes(bytes, source(), policy, revocations, 10, 1_000)
+        .expect("inspect capture connector");
+    assert_eq!(
+        inspection.captures,
+        vec![ConnectorCaptureCapability {
+            stream: "ecg".to_owned(),
+            unit: "counts".to_owned(),
+            minimum_sample_rate_hz: 100,
+            maximum_sample_rate_hz: 100,
+        }]
+    );
     let _ = std::fs::remove_file(path);
 }
 

@@ -20,8 +20,18 @@ final class Repository: ObservableObject {
   /// A closure rather than a stored manager, so the read model keeps no connector dependency.
   var lowPowerSink: @MainActor (Bool) -> Void = { _ in }
 
+  /// The battery-saver state as last seen. Seeded from the core on launch rather than assumed, so
+  /// the switch reflects what the runtime is actually doing across a relaunch (ADR-030).
+  @Published private(set) var lowPowerIsOn = false
+
   /// Trade data density for battery on both the phone and the strap.
-  @MainActor func setLowPower(_ on: Bool) { lowPowerSink(on) }
+  @MainActor func setLowPower(_ on: Bool) {
+    lowPowerIsOn = on
+    lowPowerSink(on)
+  }
+
+  /// Adopt the core's own answer, without treating it as a user action.
+  @MainActor func adoptLowPower(_ on: Bool) { lowPowerIsOn = on }
 
   /// Replace the day history from a core range read. Only the fields an admitted analytic
   /// produces are filled; the rest stay nil, which is what keeps the empty states honest.

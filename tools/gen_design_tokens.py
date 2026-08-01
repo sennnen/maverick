@@ -48,10 +48,13 @@ def swift(tokens: dict) -> str:
         )
     out.append("")
 
-    out.append("  // Colours identical in both schemes.")
-    for name, value in tokens["fixedColors"].items():
-        out.append(f"  static let {name}: UInt32 = 0x{value}")
-    out.append("")
+    # Scheme-independent colours are optional: the palette currently has none, and an empty
+    # section is better than a token nothing reads.
+    if tokens.get("fixedColors"):
+        out.append("  // Colours identical in both schemes.")
+        for name, value in tokens["fixedColors"].items():
+            out.append(f"  static let {name}: UInt32 = 0x{value}")
+        out.append("")
 
     out.append("  // Colours carrying an alpha per scheme.")
     for name, pair in tokens["alphaColors"].items():
@@ -63,7 +66,7 @@ def swift(tokens: dict) -> str:
         )
     out.append("")
 
-    out.append("  // Metric family hues: glow centre and the edge it blooms out of.")
+    out.append("  // Semantic metric families; every value resolves to the monochrome ink/wash.")
     for family in tokens["families"]["order"]:
         entry = tokens["families"][family]
         for role in ("glow", "edge"):
@@ -106,10 +109,11 @@ def kotlin(tokens: dict) -> str:
         out.append(f"    const val {name}Light: Long = 0x{pair['light']}")
     out.append("")
 
-    out.append("    // Colours identical in both schemes.")
-    for name, value in tokens["fixedColors"].items():
-        out.append(f"    const val {name}: Long = 0x{value}")
-    out.append("")
+    if tokens.get("fixedColors"):
+        out.append("    // Colours identical in both schemes.")
+        for name, value in tokens["fixedColors"].items():
+            out.append(f"    const val {name}: Long = 0x{value}")
+        out.append("")
 
     out.append("    // Colours carrying an alpha per scheme.")
     for name, pair in tokens["alphaColors"].items():
@@ -121,7 +125,7 @@ def kotlin(tokens: dict) -> str:
         out.append(f"    const val {name}LightAlpha: Float = {light_a}f")
     out.append("")
 
-    out.append("    // Metric family hues: glow centre and the edge it blooms out of.")
+    out.append("    // Semantic metric families; every value resolves to the monochrome ink/wash.")
     for family in tokens["families"]["order"]:
         entry = tokens["families"][family]
         for role in ("glow", "edge"):

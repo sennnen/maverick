@@ -19,14 +19,15 @@ final class LiveState: ObservableObject {
   @Published var advertisingName: String?
 }
 
-/// A manual workout in progress (strain-hub live banner). Never set until live sessions land.
+/// A manual workout in progress.
+///
+/// `sport` is carried rather than looked up because the live screen has to name the activity, and
+/// the session does not exist in the store until it ends — there is nothing to look it up in.
 struct ActiveWorkout: Equatable {
   var startMs: Int
+  var sport: String
   var liveStrain: Double = 0
 }
-
-/// A strength session in progress. Inert until the strength lane lands.
-final class StrengthSession: ObservableObject {}
 
 /// The app-wide model behind the Aura views — the Mav twin of Maverick's `AppModel`. It owns the
 /// core runtime worker (via `MavStore`) and republishes snapshot facts into the stores the
@@ -35,7 +36,6 @@ final class StrengthSession: ObservableObject {}
 final class AppModel: ObservableObject {
   @Published var bpm: Int?
   @Published var activeWorkout: ActiveWorkout?
-  @Published var strengthSession: StrengthSession?
   /// Today's analytics as the shared core computed them, with the availability list that says why
   /// anything absent is absent. The only source of an analytic number in this app.
   @Published var dailySnapshot: DailySnapshotReport?
@@ -45,8 +45,10 @@ final class AppModel: ObservableObject {
   @Published var recoveryUnavailableReason: String?
   /// The core's `historical-status/v1` progress as a display line; nil when idle or unknown.
   @Published var syncProgress: String?
+  /// True when the day on screen came from the debug fixture rather than from a strap. Every
+  /// surface that reads it must badge itself; a release build can never set it.
+  @Published var usingDebugFixture = false
 
-  let countdown = CountdownTimer()
   let behavior = BehaviorStore()
   let strandML = StrandMLEngine()
 
@@ -152,6 +154,13 @@ final class ProfileStore: ObservableObject {
 
   /// Effective HR-max, resolved by the core rather than recomputed here.
   var hrMax: Int { AuraZoneMath.maxHr(age: age, override: hrMaxOverride) }
+
+  /// Whether the cycle surfaces exist at all.
+  ///
+  /// This follows from the profile rather than from a preference of its own. Asking someone to
+  /// state their sex and then asking again, in a different screen, whether they would like the
+  /// feature that follows from it is a question the app already knows the answer to.
+  var tracksCycle: Bool { sex.lowercased() == "female" }
 
   init() {
     let age = d.integer(forKey: "profile.age")

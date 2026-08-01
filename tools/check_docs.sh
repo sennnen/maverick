@@ -67,4 +67,5 @@ if [ "$failures" -gt 0 ]; then
     exit 1
 fi
 tools/check_no_bundled_connectors.py || exit 1
+python3 tools/check_model_assets.py || exit 1
 echo "check_docs: ok"

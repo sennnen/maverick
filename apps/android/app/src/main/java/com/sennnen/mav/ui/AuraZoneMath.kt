@@ -34,4 +34,21 @@ object AuraZoneMath {
         runtime?.let {
             it.heartRateZoneFor(bpm.toDouble(), age.toDouble(), maxHrOverride?.toDouble()).toInt()
         } ?: 0
+
+    /** Display bounds from the core's admitted ladder. No platform-side zone arithmetic. */
+    fun bounds(age: Int, maxHrOverride: Int): List<String>? {
+        val report = runtime?.heartRateZones(
+            age.toDouble(),
+            maxHrOverride.takeIf { it > 0 }?.toDouble(),
+        ) ?: return null
+        val lows = report.lowerBpm
+        if (lows.size < 5) return null
+        return (0 until 5).map { index ->
+            val low = lows[index].roundToInt()
+            if (index == 4) "$low+ bpm"
+            else "$low–${lows[index + 1].roundToInt() - 1}"
+        }.mapIndexed { index, value ->
+            if (index == 4) value else "$value bpm"
+        }
+    }
 }

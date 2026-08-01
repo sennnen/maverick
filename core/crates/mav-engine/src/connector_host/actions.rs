@@ -84,6 +84,12 @@ impl ConnectorHost {
                     )
                 })?;
                 followups.push(EventBody::SamplesCommitted { batch_id, count });
+                if accounting.stop_capture {
+                    self.active_capture = None;
+                    followups.push(EventBody::CaptureStop {
+                        stream: "ecg".to_owned(),
+                    });
+                }
             }
             ActionBody::EmitDiagnostic {
                 level,
@@ -110,7 +116,8 @@ impl ConnectorHost {
                     wall_time_ms.unwrap_or_default().saturating_mul(1_000_000),
                 )?;
             }
-            ActionBody::DeclareCapabilities { .. } => {
+            ActionBody::DeclareCapabilities { streams } => {
+                self.active_capabilities = streams.into_iter().collect();
                 self.lifecycle = ConnectorLifecycle::Streaming;
             }
             ActionBody::CompleteOperation {

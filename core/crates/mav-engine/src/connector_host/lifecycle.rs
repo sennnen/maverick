@@ -179,6 +179,11 @@ impl ConnectorHost {
                 self.actions.clear();
                 self.outstanding.clear();
                 self.pending_timers.clear();
+                self.active_capabilities.clear();
+                self.active_capture = None;
+                if let Some(capture) = self.ecg_capture.as_mut() {
+                    capture.cancel();
+                }
                 self.lifecycle = ConnectorLifecycle::Disconnected;
                 true
             }

@@ -81,6 +81,15 @@ and snapshots it for update rollback. Connector code never receives a database o
 handle. Learned values remain outside disposable derived tiers because dropping them would lose
 accumulated device state.
 
+## ECG evidence and results
+
+Schema version 6 adds two deliberately different ECG tiers. `ecg_inference` is append-only evidence:
+it records the capture window, raw/tensor hashes, model and preprocessing identity, bounded native
+outputs, and the information needed to reproduce an interpretation. `ecg_result` is the rebuildable
+projection used by history and report reads. It may be cleared and recomputed from evidence; clearing
+derived data never deletes the inference record. History is ordered newest-first, and every result
+retains the capture id and both hashes so the displayed label can be walked back to its exact inputs.
+
 ## Connector installation and state
 
 WC-P6 implements a dedicated `mav-connector-store` schema in the install database. Its schema

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import com.sennnen.mav.BuildConfig
+import com.sennnen.mav.ecg.MavEcgClassifier
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -33,6 +34,11 @@ import uniffi.mav_ffi.ConnectorTrustRevocations
 import uniffi.mav_ffi.FfiException
 import uniffi.mav_ffi.InstalledConnectorRecord
 import uniffi.mav_ffi.DailySnapshotReport
+import uniffi.mav_ffi.ConnectorCaptureCapability
+import uniffi.mav_ffi.EcgCaptureReport
+import uniffi.mav_ffi.EcgPrediction
+import uniffi.mav_ffi.EcgReportPayload
+import uniffi.mav_ffi.EcgResultReport
 import uniffi.mav_ffi.MavRuntime
 import uniffi.mav_ffi.TimezoneSpan
 import uniffi.mav_ffi.RuntimeConfig
@@ -70,6 +76,21 @@ class AndroidConnectorManager(
     private val mutableDiscoveredDevices = MutableStateFlow<List<ConnectorScanDevice>>(emptyList())
     val discoveredDevices: StateFlow<List<ConnectorScanDevice>> = mutableDiscoveredDevices.asStateFlow()
 
+    private val mutableEcgCapabilities =
+        MutableStateFlow<List<ConnectorCaptureCapability>>(emptyList())
+    val ecgCapabilities: StateFlow<List<ConnectorCaptureCapability>> =
+        mutableEcgCapabilities.asStateFlow()
+
+    private val mutableEcgCapture = MutableStateFlow<EcgCaptureReport?>(null)
+    val ecgCapture: StateFlow<EcgCaptureReport?> = mutableEcgCapture.asStateFlow()
+
+    private val mutableEcgResults = MutableStateFlow<List<EcgResultReport>>(emptyList())
+    val ecgResults: StateFlow<List<EcgResultReport>> = mutableEcgResults.asStateFlow()
+
+    private val mutableEcgError = MutableStateFlow<String?>(null)
+    val ecgError: StateFlow<String?> = mutableEcgError.asStateFlow()
+    private var ecgInferenceInFlight: ULong? = null
+
     val managerEnabled: Boolean = BuildConfig.MAV_CONNECTOR_MANAGER_ENABLED
     val remoteImportEnabled: Boolean = BuildConfig.MAV_ALLOW_REMOTE_CONNECTORS
     val thirdPartyEnabled: Boolean = BuildConfig.MAV_ALLOW_THIRD_PARTY_CONNECTORS
@@ -77,13 +98,16 @@ class AndroidConnectorManager(
     private var policy = ConnectorTrustPolicy(
         revision = 1uL,
         allowThirdParty = thirdPartyEnabled,
-        allowDevelopment = BuildConfig.DEBUG,
+        allowDevelopment = BuildConfig.MAV_ALLOW_DEVELOPMENT_CONNECTORS,
         keys = AndroidConnectorTrust.configuredKeys(),
     )
     private var revocations = ConnectorTrustRevocations(
         revision = 0uL,
-        generatedAtMs = if (registryConfiguration == null || BuildConfig.DEBUG) 0 else 1,
-        validUntilMs = if (registryConfiguration == null || BuildConfig.DEBUG) {
+        generatedAtMs =
+            if (registryConfiguration == null || BuildConfig.MAV_ALLOW_DEVELOPMENT_CONNECTORS) 0 else 1,
+        validUntilMs = if (
+            registryConfiguration == null || BuildConfig.MAV_ALLOW_DEVELOPMENT_CONNECTORS
+        ) {
             System.currentTimeMillis() + 31_536_000_000
         } else {
             0
@@ -109,6 +133,7 @@ class AndroidConnectorManager(
         restoreRegistryCache()
         refreshRegistry()
         refreshInstalledNow()
+        refreshEcgHistory()
         if (!sessionRestored) {
             sessionRestored = true
             bluetooth.checkpoint?.let { resumeSession(it) }
@@ -414,6 +439,48 @@ class AndroidConnectorManager(
 
     fun selectDevice(deviceId: String) = bluetooth.selectDevice(deviceId)
 
+    fun startEcgCapture() {
+        if (mutableEcgCapabilities.value.none { it.stream == "ecg" }) {
+            mutableEcgError.value =
+                "This connected device has not positively declared ECG capture."
+            return
+        }
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                gate.withLock {
+                    ensureRuntime().startConnectorCapture("ecg", System.currentTimeMillis())
+                }
+                refreshEcgState()
+            }.onFailure { mutableEcgError.value = it.userMessage() }
+        }
+    }
+
+    fun stopEcgCapture() {
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                gate.withLock {
+                    ensureRuntime().stopConnectorCapture("ecg", System.currentTimeMillis())
+                }
+                refreshEcgState()
+            }.onFailure { mutableEcgError.value = it.userMessage() }
+        }
+    }
+
+    /** Forget one reading. The history reloads from the store rather than being patched. */
+    fun removeEcgResult(captureId: ULong) {
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                gate.withLock { ensureRuntime().deleteEcgCapture(captureId) }
+            }.onSuccess { refreshEcgHistory() }
+                .onFailure { mutableEcgError.value = it.userMessage() }
+        }
+    }
+
+    suspend fun ecgReportPayload(captureId: ULong): EcgReportPayload? =
+        withContext(Dispatchers.IO) {
+            gate.withLock { ensureRuntime().ecgReportPayload(captureId) }
+        }
+
     fun reportFailure(error: Throwable) = failConnection(error)
 
     fun onBluetoothPermissionResult(granted: Boolean) = bluetooth.onPermissionResult(granted)
@@ -511,6 +578,7 @@ class AndroidConnectorManager(
         }
         publishTelemetry(telemetry)
         withContext(Dispatchers.Main) { actions.forEach(bluetooth::execute) }
+        refreshEcgState()
     }
 
     private fun enqueueTransportEvent(event: ConnectorTransportEvent) {
@@ -529,6 +597,7 @@ class AndroidConnectorManager(
         }.onSuccess { (actions, telemetry) ->
             publishTelemetry(telemetry)
             withContext(Dispatchers.Main) { actions.forEach(bluetooth::execute) }
+            refreshEcgState()
             if (telemetry.lifecycle == ConnectorLifecycleState.DISCONNECTED && actions.isEmpty()) {
                 bluetooth.checkpoint = null
             }
@@ -546,6 +615,70 @@ class AndroidConnectorManager(
             samplesPersisted = counts?.samplesPersisted?.toLong() ?: 0L,
             samplesDuplicate = counts?.samplesDuplicate?.toLong() ?: 0L,
         )
+    }
+
+    private suspend fun refreshEcgHistory() {
+        runCatching {
+            gate.withLock { ensureRuntime().ecgResults(1uL, 50u) }
+        }.onSuccess { mutableEcgResults.value = it }
+    }
+
+    private suspend fun refreshEcgState() {
+        val state = runCatching {
+            gate.withLock {
+                val active = ensureRuntime()
+                Triple(
+                    active.connectorCaptureCapabilities(),
+                    active.ecgCaptureState(System.currentTimeMillis()),
+                    active.ecgInferenceRequest(),
+                )
+            }
+        }.getOrElse {
+            mutableEcgCapabilities.value = emptyList()
+            return
+        }
+        mutableEcgCapabilities.value = state.first
+        mutableEcgCapture.value = state.second
+        val request = state.third
+        if (state.second?.phase != "analysing" ||
+            request == null ||
+            ecgInferenceInFlight == request.captureId
+        ) {
+            return
+        }
+        ecgInferenceInFlight = request.captureId
+        runCatching {
+            val predictions = MavEcgClassifier(appContext).use { classifier ->
+                classifier.predictBatch(request.tensors.map { it.values.toFloatArray() }).map {
+                    EcgPrediction(
+                        sinusRhythm = it[0],
+                        atrialFibrillation = it[1],
+                        otherAbnormalRhythm = it[2],
+                    )
+                }
+            }
+            gate.withLock {
+                ensureRuntime().submitEcgInference(
+                    request.captureId,
+                    predictions,
+                    MavEcgClassifier.ADMITTED_MODEL_SHA256,
+                    System.currentTimeMillis(),
+                )
+            }
+        }.onSuccess { result ->
+            mutableEcgCapture.value = EcgCaptureReport(
+                captureId = result.captureId,
+                phase = "result",
+                progressMilli = 1_000u.toUShort(),
+                qualityMilli = result.qualityMilli,
+                qualityReason = null,
+                recordedSamples = result.sampleCount,
+                targetSamples = result.sampleCount,
+            )
+            mutableEcgError.value = null
+            refreshEcgHistory()
+        }.onFailure { mutableEcgError.value = it.userMessage() }
+        ecgInferenceInFlight = null
     }
 
     private fun ensureRuntime(): MavRuntime {

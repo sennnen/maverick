@@ -93,6 +93,20 @@ impl ConnectorHost {
         self.observe_produced(Stage::Store, persisted);
         accounting.persisted = persisted;
         accounting.duplicate += ordered.len().saturating_sub(persisted);
+        if self.active_capture.as_deref() == Some("ecg") {
+            let ecg_values: Vec<f64> = ordered
+                .iter()
+                .filter(|sample| sample.kind == StreamKind::Ecg)
+                .map(|sample| sample.value.as_f64())
+                .collect();
+            if !ecg_values.is_empty() {
+                accounting.stop_capture = self
+                    .ecg_capture
+                    .as_mut()
+                    .ok_or_else(|| host_state("active ECG stream has no capture controller"))?
+                    .ingest(&ecg_values, wall_ms)?;
+            }
+        }
         self.samples_persisted = self.samples_persisted.saturating_add(persisted as u64);
         self.samples_duplicate = self
             .samples_duplicate
@@ -155,7 +169,10 @@ pub(super) fn stream_contract(value: &str) -> Result<(StreamKind, &'static str)>
         // mislabelling the wearer's data, so the name is part of the contract.
         "rr-interval" => Ok((StreamKind::RrInterval, "milliseconds")),
         "pulse-interval" => Ok((StreamKind::PulseInterval, "milliseconds")),
-        "ecg" => Ok((StreamKind::Ecg, "counts")),
+        // The WHOOP AFE is an 18-bit converter with a +/-10 mV range, so a connector that knows its
+        // device can and must deliver calibrated millivolts. An ECG in raw counts cannot carry a
+        // calibration pulse or a 10 mm/mV report without asserting a scale nobody established.
+        "ecg" => Ok((StreamKind::Ecg, "millivolts")),
         "red-ppg" => Ok((StreamKind::RedPpg, "counts")),
         "infrared-ppg" => Ok((StreamKind::InfraredPpg, "counts")),
         "ambient-light" => Ok((StreamKind::AmbientLight, "counts")),

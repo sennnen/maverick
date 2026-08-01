@@ -185,9 +185,38 @@ class MavBleExecutor(
         scanCatalog.clear()
         advertisements.clear()
         discoverySink(emptyList())
+        // A bonded LE wearable commonly stops advertising while another app owns a GATT link.
+        // It must still be selectable: Android already authenticated its stable device identity,
+        // and service discovery after connection remains the authoritative compatibility check.
+        if (hasConnectPermission()) {
+            adapter?.bondedDevices
+                ?.filter { it.type == BluetoothDevice.DEVICE_TYPE_LE || it.type == BluetoothDevice.DEVICE_TYPE_DUAL }
+                ?.mapNotNull { device ->
+                    val name = runCatching { device.name }.getOrNull()?.takeIf(String::isNotBlank)
+                        ?: return@mapNotNull null
+                    devices[device.address] = device
+                    val advertisement = ConnectorTransportEvent.Advertisement(
+                        address = device.address,
+                        rssi = Short.MIN_VALUE,
+                        serviceUuids = operation.serviceUuids,
+                        manufacturerData = byteArrayOf(),
+                        name = name,
+                    )
+                    advertisements[device.address] = advertisement
+                    ConnectorScanDevice(
+                        id = device.address,
+                        name = name,
+                        rssi = Int.MIN_VALUE,
+                        paired = true,
+                    )
+                }
+                ?.forEach(scanCatalog::observe)
+            discoverySink(scanCatalog.devices())
+        }
         val filters = operation.serviceUuids.map { value ->
             ScanFilter.Builder().setServiceUuid(ParcelUuid(uuid(value))).build()
         }
+        scanner.stopScan(scanCallback)
         scanner.startScan(
             filters,
             ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(),
@@ -433,6 +462,7 @@ class MavBleExecutor(
                     id = address,
                     name = name ?: "Nearby wearable",
                     rssi = result.rssi,
+                    paired = result.device.bondState == BluetoothDevice.BOND_BONDED,
                 ),
             )
             discoverySink(scanCatalog.devices())

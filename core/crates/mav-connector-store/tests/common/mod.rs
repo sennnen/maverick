@@ -11,6 +11,20 @@ const KEY_ID: &str = "store-test-key";
 const SIGNING_SEED: [u8; 32] = [23; 32];
 
 pub fn signed_artifact(version: &str, state_schema: u32, valid_fixture: bool) -> Vec<u8> {
+    signed_artifact_with_capture(version, state_schema, valid_fixture, false)
+}
+
+#[allow(dead_code)]
+pub fn signed_capture_artifact(version: &str, state_schema: u32) -> Vec<u8> {
+    signed_artifact_with_capture(version, state_schema, true, true)
+}
+
+fn signed_artifact_with_capture(
+    version: &str,
+    state_schema: u32,
+    valid_fixture: bool,
+    capture: bool,
+) -> Vec<u8> {
     let output = encode_canonical(&ActionBatch {
         actions: Vec::new(),
     })
@@ -40,7 +54,20 @@ pub fn signed_artifact(version: &str, state_schema: u32, valid_fixture: bool) ->
         [0; 32]
     });
     let fixture_bytes = encode_canonical(&fixtures).expect("fixtures encode");
-    let manifest = manifest(version, state_schema, Sha256::digest(&fixture_bytes).into());
+    let mut manifest = manifest(version, state_schema, Sha256::digest(&fixture_bytes).into());
+    if capture {
+        manifest.schema = MANIFEST_SCHEMA_V2.to_owned();
+        manifest.capabilities.push(CapabilityDecl {
+            stream: "ecg".to_owned(),
+            transport: vec![TransportCapability::Subscribe, TransportCapability::Write],
+        });
+        manifest.captures = Some(vec![CaptureDecl {
+            stream: "ecg".to_owned(),
+            unit: "counts".to_owned(),
+            minimum_sample_rate_hz: 100,
+            maximum_sample_rate_hz: 100,
+        }]);
+    }
     append_custom(
         &mut module,
         "mav:manifest",
@@ -136,6 +163,7 @@ fn manifest(version: &str, state_schema: u32, fixture_set_hash: [u8; 32]) -> Man
             stream: "heart-rate".to_owned(),
             transport: vec![TransportCapability::Subscribe],
         }],
+        captures: None,
         permissions: vec![Permission::Ble],
         entrypoints: Entrypoints::default(),
         fixture_set_hash,

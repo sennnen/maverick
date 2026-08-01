@@ -51,6 +51,13 @@ const CHUNK_OVERLAP_MS: f64 = 3_000.0;
 /// The input is raw converter counts; no scale is assumed and none is invented, because every
 /// stage below is either linear or a comparison against a threshold derived from the signal
 /// itself. A signal too short to learn a threshold from returns nothing.
+///
+/// No *offset* is assumed either. The band-pass rejects DC in steady state but starts from rest,
+/// so a waveform sitting on a converter pedestal — a WHOOP MG electrode idles near 1,220 counts —
+/// drives a start transient orders of magnitude larger than any QRS. That transient lands inside
+/// the learning window, sets the signal-peak estimate from itself, and leaves an adaptive
+/// threshold no real beat can clear. Removing the baseline first costs nothing on an already
+/// centred waveform and is what makes an unmodified converter stream detectable at all.
 pub fn r_peaks(signal: &[f64], sample_rate_hz: f64) -> Vec<usize> {
     let per_ms = sample_rate_hz / 1_000.0;
     let window = ((INTEGRATION_MS * per_ms).round() as usize).max(1);
@@ -58,7 +65,7 @@ pub fn r_peaks(signal: &[f64], sample_rate_hz: f64) -> Vec<usize> {
         return Vec::new();
     }
 
-    let band = band_pass(signal, sample_rate_hz);
+    let band = band_pass(&without_baseline(signal), sample_rate_hz);
     let integrated = integrate(&square(&derivative(&band)), window);
 
     let refractory = (REFRACTORY_MS * per_ms).round() as usize;
@@ -197,6 +204,19 @@ fn median_spacing(samples: &[(i64, f64)]) -> Option<f64> {
     }
     gaps.sort_unstable();
     Some(gaps[gaps.len() / 2] as f64)
+}
+
+/// The waveform with its converter pedestal removed. The median, not the mean: QRS complexes are
+/// one-sided excursions, so the mean of a slow rhythm sits above the isoelectric line it is
+/// supposed to find, and a window that opens part-way through a complex pulls it further.
+fn without_baseline(signal: &[f64]) -> Vec<f64> {
+    let mut sorted: Vec<f64> = signal.to_vec();
+    sorted.sort_unstable_by(f64::total_cmp);
+    let baseline = sorted[sorted.len() / 2];
+    if !baseline.is_finite() {
+        return signal.to_vec();
+    }
+    signal.iter().map(|sample| sample - baseline).collect()
 }
 
 /// Second-order Butterworth high-pass then low-pass, each run forwards and then backwards so the
@@ -356,6 +376,32 @@ mod tests {
     use super::*;
 
     const RATE_HZ: f64 = 250.0;
+
+    /// A worn WHOOP MG, finger on the electrode: raw converter counts on a ~1,220 pedestal, the
+    /// shape no synthetic fixture in this directory has. Before the baseline removal this whole
+    /// 45-second capture yielded a single R peak, so every calibration window read `Contact` and
+    /// no ECG capture could start on real hardware.
+    #[test]
+    fn live_mg_counts_detect_beats_through_the_converter_pedestal() {
+        let signal: Vec<f64> = include_str!("../../../../fixtures/ecg/mg_electrode_100hz_v1.csv")
+            .lines()
+            .skip(1)
+            .map(|line| line.split(',').nth(1).unwrap().parse().unwrap())
+            .collect();
+        assert_eq!(signal.len(), 4_500);
+        let mean = signal.iter().sum::<f64>() / signal.len() as f64;
+        assert!(mean > 1_000.0, "fixture must keep its pedestal, got {mean}");
+
+        let peaks = r_peaks(&signal, 100.0);
+        assert_eq!(peaks.len(), 59, "expected the fixture's pinned beat count");
+        let bpm = peaks.len() as f64 * 60.0 / (signal.len() as f64 / 100.0);
+        assert!((bpm - 78.7).abs() < 0.5, "implied rate {bpm} bpm");
+
+        // The same waveform with the pedestal already gone must find the same beats: the fix is a
+        // baseline removal, not a change to what counts as a beat.
+        let centred: Vec<f64> = signal.iter().map(|sample| sample - mean).collect();
+        assert_eq!(r_peaks(&centred, 100.0), peaks);
+    }
 
     /// A synthetic lead II: a sharp QRS, a rounded T wave, and a small P wave, repeated at a set
     /// interval. Shaped so the T wave is tall enough to be counted by a detector without T-wave

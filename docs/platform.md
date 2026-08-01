@@ -341,12 +341,44 @@ Native code may not:
 - fill absent data with demo, cached legacy, or guessed values;
 - issue device commands not emitted by the runtime.
 
-The four hub slots exist even when their analytics do not. Their state is one of value, collecting,
-unavailable, or failed. That state comes from the core contract.
+The shell is three tabs — `Today`, `Vitals`, `Workouts` — sharing one top bar and one device sheet.
+The four-hub shell this paragraph used to describe is superseded by
+[the UX lane](plans/active/ux-overhaul.md), which deletes it rather than migrating it.
+
+A metric slot exists even when its analytic does not. Its state is one of value, collecting,
+unavailable, or failed, and that state comes from the core contract. `Vitals` builds its row list
+from the availability set rather than from a fixed list of slots, so a metric no connector can supply
+is an honest unavailable card and never an empty frame.
+
+Device controls a connector declares ([ADR-031](adr/ADR-031.md)) arrive in the host snapshot as a
+`device-controls/v1` block: a bounded list of `toggle` / `choice` / `action` declarations, each with a
+stable id, a label, a one-line explanation, and an optional experimental flag. Native renders them
+from its own components and sends `set_device_control` back. It may not invent a control, reorder the
+declared list into a judgement, or render a label as anything but text.
+
+Haptics arrive the same way ([ADR-032](adr/ADR-032.md)), as a `haptics/v1` block listing which signals
+of the closed host vocabulary — `milestone`, `goal_complete`, `set_logged`, `rest_complete`,
+`zone_alert(1..=5)` — the connected connector declared. The app requests a signal, never a byte
+pattern, and a connector may only write to its haptic characteristic while a host-initiated request
+is outstanding. Every workout feature built on a signal renders through the unavailable component
+when the signal is absent, so a strap that cannot buzz never appears to have agreed to.
+
+Captured waveform entries arrive through the `connector_capture_capabilities` FFI read model
+([ADR-033](adr/ADR-033.md)). Each record contains only stream, unit, and signed sample-rate bounds,
+already intersected with the active hardware session. Native may render the host-owned flow and call
+`start_connector_capture` / `stop_connector_capture`; it may not infer availability from connector
+identity or issue the device write itself.
+
+For ECG, the host additionally exposes the current `ecg_capture_state`, a bounded
+`ecg_inference_request`, result history, and report payload. Core owns calibration, the exact
+30-second sample boundary, preprocessing, confidence/XAI interpretation, provenance, and storage.
+Native owns only accelerated tensor inference and presentation: Core ML on iOS, TFLite on Android,
+text-first result/history screens, and a local native PDF renderer. A native model response is
+accepted only with the admitted model hash and the capture id from the outstanding request.
 
 ### Unavailable analytics
 
-`AuraUnavailableCard` — one component per platform, same wording — is how an absent metric is shown.
+One unavailable component per platform, same wording, is how an absent metric is shown.
 It takes the core's availability entry and renders the reason: what stream is missing, or that the
 algorithm is not admitted. A screen never leaves an analytic blank and never substitutes a number it
 computed for itself.
@@ -363,14 +395,31 @@ The Aura palette, spacing, radii, and type-scale sizes live once, in `tokens/aur
 regenerates them and fails on a diff. Edit the JSON, run the generator, commit both.
 
 The generator owns *values*, not decisions. Font families, weight names, and how a scheme is resolved
-at runtime stay in the hand-written `AuraDesign.swift` and `AuraTheme.kt`, which consume the
-constants — Helvetica Neue on iOS and the platform sans on Android is a deliberate difference, not
-drift. So is Android's Material3 typography mapping, which has no iOS counterpart: those `.sp` values
-are role names in a Compose API, not shared theme values.
+at runtime stay in the hand-written `MavTheme.swift` and `MavTheme.kt`, which consume the constants.
+So does Android's Material3 typography mapping, which has no iOS counterpart: those `.sp` values are
+role names in a Compose API, not shared theme values.
 
-The extraction audit found the two platforms already agreed on every colour, spacing, and radius, so
-no divergence had to be resolved. That is worth stating rather than assuming: the value of this
-pipeline from here on is that the next divergence fails CI instead of shipping.
+Type is deliberately per-platform. iOS uses SF Pro and New York; Android uses Roboto and the platform
+serif. Nothing is bundled on either side. Apple's faces are licensed for Apple platforms only, so
+matching them on Android is not available, and the bundled Didone that briefly stood in for New York
+read thin at display sizes and made the brand role look like a different product on each phone. Same
+role, same weight, each in its native voice, is the honest version of parity here.
+
+**Colour is where the two platforms deliberately diverge.** iOS renders the designed palette from
+`tokens/aura.json`. Android takes its surfaces, ink, and accent from Material You — the user's
+wallpaper and theme — and falls back to the token palette on API < 31. A designed palette is right on
+a platform with one look; native theming is right on a platform where the user already picked one.
+
+That divergence has a cost that is paid rather than ignored. `tools/check_a11y.py` reasons about the
+token file, so it cannot see a wallpaper, and a dynamic scheme carries no promise that its ink clears
+7:1 on its own background. Every weight Android derives from the system therefore passes through the
+runtime clamp in `MavTheme.kt`, which pushes it toward black or white by the smallest correction that
+satisfies the same ratio the gate enforces on iOS. The gate checks the palette we ship; the clamp
+checks the one the phone hands us.
+
+What does *not* come from the system, on either platform: status washes, family pigments, and the two
+photographic washes. Those encode meaning — a verdict, a category, a guaranteed contrast floor — and
+a wallpaper-derived hue would state it in a colour that means nothing.
 
 Deliberately not built: any wireframe-to-code or layout-generation system. Two native shells that
 already share an information model need a shared palette, not a shared renderer.

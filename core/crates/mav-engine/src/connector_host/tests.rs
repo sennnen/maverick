@@ -30,8 +30,8 @@ pub(super) fn raw_and_calibrated_skin_temperature_are_separate_streams() {
 }
 
 use mav_connector_abi::{
-    AbiRange, CapabilityDecl, CoreRange, DeviceFamily, DowngradePolicy, Entrypoints,
-    LimitsProfileId, Permission, ServiceDecl, TimerToken, UpdatePolicy,
+    AbiRange, CapabilityDecl, CaptureDecl, CoreRange, DeviceFamily, DowngradePolicy, Entrypoints,
+    LimitsProfileId, Permission, ServiceDecl, TimerToken, UpdatePolicy, MANIFEST_SCHEMA_V2,
 };
 
 #[derive(Default)]
@@ -121,6 +121,7 @@ pub(super) fn manifest() -> Manifest {
                 TransportCapability::Write,
             ],
         }],
+        captures: None,
         permissions: vec![Permission::Ble],
         entrypoints: Entrypoints::default(),
         fixture_set_hash: [0; 32],
@@ -152,8 +153,16 @@ pub(super) fn empty() -> ActionBatch {
 }
 
 pub(super) fn host(batches: Vec<ActionBatch>, capacity: u32) -> ConnectorHost {
+    host_with_manifest(manifest(), batches, capacity)
+}
+
+fn host_with_manifest(
+    manifest: Manifest,
+    batches: Vec<ActionBatch>,
+    capacity: u32,
+) -> ConnectorHost {
     ConnectorHost::with_program(
-        manifest(),
+        manifest,
         [7; 32],
         Box::new(ScriptedProgram::new(batches)),
         Store::open_in_memory().expect("store"),
@@ -164,6 +173,22 @@ pub(super) fn host(batches: Vec<ActionBatch>, capacity: u32) -> ConnectorHost {
         },
     )
     .expect("host")
+}
+
+fn capture_manifest() -> Manifest {
+    let mut value = manifest();
+    value.schema = MANIFEST_SCHEMA_V2.to_owned();
+    value.capabilities.push(CapabilityDecl {
+        stream: "ecg".to_owned(),
+        transport: vec![TransportCapability::Subscribe, TransportCapability::Write],
+    });
+    value.captures = Some(vec![CaptureDecl {
+        stream: "ecg".to_owned(),
+        unit: "millivolts".to_owned(),
+        minimum_sample_rate_hz: 100,
+        maximum_sample_rate_hz: 100,
+    }]);
+    value
 }
 
 pub(super) fn advertisement() -> EventBody {
@@ -567,6 +592,7 @@ pub(super) fn duplicate_samples_acknowledge_as_durable_without_duplicate_rows() 
             emitted: 1,
             persisted: 1,
             duplicate: 0,
+            stop_capture: false,
         })
     );
     // Second pass: the same sample is recognised, not silently dropped and not stored twice.
@@ -576,6 +602,7 @@ pub(super) fn duplicate_samples_acknowledge_as_durable_without_duplicate_rows() 
             emitted: 1,
             persisted: 0,
             duplicate: 1,
+            stop_capture: false,
         })
     );
     assert_eq!(
@@ -751,7 +778,7 @@ fn every_stream_kind_has_a_wire_name() {
         (StreamKind::HeartRate, "heart-rate", "beats-per-minute"),
         (StreamKind::RrInterval, "rr-interval", "milliseconds"),
         (StreamKind::PulseInterval, "pulse-interval", "milliseconds"),
-        (StreamKind::Ecg, "ecg", "counts"),
+        (StreamKind::Ecg, "ecg", "millivolts"),
         (StreamKind::RedPpg, "red-ppg", "counts"),
         (StreamKind::InfraredPpg, "infrared-ppg", "counts"),
         (StreamKind::AmbientLight, "ambient-light", "counts"),
@@ -806,4 +833,344 @@ pub(super) fn low_power_is_stated_on_activation_and_on_change_but_the_default_is
     saver.set_low_power(true, None).expect("pre-set");
     saver.start().expect("start in low power");
     assert!(saver.low_power());
+}
+
+#[test]
+pub(super) fn capture_is_exposed_only_by_the_signed_and_session_active_intersection() {
+    let mut inactive = host_with_manifest(
+        capture_manifest(),
+        vec![
+            empty(),
+            batch(vec![action(
+                2,
+                1,
+                ActionBody::DeclareCapabilities {
+                    streams: vec!["heart-rate".to_owned()],
+                },
+            )]),
+        ],
+        4,
+    );
+    inactive.start().expect("start");
+    assert!(inactive.available_captures().is_empty());
+    assert_eq!(
+        inactive
+            .start_capture("ecg", Some(10))
+            .expect_err("inactive capture")
+            .code,
+        codes::CONNECTOR_HOST_ACTION_UNDECLARED
+    );
+
+    let mut active = host_with_manifest(
+        capture_manifest(),
+        vec![
+            empty(),
+            batch(vec![action(
+                2,
+                1,
+                ActionBody::DeclareCapabilities {
+                    streams: vec!["heart-rate".to_owned(), "ecg".to_owned()],
+                },
+            )]),
+        ],
+        4,
+    );
+    active.start().expect("start");
+    assert_eq!(
+        active.available_captures(),
+        vec![ConnectorCaptureCapability {
+            stream: "ecg".to_owned(),
+            unit: "millivolts".to_owned(),
+            minimum_sample_rate_hz: 100,
+            maximum_sample_rate_hz: 100,
+        }]
+    );
+}
+
+#[test]
+pub(super) fn capture_start_and_stop_are_semantic_events_with_one_active_capture() {
+    let mut active = host_with_manifest(
+        capture_manifest(),
+        vec![
+            empty(),
+            batch(vec![action(
+                2,
+                1,
+                ActionBody::DeclareCapabilities {
+                    streams: vec!["heart-rate".to_owned(), "ecg".to_owned()],
+                },
+            )]),
+            batch(vec![action(
+                3,
+                2,
+                ActionBody::Write {
+                    characteristic_id: "data".to_owned(),
+                    bytes: vec![63, 1],
+                    confirmed: true,
+                },
+            )]),
+            batch(vec![action(
+                4,
+                3,
+                ActionBody::Write {
+                    characteristic_id: "data".to_owned(),
+                    bytes: vec![82, 1],
+                    confirmed: true,
+                },
+            )]),
+        ],
+        4,
+    );
+    active.start().expect("start");
+    active
+        .start_capture("ecg", Some(10))
+        .expect("capture start");
+    assert_eq!(active.active_capture(), Some("ecg"));
+    assert_eq!(
+        active
+            .start_capture("ecg", Some(11))
+            .expect_err("second capture")
+            .code,
+        codes::CONNECTOR_HOST_STATE
+    );
+    assert!(matches!(
+        active.drain_actions(1)[0].body,
+        ConnectorTransportRequest::Write { ref bytes, .. } if bytes == &[63, 1]
+    ));
+    active.stop_capture("ecg", Some(40)).expect("capture stop");
+    assert_eq!(active.active_capture(), None);
+    assert!(matches!(
+        active.drain_actions(1)[0].body,
+        ConnectorTransportRequest::Write { ref bytes, .. } if bytes == &[82, 1]
+    ));
+}
+
+#[test]
+pub(super) fn ecg_connector_samples_flow_through_exact_capture_inference_history_and_report_data() {
+    const RATE_HZ: usize = 100;
+    const CALIBRATION_AND_RECORDING_SECONDS: usize = 37;
+    const BASE_MS: i64 = 1_752_600_000_000;
+
+    let source = include_str!("../../../../../fixtures/ecg/n_regular_72_v1.csv")
+        .lines()
+        .skip(1)
+        .map(|line| {
+            line.split(',')
+                .nth(1)
+                .expect("fixture value")
+                .parse::<f64>()
+                .expect("finite fixture value")
+        })
+        .collect::<Vec<_>>();
+    let quality_probe = (0..RATE_HZ * 5)
+        .map(|index| source[index * 256 / RATE_HZ])
+        .collect::<Vec<_>>();
+    let quality = mav_analytic::ecg_quality::assess_ecg_quality(&quality_probe, RATE_HZ as f64);
+    assert!(
+        quality.good,
+        "100 Hz fixture must calibrate: {:?}",
+        quality.reason
+    );
+    let mut batches = vec![
+        empty(),
+        batch(vec![action(
+            2,
+            1,
+            ActionBody::DeclareCapabilities {
+                streams: vec!["heart-rate".to_owned(), "ecg".to_owned()],
+            },
+        )]),
+        batch(vec![action(
+            3,
+            2,
+            ActionBody::Write {
+                characteristic_id: "data".to_owned(),
+                bytes: vec![63, 1],
+                confirmed: true,
+            },
+        )]),
+    ];
+    for second in 0..CALIBRATION_AND_RECORDING_SECONDS {
+        let samples = (0..RATE_HZ)
+            .map(|within_second| {
+                let sample_index = second * RATE_HZ + within_second;
+                let source_index = (sample_index * 256 / RATE_HZ) % source.len();
+                WireSample {
+                    stream: "ecg".to_owned(),
+                    value_microunits: (source[source_index] * 1_000_000.0).round() as i64,
+                    device_time_ms: Some(BASE_MS + sample_index as i64 * 10),
+                    sequence: sample_index as u32,
+                    unit: "millivolts".to_owned(),
+                }
+            })
+            .collect();
+        let notification_sequence = 4 + second as u64 * 2;
+        batches.push(batch(vec![action(
+            notification_sequence,
+            3 + second as u64,
+            ActionBody::EmitSamples {
+                batch_id: BatchId(second as u64 + 1),
+                samples,
+            },
+        )]));
+        // Every sample batch is followed by the host's SamplesCommitted acknowledgement.
+        batches.push(empty());
+    }
+    let stop_sequence = 4 + (CALIBRATION_AND_RECORDING_SECONDS as u64 - 1) * 2 + 2;
+    batches.push(batch(vec![action(
+        stop_sequence,
+        3 + CALIBRATION_AND_RECORDING_SECONDS as u64,
+        ActionBody::Write {
+            characteristic_id: "data".to_owned(),
+            bytes: vec![82, 1],
+            confirmed: true,
+        },
+    )]));
+
+    let mut active = host_with_manifest(capture_manifest(), batches, 8);
+    active.start().expect("active capture session");
+    active
+        .start_capture("ecg", Some(BASE_MS))
+        .expect("ECG start");
+    assert!(matches!(
+        active.drain_actions(1)[0].body,
+        ConnectorTransportRequest::Write { ref bytes, .. } if bytes == &[63, 1]
+    ));
+
+    for second in 0..CALIBRATION_AND_RECORDING_SECONDS {
+        active
+            .apply(
+                EventBody::Notification {
+                    characteristic_id: "data".to_owned(),
+                    bytes: vec![second as u8],
+                },
+                Some(BASE_MS + (second as i64 + 1) * 1_000),
+            )
+            .expect("ECG sample batch");
+    }
+
+    assert_eq!(
+        active.active_capture(),
+        None,
+        "host auto-stops at 30 seconds"
+    );
+    assert!(matches!(
+        active.drain_actions(1)[0].body,
+        ConnectorTransportRequest::Write { ref bytes, .. } if bytes == &[82, 1]
+    ));
+    let snapshot = active.ecg_capture_snapshot().expect("capture snapshot");
+    assert_eq!(
+        snapshot.phase,
+        EcgCapturePhase::Analysing,
+        "capture ended with {:?}",
+        snapshot.quality_reason
+    );
+    assert_eq!(snapshot.recorded_samples, 3_000);
+    assert_eq!(snapshot.target_samples, 3_000);
+
+    let request = active
+        .ecg_inference_request()
+        .expect("native inference work");
+    assert_eq!(request.tensors.len(), 7);
+    assert!(request.tensors.iter().all(|tensor| tensor.len() == 7_680));
+    let mut predictions = vec![[0.74, 0.01, 0.25]; 7];
+    predictions[1] = [0.55, 0.02, 0.43];
+    let result = active
+        .submit_ecg_inference(
+            request.capture_id,
+            predictions,
+            crate::ecg_capture::ECG_COREML_SHA256.to_owned(),
+            BASE_MS + 35_000,
+        )
+        .expect("admitted native result");
+    assert_eq!(result.rhythm, mav_model::ecg::EcgRhythmClass::SinusRhythm);
+    assert!(result.provisional);
+    assert_eq!(result.explanation.len(), 6);
+
+    let history = active
+        .store
+        .ecg_results(DeviceId::new(9), 10)
+        .expect("ECG history");
+    assert_eq!(history.as_slice(), std::slice::from_ref(&result));
+    let evidence = active
+        .store
+        .ecg_inference(result.capture_id)
+        .expect("inference lookup")
+        .expect("durable inference evidence");
+    let report_waveform = active
+        .store
+        .samples_between(
+            DeviceId::new(9),
+            StreamKind::Ecg,
+            WallTime::from_nanos(evidence.started_ns),
+            WallTime::from_nanos(evidence.ended_ns),
+        )
+        .expect("report waveform");
+    assert_eq!(report_waveform.len(), 3_000);
+    assert_eq!(evidence.sample_count, 3_000);
+    assert_eq!(evidence.raw_sha256, result.raw_sha256);
+    assert_eq!(evidence.tensor_sha256, result.tensor_sha256);
+}
+
+#[test]
+pub(super) fn cancelling_an_active_capture_queues_stop_before_disconnect() {
+    let cancellation_action = |cause, operation, body| ConnectorAction {
+        connector_id: ConnectorId::new("org.example.host").expect("connector id"),
+        session_id: mav_connector_abi::SessionId(7),
+        caused_by: EventSequence(cause),
+        cancellation_generation: CancellationGeneration(1),
+        operation_id: OperationId(operation),
+        deadline_token: TimerToken(operation + 100),
+        body,
+    };
+    let mut active = host_with_manifest(
+        capture_manifest(),
+        vec![
+            empty(),
+            batch(vec![action(
+                2,
+                1,
+                ActionBody::DeclareCapabilities {
+                    streams: vec!["heart-rate".to_owned(), "ecg".to_owned()],
+                },
+            )]),
+            batch(vec![action(
+                3,
+                2,
+                ActionBody::Write {
+                    characteristic_id: "data".to_owned(),
+                    bytes: vec![63, 1],
+                    confirmed: true,
+                },
+            )]),
+            batch(vec![cancellation_action(
+                4,
+                3,
+                ActionBody::Write {
+                    characteristic_id: "data".to_owned(),
+                    bytes: vec![82, 1],
+                    confirmed: true,
+                },
+            )]),
+            batch(vec![cancellation_action(5, 4, ActionBody::Disconnect)]),
+        ],
+        4,
+    );
+    active.start().expect("start");
+    active
+        .start_capture("ecg", Some(10))
+        .expect("capture start");
+    active.drain_actions(4);
+    active
+        .cancel(CancelReason::User, Some(20))
+        .expect("capture cancellation");
+
+    let actions = active.drain_actions(4);
+    assert_eq!(actions.len(), 2);
+    assert!(matches!(
+        actions[0].body,
+        ConnectorTransportRequest::Write { ref bytes, .. } if bytes == &[82, 1]
+    ));
+    assert_eq!(actions[1].body, ConnectorTransportRequest::Disconnect);
+    assert_eq!(active.active_capture(), None);
 }

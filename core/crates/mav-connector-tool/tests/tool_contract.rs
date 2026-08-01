@@ -126,6 +126,7 @@ fn records() -> (Manifest, AbiDescriptor, FixtureSet) {
             stream: "heart-rate".to_owned(),
             transport: vec![TransportCapability::Subscribe],
         }],
+        captures: None,
         permissions: vec![Permission::Ble],
         entrypoints: Entrypoints::default(),
         fixture_set_hash: Sha256::digest(fixture_bytes).into(),

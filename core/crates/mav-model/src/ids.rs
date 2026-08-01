@@ -61,6 +61,10 @@ define_id!(
     /// A row in the provenance table describing how a feature was produced.
     MetadataId
 );
+define_id!(
+    /// One host-owned captured waveform and its rebuildable interpretation.
+    EcgCaptureId
+);
 
 #[cfg(test)]
 mod tests {

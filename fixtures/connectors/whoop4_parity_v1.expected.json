@@ -1,11 +1,11 @@
 {
   "schema": "mavconn-parity/v1",
   "connector_id": "dev.maverick.whoop4",
-  "connector_version": "1.0.2",
-  "artifact_sha256": "43039ce95960505f465ae6c11fb6014e97b3852d5d95add28f8f9a6a1e15ff14",
-  "manifest_sha256": "26fcc3e78164e32b6c64cc11938ffc141dc34c460919103212589d7601a7779e",
-  "signed_sha256": "39d8370e4f2dc477074dd9fe31f36277798809a8236d3751352dafdfd5520f50",
-  "fixture_count": 16,
+  "connector_version": "1.0.3",
+  "artifact_sha256": "d3dae33eb0849f6eec489473d5ddd38ff39506e74ec40c6ca57a2b513491a145",
+  "manifest_sha256": "ff2931bff3492225ceb98332bc37f6dc40c8969ec81b79cd7224bb282a6508f8",
+  "signed_sha256": "1d8500c78921fd821b1f699ef210eb7450c1037290f6e871171070be9f0fabf4",
+  "fixture_count": 18,
   "fixtures": [
     {
       "name": "activate-gen4-scan",
@@ -14,7 +14,7 @@
       "action_trace_sha256": "b8df60506a6bc56c41174f0c728b239ea2b5342e21485d943241bb90e02ece4c",
       "sample_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "final_state_sha256": "23f4cf6199313daaf74f5f951f1f4eca4a51275c91821440ec8c6c4b32533ed9",
-      "max_fuel_consumed": 45193,
+      "max_fuel_consumed": 45551,
       "peak_memory_bytes": 1179648
     },
     {
@@ -24,7 +24,7 @@
       "action_trace_sha256": "deec64494193ac52403caba7a533e744364708a2c4ebec91b00edcbb385ee9ba",
       "sample_sha256": "e39e942c635ef30dc5ade30d0a66de9d988c45fe541e7d340f77ff23cd5b576a",
       "final_state_sha256": "9ab96ed29e9327d31ef29f60fb48a3165bf6ce45440a19fc63fbbc88cf10a886",
-      "max_fuel_consumed": 111985,
+      "max_fuel_consumed": 112518,
       "peak_memory_bytes": 1179648
     },
     {
@@ -34,7 +34,7 @@
       "action_trace_sha256": "deec64494193ac52403caba7a533e744364708a2c4ebec91b00edcbb385ee9ba",
       "sample_sha256": "e39e942c635ef30dc5ade30d0a66de9d988c45fe541e7d340f77ff23cd5b576a",
       "final_state_sha256": "9ab96ed29e9327d31ef29f60fb48a3165bf6ce45440a19fc63fbbc88cf10a886",
-      "max_fuel_consumed": 111985,
+      "max_fuel_consumed": 112518,
       "peak_memory_bytes": 1179648
     },
     {
@@ -44,7 +44,7 @@
       "action_trace_sha256": "1aeb8522bace84c84e87e116a34acf24addeabfa145a088cc463e692b186eded",
       "sample_sha256": "067d20e356e4e58c0ff7b91bad235366100472c6583cda9c5bd94b0abdcfbf6a",
       "final_state_sha256": "9ab96ed29e9327d31ef29f60fb48a3165bf6ce45440a19fc63fbbc88cf10a886",
-      "max_fuel_consumed": 73779,
+      "max_fuel_consumed": 74312,
       "peak_memory_bytes": 1179648
     },
     {
@@ -54,7 +54,7 @@
       "action_trace_sha256": "fc2b66e436e9a540232294f23645e2953d2155bf91a4a6c341ef462785108446",
       "sample_sha256": "fef1e13d9f711292e10d082bc1531fb39467679e84b16ea1a97321926889707c",
       "final_state_sha256": "9ab96ed29e9327d31ef29f60fb48a3165bf6ce45440a19fc63fbbc88cf10a886",
-      "max_fuel_consumed": 70353,
+      "max_fuel_consumed": 70886,
       "peak_memory_bytes": 1179648
     },
     {
@@ -64,7 +64,7 @@
       "action_trace_sha256": "fc2b66e436e9a540232294f23645e2953d2155bf91a4a6c341ef462785108446",
       "sample_sha256": "fef1e13d9f711292e10d082bc1531fb39467679e84b16ea1a97321926889707c",
       "final_state_sha256": "9ab96ed29e9327d31ef29f60fb48a3165bf6ce45440a19fc63fbbc88cf10a886",
-      "max_fuel_consumed": 70353,
+      "max_fuel_consumed": 70886,
       "peak_memory_bytes": 1179648
     },
     {
@@ -74,7 +74,7 @@
       "action_trace_sha256": "fc2b66e436e9a540232294f23645e2953d2155bf91a4a6c341ef462785108446",
       "sample_sha256": "fef1e13d9f711292e10d082bc1531fb39467679e84b16ea1a97321926889707c",
       "final_state_sha256": "9ab96ed29e9327d31ef29f60fb48a3165bf6ce45440a19fc63fbbc88cf10a886",
-      "max_fuel_consumed": 70353,
+      "max_fuel_consumed": 70886,
       "peak_memory_bytes": 1179648
     },
     {
@@ -84,7 +84,7 @@
       "action_trace_sha256": "0e4ea284f21ec320f0b443831b5a09d7d1b46eb6e38b3e9621cd92d646d0b008",
       "sample_sha256": "66365695bbe4df11304c72b765df29678cccd4062d2a3b2cd28a45583a835ed1",
       "final_state_sha256": "9ab96ed29e9327d31ef29f60fb48a3165bf6ce45440a19fc63fbbc88cf10a886",
-      "max_fuel_consumed": 62332,
+      "max_fuel_consumed": 62641,
       "peak_memory_bytes": 1179648
     },
     {
@@ -94,7 +94,7 @@
       "action_trace_sha256": "e7b74ed39c9d31c7e0e216a14043cc961a57a090ff79221162b78386e237a50f",
       "sample_sha256": "03b3af9886a3aa7acda54b3cc5ffa9797d1c188931c44ebb52512f41356f6395",
       "final_state_sha256": "9ab96ed29e9327d31ef29f60fb48a3165bf6ce45440a19fc63fbbc88cf10a886",
-      "max_fuel_consumed": 69465,
+      "max_fuel_consumed": 69998,
       "peak_memory_bytes": 1179648
     },
     {
@@ -104,7 +104,7 @@
       "action_trace_sha256": "6191a8e9d613eb9cdb74b6d1572a291325ecddfb5d8141c8562d65533764f2f7",
       "sample_sha256": "002cf02c81aa52c7976f147deec64cc98622a29d2db6316e78eda330aab58dfd",
       "final_state_sha256": "9ab96ed29e9327d31ef29f60fb48a3165bf6ce45440a19fc63fbbc88cf10a886",
-      "max_fuel_consumed": 59713,
+      "max_fuel_consumed": 60246,
       "peak_memory_bytes": 1179648
     },
     {
@@ -114,7 +114,27 @@
       "action_trace_sha256": "46e66104828d1c7ded84cc2bfab435fc2c6e10519d1781ad544195112cf35a65",
       "sample_sha256": "9a549cf29d0d95060154f3ee53669762858973fd15bf2933c77d1e7af4c90d99",
       "final_state_sha256": "9ab96ed29e9327d31ef29f60fb48a3165bf6ce45440a19fc63fbbc88cf10a886",
-      "max_fuel_consumed": 59698,
+      "max_fuel_consumed": 60231,
+      "peak_memory_bytes": 1179648
+    },
+    {
+      "name": "gen4-hello-response-gated",
+      "events": 7,
+      "input_sha256": "74196b70e15e1854920e060555fe22006f33a00b3e44b4413d7864bcac1900f2",
+      "action_trace_sha256": "1b9d641ba8cbcd30abe4fcd498528fc9ac8561a8d3ddbd38b06bdc0074370311",
+      "sample_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "final_state_sha256": "32223df5a4ed673ec9d0235d7a784430dac9b77206af0fe8400417fb952a720b",
+      "max_fuel_consumed": 118370,
+      "peak_memory_bytes": 1179648
+    },
+    {
+      "name": "gen4-console-routing",
+      "events": 1,
+      "input_sha256": "5c448df8eeac9b97f4aa49e3f0fcb8002344b1110a50effcd25d99af701511f2",
+      "action_trace_sha256": "5012ab3dbf7171e9439fa3521d4b7b91fd06f7cb5760024344ed58b2ec8f3cb5",
+      "sample_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "final_state_sha256": "9ab96ed29e9327d31ef29f60fb48a3165bf6ce45440a19fc63fbbc88cf10a886",
+      "max_fuel_consumed": 61717,
       "peak_memory_bytes": 1179648
     },
     {
@@ -124,7 +144,7 @@
       "action_trace_sha256": "9dfdd216ef6fac153ebe9b12e9e9400ad0a3ba0ead414b6c825c1fab62a8e27a",
       "sample_sha256": "e39e942c635ef30dc5ade30d0a66de9d988c45fe541e7d340f77ff23cd5b576a",
       "final_state_sha256": "9ab96ed29e9327d31ef29f60fb48a3165bf6ce45440a19fc63fbbc88cf10a886",
-      "max_fuel_consumed": 112022,
+      "max_fuel_consumed": 112555,
       "peak_memory_bytes": 1179648
     },
     {
@@ -134,7 +154,7 @@
       "action_trace_sha256": "91bb4f11c3fc582201c38d7829d6eb3c2eefdd1ad97df4ff8f2f1004d60b6500",
       "sample_sha256": "95aea28d2565b1928a11d249b586828246418a305b974e9cdf8064f02501eeb5",
       "final_state_sha256": "1145f1c2701d91ed974f17f8490ac915d649acd0492f5956eaba3ddacb7bc45e",
-      "max_fuel_consumed": 192421,
+      "max_fuel_consumed": 193081,
       "peak_memory_bytes": 1179648
     },
     {
@@ -144,7 +164,7 @@
       "action_trace_sha256": "cc87114a3587652e5487f8699e08f34750ba0fbc3e6ae745e2673c9fe16b1904",
       "sample_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "final_state_sha256": "810c8f7f7dbba01763d93c5d217b3bb12bf1d62039ffe453b11f2dea34952297",
-      "max_fuel_consumed": 92442,
+      "max_fuel_consumed": 93052,
       "peak_memory_bytes": 1179648
     },
     {
@@ -154,7 +174,7 @@
       "action_trace_sha256": "e5efbfe22c42f3e852c27a50ffa3877590cb4e0b5f60d91a04890cea816e32f4",
       "sample_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "final_state_sha256": "23f4cf6199313daaf74f5f951f1f4eca4a51275c91821440ec8c6c4b32533ed9",
-      "max_fuel_consumed": 44890,
+      "max_fuel_consumed": 45214,
       "peak_memory_bytes": 1179648
     },
     {
@@ -164,7 +184,7 @@
       "action_trace_sha256": "68abd9c13ced2a8917d731bc2b740d6b5fb789ab26b99eddcd993db3431d45f1",
       "sample_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "final_state_sha256": "9ab96ed29e9327d31ef29f60fb48a3165bf6ce45440a19fc63fbbc88cf10a886",
-      "max_fuel_consumed": 54924,
+      "max_fuel_consumed": 55459,
       "peak_memory_bytes": 1179648
     }
   ]

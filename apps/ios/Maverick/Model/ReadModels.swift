@@ -95,7 +95,10 @@ struct JournalEntry: Equatable, Codable {
 }
 
 /// One workout; `zonesJSON` is verbatim HR-zone-percentages JSON, times unix seconds.
-struct WorkoutRow: Equatable, Codable {
+/// `Hashable` so a session can be a `NavigationStack` path value and the detail screen can be
+/// pushed rather than presented. Every stored property is already `Hashable`, so the synthesised
+/// conformance is the whole implementation.
+struct WorkoutRow: Equatable, Hashable, Codable {
   let startTs: Int
   let endTs: Int
   let sport: String

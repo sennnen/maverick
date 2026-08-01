@@ -81,7 +81,8 @@ ABI v1 uses ascending unsigned integer map keys and append-only numeric enum ind
 decoding re-encodes the typed value and requires byte equality, which also rejects unknown or
 duplicate fields. The frozen CDDL SHA-256 hashes are
 `b901e5a701e7af5794b74ff5beb05512a1e6fa0e3e76cc7c97dc72f8b66d2ea8` for ABI events and actions,
-`4ebeb126d4c17eeaccdab69320cb6d085d3b060a3d413c1e3bc8c8362ec7912b` for manifests,
+`4ebeb126d4c17eeaccdab69320cb6d085d3b060a3d413c1e3bc8c8362ec7912b` for v1 manifests,
+`d037919069eb87ec4cab2c31dc6450f814fa770c0096e0b4b7a659db6a31f1cc` for v2 manifests,
 `1daaa3a4ea07e1c130461c61fc9a0e0d8433db60ac56f8b9bbc1073ba9cbf1ff` for fixtures, and
 `be8508dcc5fb1089828ddb7beb9fdcd5303dfaa8a95bf5c4c52f21cd5751587e` for signatures. Hash bytes are
 public constants in `mav-connector-abi` and mechanically checked against the schema sources.
@@ -99,7 +100,7 @@ verification keys only.
 Required fields:
 
 ```text
-schema: "mavconn-manifest/v1"
+schema: "mavconn-manifest/v1" or "mavconn-manifest/v2"
 connector_id: reverse-DNS stable id
 version: SemVer without build metadata
 display_name, description
@@ -115,12 +116,19 @@ permissions: [closed enum; BLE-only in v1]
 entrypoints: fixed v1 export names
 fixture_set_hash
 update: { channel, downgrade_policy }
+captures: [{ stream, unit, minimum_sample_rate_hz, maximum_sample_rate_hz }] # v2 only
 ```
 
 Advertisement rules can match declared service UUIDs, manufacturer id plus bounded masked bytes,
 and normalized name prefixes. Regex, arbitrary code, and hidden registry lookup are forbidden.
 Characteristics declare logical ids, UUIDs, properties, sensitivity, and whether confirmed writes
 are required. Actions may reference only logical ids declared here.
+
+Manifest v2 is additive and exists for user-initiated captured streams (ADR-033). Each capture must
+reference a signed stream capability, use the host's frozen unit vocabulary, and stay within
+1–4,096 Hz. This is maximum authority only: the app sees a capture only after the connected
+session's `DeclareCapabilities` also names that stream. A v1 artifact decodes exactly as before and
+cannot declare a capture.
 
 ### `mav:abi`
 
@@ -186,7 +194,9 @@ Closed versioned event families:
   `WriteResult`, `Notification`, `Disconnected`, `TransportError`;
 - time: `TimerFired` with opaque token and monotonic ordering only;
 - persistence/pipeline: `StateCommitted`, `SamplesCommitted`, `SamplesRejected`;
-- update: `PrepareStateMigration`, `StateMigrationCommitted`.
+- update: `PrepareStateMigration`, `StateMigrationCommitted`;
+- host policy: `PowerModeChanged`;
+- captured streams: `CaptureStart { stream }`, `CaptureStop { stream }`.
 
 Each carries connector/session ids, an event sequence, cancellation generation, bounded byte fields,
 and only the data needed for that event. UUIDs are normalized strings at the ABI edge. Host wall
@@ -214,6 +224,8 @@ queue. Guest-proposed correlation ids stay inside the ABI and are mapped to host
 action reaches native code, then mapped back on the result event. Draining is ordered and exactly
 once; a batch that cannot fit leaves the queue unchanged. Disconnect/cancel increments generation,
 clears queued work and pending timers/results, and journals late arrivals before ignoring them.
+If a capture is active, cancellation first emits `CaptureStop` under the new cancellation
+generation and preserves its resulting stop write ahead of disconnect.
 
 An `EmitSamples` action validates the signed stream and its frozen unit, converts fixed-point
 microunits, then runs SQI, timeline placement/deduplication, provenance, and transactional storage
@@ -458,13 +470,26 @@ A connector in low power **must keep its primary vitals stream running**. What i
   lines rather than samples. WHOOP 4.0 has no diagnostic-only characteristic, so it drops nothing.
 - **Historical offload cadence.** Both WHOOP connectors multiply their idle timer by five. History
   is not time-critical, and this is the largest saving available that loses no data.
-- **Raw streams.** Raw AFE capture is already probe-only, so there is nothing to drop in a release
-  build.
+- **Raw streams.** WHOOP MG ECG is off by default in every power mode and runs only during an
+  explicit bounded host capture. Low power does not silently remove a user-requested recording.
 
 The policy is host-owned, not connector state: it is deliberately absent from every connector's
 snapshot, so a resumed or reinstalled connector is told again rather than remembering a stale value.
 The host does not verify what a connector actually gives up; "how much battery" is not something the
 ABI can measure, and a connector that ignores the event is correct but impolite.
+
+## Captured streams
+
+The runtime exposes `connector_capture_capabilities` over UniFFI. It is the intersection of the
+signed manifest-v2 declarations and the streams active for this hardware session. Native code never
+infers this from a connector id, display name, model name, or serial prefix.
+
+`start_connector_capture(stream)` and `stop_connector_capture(stream)` deliver semantic events to
+the Wasm connector. Only one capture can be active, the connector must already be streaming, and an
+unsigned or session-inactive stream fails closed. A connector translates those events into its own
+declared writes. Disconnect clears session availability; cancel sends stop before disconnect. The
+host-owned ECG controller in ADR-033 builds calibration and the 30-second record above this
+device-neutral boundary.
 
 ## Platform policy
 

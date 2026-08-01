@@ -1,6 +1,7 @@
 use crate::migrations::{Migration, CURRENT_SCHEMA_VERSION, MIGRATIONS};
+use mav_model::ecg::{EcgInferenceEvidence, EcgResult};
 use mav_model::error::{codes, Category, MavError, Result, Severity};
-use mav_model::ids::{DeviceId, MetadataId};
+use mav_model::ids::{DeviceId, EcgCaptureId, MetadataId};
 use mav_model::raw::RawValue;
 use mav_model::stream::{Placement, Quality, RejectReason, Sample, StreamKind};
 use mav_model::time::{DeviceTime, WallTime};
@@ -375,9 +376,160 @@ impl Store {
             .map_err(|e| query_err("reading a daily snapshot", &e))
     }
 
+    /// Append the native ECG model output. A capture id is immutable evidence: replaying the same
+    /// inference is an error rather than an update that could silently rewrite history.
+    pub fn insert_ecg_inference(&self, evidence: &EcgInferenceEvidence) -> Result<()> {
+        self.conn
+            .execute(
+                "INSERT INTO ecg_inference \
+                 (capture_id, device_id, started_ns, evidence_json, created_ns) \
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    evidence.capture_id.get() as i64,
+                    evidence.device_id.get() as i64,
+                    evidence.started_ns,
+                    to_json(evidence)?,
+                    evidence.created_ns,
+                ],
+            )
+            .map_err(|e| query_err("writing ECG inference evidence", &e))?;
+        Ok(())
+    }
+
+    /// Immutable native ECG evidence for one capture.
+    pub fn ecg_inference(&self, capture_id: EcgCaptureId) -> Result<Option<EcgInferenceEvidence>> {
+        let json = self
+            .conn
+            .query_row(
+                "SELECT evidence_json FROM ecg_inference WHERE capture_id = ?1",
+                params![capture_id.get() as i64],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(|e| query_err("reading ECG inference evidence", &e))?;
+        json.map(|value| from_json(&value)).transpose()
+    }
+
+    /// Write the rebuildable interpretation for one capture.
+    pub fn upsert_ecg_result(&self, result: &EcgResult) -> Result<()> {
+        self.conn
+            .execute(
+                "INSERT OR REPLACE INTO ecg_result \
+                 (capture_id, device_id, started_ns, result_json) VALUES (?1, ?2, ?3, ?4)",
+                params![
+                    result.capture_id.get() as i64,
+                    result.device_id.get() as i64,
+                    result.started_ns,
+                    to_json(result)?,
+                ],
+            )
+            .map_err(|e| query_err("writing an ECG result", &e))?;
+        Ok(())
+    }
+
+    /// Rebuildable interpretation for one capture.
+    pub fn ecg_result(&self, capture_id: EcgCaptureId) -> Result<Option<EcgResult>> {
+        let json = self
+            .conn
+            .query_row(
+                "SELECT result_json FROM ecg_result WHERE capture_id = ?1",
+                params![capture_id.get() as i64],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(|e| query_err("reading an ECG result", &e))?;
+        json.map(|value| from_json(&value)).transpose()
+    }
+
+    /// Captures whose evidence was retained but whose interpreted result is missing, oldest first.
+    ///
+    /// A result is reproducible from its evidence and only from its evidence — the native model's
+    /// probabilities are in the evidence row, and no amount of stored samples brings them back.
+    /// Anything listed here is a capture the wearer recorded and can no longer see.
+    pub fn ecg_evidence_without_result(&self, device: DeviceId) -> Result<Vec<EcgCaptureId>> {
+        let mut statement = self
+            .conn
+            .prepare_cached(
+                "SELECT i.capture_id FROM ecg_inference i \
+                 LEFT JOIN ecg_result r ON r.capture_id = i.capture_id \
+                 WHERE i.device_id = ?1 AND r.capture_id IS NULL \
+                 ORDER BY i.capture_id",
+            )
+            .map_err(|e| query_err("preparing orphaned ECG evidence read", &e))?;
+        let rows = statement
+            .query_map(params![device.get() as i64], |row| {
+                row.get::<_, i64>(0).map(|id| EcgCaptureId::new(id as u64))
+            })
+            .map_err(|e| query_err("reading orphaned ECG evidence", &e))?;
+        rows.collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(|e| query_err("collecting orphaned ECG evidence", &e))
+    }
+
+    /// A device's ECG history, newest capture first.
+    pub fn ecg_results(&self, device: DeviceId, limit: usize) -> Result<Vec<EcgResult>> {
+        let mut statement = self
+            .conn
+            .prepare_cached(
+                "SELECT result_json FROM ecg_result WHERE device_id = ?1 \
+                 ORDER BY started_ns DESC, capture_id DESC LIMIT ?2",
+            )
+            .map_err(|e| query_err("preparing ECG history read", &e))?;
+        let rows = statement
+            .query_map(params![device.get() as i64, limit as i64], |row| {
+                from_json_for_row(&row.get::<_, String>(0)?, 0)
+            })
+            .map_err(|e| query_err("reading ECG history", &e))?;
+        rows.collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(|e| query_err("collecting ECG history", &e))
+    }
+
+    /// Forget one ECG reading: its result, its inference evidence, and the samples behind it.
+    ///
+    /// The wearer asked for it to be gone, so nothing is kept back to rebuild it from. The stored
+    /// samples go too — an ECG the history no longer shows but the sample table still holds is not
+    /// deleted, it is hidden.
+    pub fn delete_ecg_capture(&self, capture: EcgCaptureId) -> Result<bool> {
+        let evidence = self.ecg_inference(capture)?;
+        let removed = self
+            .conn
+            .execute(
+                "DELETE FROM ecg_result WHERE capture_id = ?1",
+                params![capture.get() as i64],
+            )
+            .map_err(|e| query_err("deleting an ECG result", &e))?;
+        self.conn
+            .execute(
+                "DELETE FROM ecg_inference WHERE capture_id = ?1",
+                params![capture.get() as i64],
+            )
+            .map_err(|e| query_err("deleting ECG evidence", &e))?;
+        if let Some(evidence) = evidence {
+            self.conn
+                .execute(
+                    "DELETE FROM sample WHERE device_id = ?1 AND stream = ?2 \
+                     AND wall_time_ns >= ?3 AND wall_time_ns < ?4",
+                    params![
+                        evidence.device_id.get() as i64,
+                        StreamKind::Ecg.code(),
+                        evidence.started_ns,
+                        evidence.ended_ns,
+                    ],
+                )
+                .map_err(|e| query_err("deleting ECG samples", &e))?;
+        }
+        Ok(removed > 0)
+    }
+
     /// Discard derived rows — for one device, or for every device when `device` is `None`. Safe by
     /// construction: recomputing from the retained samples reproduces them, which is the property a
     /// derived table is defined by.
+    ///
+    /// `ecg_result` is deliberately not in this list, and was: it is derived from the retained
+    /// `ecg_inference` evidence, never from samples, so nothing here could put it back. Because
+    /// the platforms reassert their timezone spans on every launch, and that clears derived rows,
+    /// every ECG result a wearer recorded was deleted the next time the app opened — history and
+    /// its report with it. Day boundaries do not bear on a result timestamped absolutely, so the
+    /// honest answer is not to touch it.
     pub fn clear_derived(&self, device: Option<DeviceId>) -> Result<u64> {
         let filter = device.map(|id| id.get() as i64);
         let mut removed = 0usize;
@@ -692,6 +844,7 @@ fn from_json_for_row<T: DeserializeOwned>(text: &str, column: usize) -> rusqlite
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mav_model::ecg::{EcgExplanationSegment, EcgRhythmClass};
     use mav_model::raw::RawValue;
 
     fn sample(kind: StreamKind, device_ns: i64, seq: u16, value: RawValue) -> Sample<RawValue> {
@@ -704,6 +857,55 @@ mod tests {
             quality: Quality::scored(1.0),
             provenance: MetadataId::new(1),
         }
+    }
+
+    fn ecg_records(
+        capture: u64,
+        device: u64,
+        started_ns: i64,
+    ) -> (EcgInferenceEvidence, EcgResult) {
+        let evidence = EcgInferenceEvidence {
+            capture_id: EcgCaptureId::new(capture),
+            device_id: DeviceId::new(device),
+            started_ns,
+            ended_ns: started_ns + 30_000_000_000,
+            source_rate_hz: 100,
+            source_unit: "counts".to_owned(),
+            sample_count: 3_000,
+            raw_sha256: "a".repeat(64),
+            tensor_sha256: "b".repeat(64),
+            preprocessing_sha256: "c".repeat(64),
+            model_sha256: "d".repeat(64),
+            quality_milli: 930,
+            predictions: vec![[0.72, 0.08, 0.20]; 7],
+            created_ns: started_ns + 31_000_000_000,
+        };
+        let result = EcgResult {
+            capture_id: evidence.capture_id,
+            device_id: evidence.device_id,
+            started_ns,
+            ended_ns: evidence.ended_ns,
+            source_rate_hz: evidence.source_rate_hz,
+            sample_count: evidence.sample_count,
+            rhythm: EcgRhythmClass::SinusRhythm,
+            probabilities: evidence.predictions[0],
+            confidence_milli: 1_000,
+            mean_heart_rate_bpm: Some(72),
+            quality_milli: evidence.quality_milli,
+            explanation: vec![EcgExplanationSegment {
+                start_second: 0,
+                end_second: 5,
+                importance_milli: 1_000,
+            }],
+            raw_sha256: evidence.raw_sha256.clone(),
+            tensor_sha256: evidence.tensor_sha256.clone(),
+            preprocessing_sha256: evidence.preprocessing_sha256.clone(),
+            model_sha256: evidence.model_sha256.clone(),
+            algorithm_id: "nao_full_v2_ecg_classifier".to_owned(),
+            algorithm_version: "2.0.0".to_owned(),
+            provisional: true,
+        };
+        (evidence, result)
     }
 
     #[test]
@@ -898,6 +1100,124 @@ mod tests {
         let read = store.provenance(MetadataId::new(42)).unwrap().unwrap();
         assert_eq!(read, provenance);
         assert!(store.provenance(MetadataId::new(99)).unwrap().is_none());
+    }
+
+    #[test]
+    fn ecg_evidence_and_result_round_trip_with_newest_first_history() {
+        let store = Store::open_in_memory().unwrap();
+        let device = DeviceId::new(7);
+        let (older_evidence, older_result) = ecg_records(1, device.get(), 10);
+        let (newer_evidence, newer_result) = ecg_records(2, device.get(), 20);
+        for (evidence, result) in [
+            (&older_evidence, &older_result),
+            (&newer_evidence, &newer_result),
+        ] {
+            store.insert_ecg_inference(evidence).unwrap();
+            store.upsert_ecg_result(result).unwrap();
+        }
+
+        assert_eq!(
+            store.ecg_inference(EcgCaptureId::new(1)).unwrap(),
+            Some(older_evidence)
+        );
+        assert_eq!(
+            store.ecg_result(EcgCaptureId::new(2)).unwrap(),
+            Some(newer_result.clone())
+        );
+        assert_eq!(
+            store.ecg_results(device, 10).unwrap(),
+            vec![newer_result, older_result]
+        );
+    }
+
+    #[test]
+    fn deleting_an_ecg_reading_leaves_nothing_to_rebuild_it_from() {
+        let store = Store::open_in_memory().unwrap();
+        let device = DeviceId::new(7);
+        let (kept_evidence, kept_result) = ecg_records(1, device.get(), 10);
+        let (gone_evidence, gone_result) = ecg_records(2, device.get(), 20);
+        for (evidence, result) in [
+            (&kept_evidence, &kept_result),
+            (&gone_evidence, &gone_result),
+        ] {
+            store.insert_ecg_inference(evidence).unwrap();
+            store.upsert_ecg_result(result).unwrap();
+        }
+
+        assert!(store.delete_ecg_capture(EcgCaptureId::new(2)).unwrap());
+        // Result, evidence and history all forget it; the other reading is untouched.
+        assert_eq!(store.ecg_result(EcgCaptureId::new(2)).unwrap(), None);
+        assert_eq!(store.ecg_inference(EcgCaptureId::new(2)).unwrap(), None);
+        assert_eq!(store.ecg_results(device, 10).unwrap(), vec![kept_result]);
+        assert_eq!(
+            store.ecg_inference(EcgCaptureId::new(1)).unwrap(),
+            Some(kept_evidence)
+        );
+        // Deleting what is already gone is not an error, and says it removed nothing.
+        assert!(!store.delete_ecg_capture(EcgCaptureId::new(2)).unwrap());
+    }
+
+    #[test]
+    fn ecg_evidence_is_append_only_but_result_is_rebuildable() {
+        let store = Store::open_in_memory().unwrap();
+        let device = DeviceId::new(7);
+        let (evidence, mut result) = ecg_records(1, device.get(), 10);
+        store.insert_ecg_inference(&evidence).unwrap();
+        assert!(store.insert_ecg_inference(&evidence).is_err());
+
+        store.upsert_ecg_result(&result).unwrap();
+        result.confidence_milli = 500;
+        store.upsert_ecg_result(&result).unwrap();
+        assert_eq!(
+            store
+                .ecg_result(EcgCaptureId::new(1))
+                .unwrap()
+                .unwrap()
+                .confidence_milli,
+            500
+        );
+
+        // Clearing derived rows must not take the ECG result with it. Nothing in this store can
+        // recompute one from samples, so deleting it destroyed a capture the wearer recorded —
+        // and the platforms reassert their timezone spans, which clears derived rows, on every
+        // launch.
+        assert_eq!(store.clear_derived(Some(device)).unwrap(), 0);
+        assert_eq!(
+            store.ecg_result(EcgCaptureId::new(1)).unwrap(),
+            Some(result)
+        );
+        assert_eq!(
+            store.ecg_inference(EcgCaptureId::new(1)).unwrap(),
+            Some(evidence)
+        );
+    }
+
+    #[test]
+    fn evidence_left_without_a_result_is_reported_so_it_can_be_rebuilt() {
+        let store = Store::open_in_memory().unwrap();
+        let device = DeviceId::new(7);
+        let (evidence, result) = ecg_records(1, device.get(), 10);
+        let (paired_evidence, paired_result) = ecg_records(2, device.get(), 20);
+        store.insert_ecg_inference(&evidence).unwrap();
+        store.insert_ecg_inference(&paired_evidence).unwrap();
+        store.upsert_ecg_result(&paired_result).unwrap();
+
+        assert_eq!(
+            store.ecg_evidence_without_result(device).unwrap(),
+            vec![EcgCaptureId::new(1)],
+            "only the capture missing its result is reported"
+        );
+
+        store.upsert_ecg_result(&result).unwrap();
+        assert!(store
+            .ecg_evidence_without_result(device)
+            .unwrap()
+            .is_empty());
+        // Another device's orphan is not this device's business.
+        assert!(store
+            .ecg_evidence_without_result(DeviceId::new(8))
+            .unwrap()
+            .is_empty());
     }
 
     #[test]

@@ -1,0 +1,36 @@
+{
+  "schema": "mav/ecg-calibration-fixture/v1",
+  "fixture": "mg_electrode_100hz",
+  "status": "hardware-capture",
+  "source": {
+    "file": "mg_electrode_100hz_v1.csv",
+    "sha256": "e0a3e23ca06c1a59cfea52c6cae9a8d543ecffb816b4ce8eaf1575da28a4cd85",
+    "unit": "counts",
+    "sample_rate_hz": 100,
+    "sample_count": 4500,
+    "provenance": "worn WHOOP MG, strap MGB0261172, firmware 50.33.2.0, finger on the electrode",
+    "channel": "type-43 v0x0a middle channel at payload offset 0x11d",
+    "note": "Raw converter counts straight off the strap, offset and all. Every other ECG fixture in this directory is synthetic, zero-mean and in millivolts, which is exactly the shape that hid the pedestal defect this fixture pins."
+  },
+  "algorithm": {
+    "id": "pan_tompkins_r_peak",
+    "version": "1.0.0"
+  },
+  "expected": {
+    "r_peak_count": 59,
+    "implied_bpm": 78.7,
+    "calibrating_five_second_windows": 39,
+    "total_five_second_windows": 41,
+    "capture": {
+      "calibrated_after_seconds": 7,
+      "recorded_samples": 3000,
+      "phase_at_stop": "analysing",
+      "tensor_count": 7,
+      "tensor_length": 7680
+    }
+  },
+  "regression": {
+    "before": "Zero windows calibrated and the whole capture yielded one R peak. The band-pass starts from rest, so the converter pedestal drove a start transient that set the adaptive threshold above every real QRS, and the quality gate reported Contact forever.",
+    "guards": "core/crates/mav-analytic/src/ecg.rs::without_baseline"
+  }
+}

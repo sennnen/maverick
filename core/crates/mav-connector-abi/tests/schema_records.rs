@@ -137,8 +137,15 @@ fn every_closed_event_variant_validates_and_round_trips() {
             state: vec![1],
         },
         EventBody::StateMigrationCommitted { schema: 2 },
+        EventBody::PowerModeChanged { low_power: true },
+        EventBody::CaptureStart {
+            stream: "ecg".to_owned(),
+        },
+        EventBody::CaptureStop {
+            stream: "ecg".to_owned(),
+        },
     ];
-    assert_eq!(bodies.len(), 27);
+    assert_eq!(bodies.len(), 30);
     for body in bodies {
         let value = event(body);
         let encoded = encode_canonical(&value).expect("event encodes");
@@ -260,7 +267,7 @@ fn action_and_state_bounds_fail_at_the_first_excess_byte_or_item() {
 #[test]
 fn artifact_records_round_trip_under_the_same_canonical_decoder() {
     let manifest = Manifest {
-        schema: MANIFEST_SCHEMA.to_owned(),
+        schema: MANIFEST_SCHEMA_V2.to_owned(),
         connector_id: connector_id(),
         version: "1.0.0".to_owned(),
         display_name: "Example Band".to_owned(),
@@ -298,8 +305,14 @@ fn artifact_records_round_trip_under_the_same_canonical_decoder() {
         }],
         capabilities: vec![CapabilityDecl {
             stream: "heart-rate".to_owned(),
-            transport: vec![TransportCapability::Subscribe],
+            transport: vec![TransportCapability::Subscribe, TransportCapability::Write],
         }],
+        captures: Some(vec![CaptureDecl {
+            stream: "heart-rate".to_owned(),
+            unit: "beats-per-minute".to_owned(),
+            minimum_sample_rate_hz: 1,
+            maximum_sample_rate_hz: 10,
+        }]),
         permissions: vec![Permission::Ble],
         entrypoints: Entrypoints::default(),
         fixture_set_hash: [2; 32],
@@ -361,6 +374,84 @@ fn artifact_records_round_trip_under_the_same_canonical_decoder() {
 }
 
 #[test]
+fn capture_declarations_are_v2_only_bounded_and_reference_a_capability() {
+    let mut manifest = Manifest {
+        schema: MANIFEST_SCHEMA_V2.to_owned(),
+        connector_id: connector_id(),
+        version: "1.0.0".to_owned(),
+        display_name: "Example Band".to_owned(),
+        description: "Test connector".to_owned(),
+        publisher_key_id: "publisher-1".to_owned(),
+        abi: AbiRange {
+            major: 1,
+            min_minor: 0,
+            max_minor: 0,
+        },
+        core: CoreRange {
+            min_version: "0.1.0".to_owned(),
+            max_version: None,
+        },
+        state_schema: 1,
+        artifact_limits_profile: LimitsProfileId::new("mobile-v1").expect("valid profile"),
+        device_families: vec![DeviceFamily {
+            id: "example".to_owned(),
+            name_prefixes: vec!["Band".to_owned()],
+            service_uuids: vec!["180d".to_owned()],
+            manufacturer_id: None,
+            manufacturer_mask: Vec::new(),
+            manufacturer_value: Vec::new(),
+        }],
+        services: vec![ServiceDecl {
+            id: "health".to_owned(),
+            uuid: "180d".to_owned(),
+            characteristics: vec![CharacteristicDecl {
+                id: "data".to_owned(),
+                uuid: "2a37".to_owned(),
+                properties: vec![CharacteristicProperty::Notify],
+                sensitive: true,
+                confirmed_write_required: false,
+            }],
+        }],
+        capabilities: vec![CapabilityDecl {
+            stream: "ecg".to_owned(),
+            transport: vec![TransportCapability::Subscribe, TransportCapability::Write],
+        }],
+        captures: Some(vec![CaptureDecl {
+            stream: "ecg".to_owned(),
+            unit: "counts".to_owned(),
+            minimum_sample_rate_hz: 100,
+            maximum_sample_rate_hz: 256,
+        }]),
+        permissions: vec![Permission::Ble],
+        entrypoints: Entrypoints::default(),
+        fixture_set_hash: [2; 32],
+        update: UpdatePolicy {
+            channel: "stable".to_owned(),
+            downgrade: DowngradePolicy::Reject,
+        },
+    };
+    assert!(manifest.validate().is_ok());
+
+    manifest.schema = MANIFEST_SCHEMA.to_owned();
+    assert_eq!(
+        manifest.validate(),
+        Err(WireError::Schema("manifest v1 capture declarations"))
+    );
+    manifest.schema = MANIFEST_SCHEMA_V2.to_owned();
+    manifest.captures.as_mut().unwrap()[0].maximum_sample_rate_hz = 99;
+    assert_eq!(
+        manifest.validate(),
+        Err(WireError::Schema("capture sample-rate range"))
+    );
+    manifest.captures.as_mut().unwrap()[0].maximum_sample_rate_hz = 256;
+    manifest.captures.as_mut().unwrap()[0].stream = "undeclared".to_owned();
+    assert_eq!(
+        manifest.validate(),
+        Err(WireError::Schema("capture stream capability"))
+    );
+}
+
+#[test]
 fn schema_hash_is_frozen() {
     assert_eq!(
         ABI_V1_SCHEMA_HASH,
@@ -375,6 +466,10 @@ fn schema_hash_is_frozen() {
         (
             include_bytes!("../schema/manifest-v1.cddl"),
             MANIFEST_V1_SCHEMA_HASH,
+        ),
+        (
+            include_bytes!("../schema/manifest-v2.cddl"),
+            MANIFEST_V2_SCHEMA_HASH,
         ),
         (
             include_bytes!("../schema/fixtures-v1.cddl"),

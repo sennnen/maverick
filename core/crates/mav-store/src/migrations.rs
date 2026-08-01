@@ -12,7 +12,7 @@ use rusqlite::{params, Connection};
 
 /// The schema version this build understands. Opening a database recorded as newer than this is
 /// refused rather than migrated.
-pub const CURRENT_SCHEMA_VERSION: i64 = 5;
+pub const CURRENT_SCHEMA_VERSION: i64 = 6;
 
 pub enum Migration {
     Sql(&'static str),
@@ -103,6 +103,31 @@ pub const MIGRATIONS: &[Migration] = &[
     UPDATE sample SET stream = 20 WHERE stream = 1;
     DELETE FROM nightly_variability;
     DELETE FROM daily_snapshot;
+    ",
+    ),
+    // v6 — immutable native ECG model output plus its rebuildable text-first interpretation.
+    // The evidence row is append-only; the result may be replaced when interpretation wording or
+    // confidence policy changes without re-running the native model.
+    Migration::Sql(
+        "
+    CREATE TABLE ecg_inference (
+        capture_id   INTEGER PRIMARY KEY,
+        device_id    INTEGER NOT NULL,
+        started_ns   INTEGER NOT NULL,
+        evidence_json TEXT   NOT NULL,
+        created_ns   INTEGER NOT NULL
+    );
+    CREATE INDEX ecg_inference_history
+        ON ecg_inference (device_id, started_ns DESC);
+
+    CREATE TABLE ecg_result (
+        capture_id  INTEGER PRIMARY KEY,
+        device_id   INTEGER NOT NULL,
+        started_ns  INTEGER NOT NULL,
+        result_json TEXT    NOT NULL
+    );
+    CREATE INDEX ecg_result_history
+        ON ecg_result (device_id, started_ns DESC);
     ",
     ),
 ];

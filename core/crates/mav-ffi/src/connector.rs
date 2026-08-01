@@ -131,6 +131,16 @@ pub struct ConnectorDeviceFamily {
     pub service_uuids: Vec<String>,
 }
 
+/// A user-initiated captured stream. Inspection reports signed maximum authority; the runtime
+/// query returns only declarations active for the connected hardware session.
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct ConnectorCaptureCapability {
+    pub stream: String,
+    pub unit: String,
+    pub minimum_sample_rate_hz: u16,
+    pub maximum_sample_rate_hz: u16,
+}
+
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ConnectorInspection {
     pub artifact_digest: Vec<u8>,
@@ -141,6 +151,7 @@ pub struct ConnectorInspection {
     pub description: String,
     pub publisher_key_id: String,
     pub capabilities: Vec<String>,
+    pub captures: Vec<ConnectorCaptureCapability>,
     pub permissions: Vec<String>,
     pub device_families: Vec<ConnectorDeviceFamily>,
     pub state_schema: u32,

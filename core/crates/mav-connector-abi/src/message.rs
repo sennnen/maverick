@@ -298,6 +298,18 @@ pub enum EventBody {
         #[n(0)]
         low_power: bool,
     },
+    /// Begin a host-owned captured-waveform flow for a signed and session-active stream.
+    #[n(28)]
+    CaptureStart {
+        #[n(0)]
+        stream: String,
+    },
+    /// Stop a previously started captured-waveform flow.
+    #[n(29)]
+    CaptureStop {
+        #[n(0)]
+        stream: String,
+    },
 }
 
 fn logical_id(value: &str, field: &'static str) -> Result<(), WireError> {
@@ -331,6 +343,9 @@ impl Validate for EventBody {
             | Self::SamplesRejected { .. }
             | Self::StateMigrationCommitted { .. }
             | Self::PowerModeChanged { .. } => Ok(()),
+            Self::CaptureStart { stream } | Self::CaptureStop { stream } => {
+                logical_id(stream, "capture event stream")
+            }
             Self::Cancel { reason } => reason.validate(),
             Self::RestoreState { bytes: value } => {
                 bounds::bytes(value, bounds::MAX_STATE_BYTES, "restore state bytes")

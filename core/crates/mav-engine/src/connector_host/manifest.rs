@@ -95,6 +95,15 @@ impl ConnectorHost {
                         "connector declared an unsigned stream capability",
                     ));
                 }
+                if self
+                    .active_capture
+                    .as_ref()
+                    .is_some_and(|active| !streams.contains(active))
+                {
+                    return Err(host_state(
+                        "connector cannot withdraw an actively captured stream",
+                    ));
+                }
             }
             ActionBody::EmitSamples { samples, .. } => {
                 for sample in samples {

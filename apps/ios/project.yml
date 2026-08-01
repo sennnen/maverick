@@ -83,6 +83,8 @@ targets:
         buildPhase: resources
       - path: ../../fixtures/connectors/whoop5_parity_v1.expected.json
         buildPhase: resources
+      - path: ../../fixtures/ecg/corpus
+        buildPhase: resources
     dependencies:
       - target: Maverick
     settings:
