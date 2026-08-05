@@ -74,6 +74,18 @@ enum MavStageState: String {
   case unavailable
 }
 
+/// How many of one signal's models this device can run, as the core counted them.
+struct MavSignalCoverage: Equatable {
+  let total: Int
+  let runnable: Int
+}
+
+/// One plan, as the engine consumes it: the per-model rows and the core's own per-signal totals.
+struct MavPlan: Equatable {
+  var stages: [MavPlannedStage] = []
+  var coverage: [String: MavSignalCoverage] = [:]
+}
+
 /// One plan row, decoupled from the generated uniffi record so the reducer is testable without a
 /// compiled core.
 struct MavPlannedStage: Equatable {
@@ -92,8 +104,13 @@ enum MavSignalReducer {
   /// How many times one stage is retried before a surface offers the wearer the button.
   static let retryBudget = 3
 
+  /// - Parameter coverage: the core's own per-signal totals, keyed by signal name. The core
+  ///   computes these on every plan precisely so two platforms do not each write the same
+  ///   counting loop; a signal absent from the map falls back to counting its own group, which is
+  ///   what a test that hands in stages without coverage relies on.
   static func reduce(
     stages: [MavPlannedStage],
+    coverage: [String: MavSignalCoverage] = [:],
     completedAtMs: [String: Int64] = [:],
     invalidated: Set<String> = [],
     failures: [String: Int] = [:],
@@ -110,6 +127,7 @@ enum MavSignalReducer {
     }
     return order.map { name in
       let group = grouped[name] ?? []
+      let counts = coverage[name]
       return MavSignal(
         name: name,
         state: state(
@@ -120,8 +138,8 @@ enum MavSignalReducer {
           deferred: deferred,
           missingPermission: missingPermission
         ),
-        total: group.count,
-        runnable: group.filter { $0.state != .unavailable }.count
+        total: counts?.total ?? group.count,
+        runnable: counts?.runnable ?? group.filter { $0.state != .unavailable }.count
       )
     }
   }

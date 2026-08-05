@@ -8,10 +8,8 @@ import com.sennnen.mav.MavSnapshot
 import com.sennnen.mav.ble.LiveState
 import com.sennnen.mav.connector.AndroidConnectorManager
 import com.sennnen.mav.data.MetricSeriesRow
-import com.sennnen.mav.ml.MavAnalyticsEngine
+import com.sennnen.mav.ml.MavAnalytics
 import com.sennnen.mav.ml.MavAnalyticsSnapshot
-import com.sennnen.mav.ml.MavCoreAnalyticsRuntime
-import com.sennnen.mav.ml.MavModelRunner
 import com.sennnen.mav.ml.MavRunMode
 import com.sennnen.mav.data.SleepSession
 import com.sennnen.mav.data.WorkoutRow
@@ -91,25 +89,27 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
      */
     val analytics: StateFlow<MavAnalyticsSnapshot> = mutableAnalytics.asStateFlow()
 
-    private var engine: MavAnalyticsEngine? = null
     private var analyticsJob: Job? = null
+    private var mirroring: Job? = null
 
     /**
-     * Start an analytics pass, if the runtime is open.
+     * Start an analytics pass.
      *
-     * Cancels nothing: [MavAnalyticsEngine] holds a single-pass lock and a second caller returns
-     * immediately, so a resume during a background pass is free rather than a race.
+     * The engine is the process's, not this view model's: a background window and a foreground
+     * open can overlap, and only one engine means the second caller is turned away by the
+     * single-pass lock rather than running the zoo twice. It also survives a rotation, so the
+     * models the runner has loaded do too.
+     *
+     * Cancels nothing, and blocks nothing: a pass already in flight returns immediately.
      */
     fun runAnalytics(mode: MavRunMode) {
-        val runtime = MavRepo.sharedRuntime ?: return
-        val engine = engine ?: MavAnalyticsEngine(
-            runtime = MavCoreAnalyticsRuntime(runtime),
-            runner = MavModelRunner(getApplication()),
-        ).also {
-            this.engine = it
-            // Mirror the engine's own state onto the view model's flow rather than exposing the
-            // engine: the UI should not be able to start a pass by touching a state holder.
-            viewModelScope.launch { it.snapshot.collect { snapshot -> mutableAnalytics.value = snapshot } }
+        val engine = runCatching { MavAnalytics.engine(getApplication()) }.getOrNull() ?: return
+        if (mirroring == null) {
+            // Mirror the engine's own state onto this flow rather than exposing the engine: the
+            // UI should not be able to start a pass by touching a state holder.
+            mirroring = viewModelScope.launch {
+                engine.snapshot.collect { snapshot -> mutableAnalytics.value = snapshot }
+            }
         }
         if (analyticsJob?.isActive == true) return
         analyticsJob = viewModelScope.launch(Dispatchers.Default) {
@@ -117,27 +117,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * The engine a background worker should use.
-     *
-     * Shares this view model's instance when the app is alive, so a background pass and a
-     * foreground pass contend for the same single-pass lock rather than running the zoo twice.
-     * When the process was started by WorkManager with no UI, there is no view model to share
-     * and a standalone engine over the same runtime is built instead.
-     */
-    fun analyticsEngine(context: android.content.Context): MavAnalyticsEngine {
-        engine?.let { return it }
-        val runtime = MavRepo.sharedRuntime ?: throw IllegalStateException("core runtime is not open")
-        return MavAnalyticsEngine(
-            runtime = MavCoreAnalyticsRuntime(runtime),
-            runner = MavModelRunner(context),
-        ).also { engine = it }
-    }
-
     /** Clear the retry budgets and run again, for the retry affordance on a failed signal. */
     fun retryAnalytics() {
-        engine?.resetRetries()
+        MavAnalytics.opened()?.resetRetries()
         runAnalytics(MavRunMode.INTERACTIVE)
+    }
+
+    /**
+     * Drop whatever the model runner is holding.
+     *
+     * Called when the app stops. A loaded interpreter costs far more resident than its asset costs
+     * on disk — `pulse_ppg` measured 436 MB from a 57 MB file — and a backgrounded process holding
+     * that is the first one the system kills.
+     */
+    fun releaseAnalyticsResources() {
+        MavAnalytics.opened()?.releaseRunnerCache()
     }
 
     /** Generic source id used until stored read models carry the active connector identity. */

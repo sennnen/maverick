@@ -36,8 +36,24 @@ enum MavModelRunnerError: Error, Equatable, LocalizedError {
 /// constant and `tools/check_model_assets.py` proves the shipped package matches it. The runner
 /// reports that constant with each result; core refuses anything it does not admit.
 final class MavModelRunner {
+  /// How many models may stay loaded at once.
+  ///
+  /// A count rather than a byte budget, which is what the Android twin uses: `Debug`'s native
+  /// heap figure gives that runner a measured per-model cost, and Core ML offers no equivalent —
+  /// a compiled model's residency is inside the framework and the package size on disk
+  /// understates it badly. So the bound here is the one honest number available, and it is small
+  /// because the models that chain together in a pass are few: an encoder and the heads that
+  /// read it, which is three.
+  ///
+  /// It is a bound on *idle* models. The one being run is never evicted, so a single model
+  /// larger than the whole budget still runs.
+  static let maxResident = 4
+
   private let bundle: Bundle
   private var loaded: [String: MLModel] = [:]
+  /// Least-recently-used first. Kept beside `loaded` rather than as a timestamp on each entry so
+  /// eviction is a `removeFirst` instead of a scan.
+  private var recency: [String] = []
   private let lock = NSLock()
 
   init(bundle: Bundle = .main) {
@@ -53,6 +69,7 @@ final class MavModelRunner {
     lock.lock()
     defer { lock.unlock() }
     if let cached = loaded[slug] {
+      touch(slug)
       return cached
     }
     guard let url = bundle.url(forResource: slug, withExtension: "mlmodelc") else {
@@ -67,7 +84,32 @@ final class MavModelRunner {
     let model = try MLModel(contentsOf: url, configuration: configuration)
     try assertContract(model: model, entry: entry)
     loaded[slug] = model
+    touch(slug)
+    evictIdle(keeping: slug)
     return model
+  }
+
+  /// How many models are resident. Read by the tests that prove the bound holds.
+  var residentCount: Int {
+    lock.lock()
+    defer { lock.unlock() }
+    return loaded.count
+  }
+
+  /// Move one model to the most-recently-used end. Caller holds `lock`.
+  private func touch(_ slug: String) {
+    recency.removeAll { $0 == slug }
+    recency.append(slug)
+  }
+
+  /// Drop least-recently-used models until the resident count is back within budget. Caller
+  /// holds `lock`.
+  private func evictIdle(keeping: String) {
+    while loaded.count > Self.maxResident {
+      guard let oldest = recency.first(where: { $0 != keeping }) else { return }
+      recency.removeAll { $0 == oldest }
+      loaded.removeValue(forKey: oldest)
+    }
   }
 
   /// Run one inference. Inputs are keyed by the contract's tensor names; outputs come back the
@@ -132,11 +174,16 @@ final class MavModelRunner {
     return entry.admittedSHA256
   }
 
-  /// Release the cached models. Called when the app backgrounds: a compiled Core ML model can
-  /// hold tens of megabytes resident, and Pulse-PPG alone is 55 MB on disk.
+  /// Release every cached model.
+  ///
+  /// Called when the app leaves the foreground and when the system warns about memory —
+  /// `MavAnalyticsModel.releaseResources` is the one caller, behind the engine's queue so this
+  /// never lands on a model mid-inference. A compiled Core ML model holds far more resident than
+  /// its package costs on disk, and Pulse-PPG alone is 55 MB of that disk.
   func releaseCache() {
     lock.lock()
     loaded.removeAll()
+    recency.removeAll()
     lock.unlock()
   }
 

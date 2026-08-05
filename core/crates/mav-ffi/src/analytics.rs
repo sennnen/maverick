@@ -22,7 +22,7 @@
 //! against the wrong tensors.
 
 use crate::{FfiError, MavRuntime};
-use mav_analytic::model_zoo::pipeline::{pipeline_of, ProfileField, COMPOSITES};
+use mav_analytic::model_zoo::pipeline::{ProfileField, COMPOSITES, PIPELINE};
 use mav_analytic::model_zoo::{ppg, ModelId, NamedTensor};
 use mav_engine::analytics::{
     coverage, fingerprint, AnalyticsScheduler, CacheEntry, Evidence, RunMode, StageState, Unmet,
@@ -60,7 +60,18 @@ pub struct ModelStageReport {
     /// False when this model's output may be computed and stored but not rendered as a value.
     /// A surface that ignores this would present the sleep staging vocabulary as sleep stages.
     pub displayable: bool,
-    /// Why this model needs what it needs, for diagnostics and the report bundle.
+}
+
+/// Why one model needs what it needs, for diagnostics and the report bundle.
+///
+/// A call of its own rather than a field on [`ModelStageReport`]. The notes are constants — they
+/// come from the pipeline table and cannot change between passes — and carrying them on the plan
+/// meant rebuilding three and a half kilobytes of prose, and doing two linear slug lookups per
+/// model to find it, on every foreground resume and every background window. A surface that wants
+/// them asks once.
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct ModelNote {
+    pub model_slug: String,
     pub note: String,
 }
 
@@ -407,6 +418,18 @@ impl MavRuntime {
             .unwrap_or_default())
     }
 
+    /// Why each model needs what it needs. Constant for a build, so a surface reads it once
+    /// rather than receiving it again with every plan.
+    pub fn model_notes(&self) -> Vec<ModelNote> {
+        PIPELINE
+            .iter()
+            .map(|entry| ModelNote {
+                model_slug: entry.model.contract().slug.to_owned(),
+                note: entry.note.to_owned(),
+            })
+            .collect()
+    }
+
     /// The six wrapper archives and the cores that carry their parameters.
     pub fn composite_models(&self) -> Vec<CompositeModelReport> {
         COMPOSITES
@@ -425,10 +448,6 @@ impl MavRuntime {
 }
 
 fn stage_report(stage: mav_engine::analytics::PlannedStage) -> ModelStageReport {
-    let note = ModelId::from_slug(&stage.model)
-        .and_then(pipeline_of)
-        .map(|entry| entry.note.to_owned())
-        .unwrap_or_default();
     let mut report = ModelStageReport {
         model_slug: stage.model,
         rank: stage.rank,
@@ -441,7 +460,6 @@ fn stage_report(stage: mav_engine::analytics::PlannedStage) -> ModelStageReport 
         blocking_model: None,
         missing_preprocessing: None,
         displayable: stage.displayable,
-        note,
     };
     match stage.state {
         StageState::Ready => report.state = "ready".to_owned(),

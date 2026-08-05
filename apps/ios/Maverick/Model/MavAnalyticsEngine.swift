@@ -112,19 +112,20 @@ final class MavAnalyticsEngine: @unchecked Sendable {
       if outcome.completed == 0 && outcome.failed == 0 { break }
     }
 
-    let stages = (try? runtime.plan(
+    let plan = (try? runtime.plan(
       deviceID: deviceID,
       atMs: now,
       mode: mode,
       profileFields: runtime.profileFields()
-    )) ?? []
+    )) ?? MavPlan()
     let completedAt = (try? runtime.cacheCompletedAt()) ?? [:]
-    recordFailures(stages: stages, failed: failed)
+    recordFailures(stages: plan.stages, failed: failed)
 
     state.publish(
       MavAnalyticsSnapshot(
         signals: MavSignalReducer.reduce(
-          stages: stages,
+          stages: plan.stages,
+          coverage: plan.coverage,
           completedAtMs: completedAt,
           failures: failures,
           deferred: mode == .deferred && failed > 0,
@@ -154,6 +155,15 @@ final class MavAnalyticsEngine: @unchecked Sendable {
   /// Forget every retry budget, so a wearer tapping retry gets a genuine fresh attempt.
   func resetRetries() {
     queue.async { [weak self] in self?.failures.removeAll() }
+  }
+
+  /// Drop whatever the runner is holding resident.
+  ///
+  /// Queued behind any pass in flight rather than done immediately: releasing a model out from
+  /// under an inference is at best a reload and at worst a fault in Core ML's own memory. The
+  /// caller is a lifecycle transition, so a few hundred milliseconds late is free.
+  func releaseRunnerCache() {
+    queue.async { [runner] in runner.releaseCache() }
   }
 
   /// Bound on drain rounds in one pass. The core's queue is bounded at 32 and each round empties
@@ -211,7 +221,7 @@ protocol MavAnalyticsRuntime {
     atMs: Int64,
     mode: MavAnalyticsEngine.RunMode,
     profileFields: [String]
-  ) throws -> [MavPlannedStage]
+  ) throws -> MavPlan
   func profileFields() -> [String]
   /// When each model last answered, from the core's persisted cache.
   func cacheCompletedAt() throws -> [String: Int64]

@@ -11,6 +11,7 @@ struct MavTodayView: View {
   @EnvironmentObject private var model: AppModel
   @EnvironmentObject private var profile: ProfileStore
   @EnvironmentObject private var repo: Repository
+  @EnvironmentObject private var analytics: MavAnalyticsModel
   @State private var workouts: [WorkoutRow] = []
 
   private let narrative: MavNarrativeProviding = MavStubNarrativeProvider()
@@ -63,6 +64,26 @@ struct MavTodayView: View {
           }
         }
         .buttonStyle(.plain)
+        // Only once an engine exists. Before that the screen can only say "nothing has run",
+        // which is a link to an apology rather than to a surface.
+        if analytics.isAttached {
+          MavDivider()
+          NavigationLink {
+            MavAnalyticsView()
+          } label: {
+            MavRow(
+              title: NSLocalizedString("analytics.title", comment: ""),
+              // The row carries the live coverage, so it says something about this wearer's
+              // phone rather than only naming a destination.
+              detail: MavSignalCopy.rowDetail(analytics.snapshot)
+            ) {
+              Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(MavTheme.inkSecondary)
+            }
+          }
+          .buttonStyle(.plain)
+        }
         MavDivider()
         NavigationLink {
           MavDiagnosticsView()

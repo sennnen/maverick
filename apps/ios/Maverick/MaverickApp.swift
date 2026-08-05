@@ -11,6 +11,7 @@ struct MaverickApp: App {
   @StateObject private var health = HealthKitBridge()
   @StateObject private var connectors = ConnectorManager()
   @AppStorage(AppearanceMode.storageKey) private var appearanceRaw = AppearanceMode.system.rawValue
+  @Environment(\.scenePhase) private var scenePhase
 
   init() {
     // BGTaskScheduler refuses a registration made after launch finishes, so this cannot move
@@ -44,16 +45,7 @@ struct MaverickApp: App {
         }
       }
         .onAppear {
-        if let runtime = AuraZoneMath.runtime {
-          analytics.attach(
-            MavAnalyticsEngine(
-              runtime: MavCoreAnalyticsRuntime(runtime: runtime),
-              runner: MavModelRunner()
-            )
-          )
-          // The wearer just opened the app, so this pass is allowed to be expensive.
-          analytics.refresh()
-        }
+        attachAnalytics()
         // Ask for the background windows on every launch: iOS drops pending requests when the
         // app is force-quit, and re-submitting is the only way back.
         MavBackgroundAnalytics.schedule()
@@ -102,5 +94,43 @@ struct MaverickApp: App {
         #endif
       }
     }
+    // The whole of the analytics lifecycle, in one place.
+    //
+    // `.onAppear` fires once, at launch, and a resume from the app switcher is not a launch. A
+    // wearer who left the app three hours ago and came back would otherwise be reading a
+    // three-hour-old pass with no way to tell — Android has run a pass on every `onResume` since
+    // this landed, and this is the missing half of that parity.
+    .onChange(of: scenePhase) { _, phase in
+      switch phase {
+      case .active:
+        attachAnalytics()
+      case .background:
+        // Both halves of leaving: ask for the next window while the app is still alive to ask,
+        // and stop holding models the wearer is not waiting on. A backgrounded app holding a
+        // compiled model set is the first thing the system reclaims.
+        MavBackgroundAnalytics.schedule()
+        analytics.releaseResources()
+      default:
+        break
+      }
+    }
+  }
+
+  /// Build the engine if it does not exist yet, then run an interactive pass.
+  ///
+  /// Safe to call repeatedly: `attach` keeps the first engine, so a resume reuses the retry
+  /// budgets and the published snapshot rather than starting from nothing. When the core is not
+  /// open yet there is nothing to attach to and the next activation tries again.
+  private func attachAnalytics() {
+    guard let runtime = AuraZoneMath.runtime else { return }
+    analytics.attach {
+      MavAnalyticsEngine(
+        runtime: MavCoreAnalyticsRuntime(runtime: runtime),
+        runner: MavModelRunner()
+      )
+    }
+    // The wearer is looking at the screen, so this pass is allowed to be expensive. A pass
+    // already in flight turns this one away rather than queueing it.
+    analytics.refresh()
   }
 }

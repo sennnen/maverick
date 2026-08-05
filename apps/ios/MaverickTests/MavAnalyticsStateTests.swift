@@ -136,6 +136,42 @@ final class MavAnalyticsStateTests: XCTestCase {
     XCTAssertEqual(signals.first?.runnable, 1)
   }
 
+  /// The core counts coverage on every plan so that two platforms do not each write the same
+  /// loop. This proves the platform actually reads it rather than quietly recounting: the figures
+  /// below are deliberately not what counting the group would produce.
+  func testTheCoresOwnCoverageIsUsedRatherThanRecounted() {
+    let signals = MavSignalReducer.reduce(
+      stages: [stage("a", signal: "s", state: .cached)],
+      coverage: ["s": MavSignalCoverage(total: 9, runnable: 4)]
+    )
+    XCTAssertEqual(signals.first?.total, 9)
+    XCTAssertEqual(signals.first?.runnable, 4)
+  }
+
+  /// Every signal the core can plan has a written-out name. Title-casing the slug instead gives
+  /// "Daytime Hrv" and "Ppg Foundation", which is how a product surface starts looking generated.
+  func testEverySignalHasCopyRatherThanATitleCasedSlug() {
+    let planned = [
+      "activity", "energy_expenditure", "step_eligibility", "awake_heart_rate", "daytime_hrv",
+      "workout_heart_rate", "cardiovascular", "hypertension_risk", "sleep", "illness_risk",
+      "cycle_awareness", "ppg_foundation",
+    ]
+    for slug in planned {
+      let title = MavSignalCopy.title(slug)
+      XCTAssertFalse(
+        title.contains("_"),
+        "\(slug) fell through to the derived form, so its copy is missing"
+      )
+      XCTAssertNotEqual(
+        title,
+        slug.replacingOccurrences(of: "_", with: " ").capitalized,
+        "\(slug) has no written-out name"
+      )
+    }
+    // An unknown slug is still legible rather than blank.
+    XCTAssertEqual(MavSignalCopy.title("a_new_signal"), "A New Signal")
+  }
+
   /// Signals keep the order the core planned them in. A surface that reshuffled between passes
   /// would move a card out from under a finger mid-tap.
   func testSignalOrderFollowsThePlanRatherThanADictionary() {

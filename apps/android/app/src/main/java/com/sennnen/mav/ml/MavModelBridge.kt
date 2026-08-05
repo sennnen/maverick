@@ -46,6 +46,12 @@ class MavModelBridge(
         fun run(slug: String, inputs: Map<String, FloatArray>): Map<String, FloatArray>
 
         fun loadedSha256(slug: String): String
+
+        /**
+         * Drop every model held resident. Cheap to call; a runner holding nothing does nothing.
+         * Never called with an inference in flight — the engine takes the pass lock first.
+         */
+        fun releaseCache()
     }
 
     /**

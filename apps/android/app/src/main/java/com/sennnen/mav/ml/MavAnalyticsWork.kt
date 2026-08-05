@@ -11,6 +11,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.sennnen.mav.data.MavCoreRuntime
 import java.util.concurrent.TimeUnit
 
 /**
@@ -34,7 +35,13 @@ class MavAnalyticsWorker(
 ) : CoroutineWorker(context, parameters) {
 
     override suspend fun doWork(): Result {
-        val engine = provider?.invoke(applicationContext) ?: return Result.success()
+        // The process's one engine, whether or not an activity exists. Sharing it is what makes a
+        // background pass and a foreground pass contend for the same single-pass lock instead of
+        // running the zoo twice — and reaching it through a holder rather than a static the
+        // activity fills in is what makes a cold, UI-less process actually do the work. It used
+        // to find a null provider here and return success without running a model.
+        val engine = runCatching { MavAnalytics.engine(applicationContext) }
+            .getOrElse { return Result.failure() }
         val deviceId = inputData.getLong(KEY_DEVICE_ID, DEFAULT_DEVICE_ID).toULong()
         return when (engine.runPass(deviceId, MavRunMode.DEFERRED)) {
             MavAnalyticsEngine.Outcome.COMPLETED -> Result.success()
@@ -54,17 +61,6 @@ class MavAnalyticsWorker(
         const val PRECOMPUTE_NAME = "mav-analytics-precompute"
         const val KEY_DEVICE_ID = "device_id"
         const val DEFAULT_DEVICE_ID = 1L
-
-        /**
-         * How the worker reaches the engine.
-         *
-         * WorkManager constructs workers itself, so the engine has to be reachable statically.
-         * Set once from the application; left null in unit tests, where [doWork] succeeds
-         * without touching a runtime.
-         */
-        @Volatile
-        @JvmStatic
-        var provider: ((Context) -> MavAnalyticsEngine)? = null
 
         /**
          * The constraints every background pass runs under.

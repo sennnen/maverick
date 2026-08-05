@@ -1,10 +1,12 @@
 package com.sennnen.mav
 
 import com.sennnen.mav.ml.MavPlannedStage
+import com.sennnen.mav.ml.MavSignalCoverage
 import com.sennnen.mav.ml.MavSignalReducer
 import com.sennnen.mav.ml.MavSignalState
 import com.sennnen.mav.ml.MavStageState
 import com.sennnen.mav.ml.MavUnavailable
+import com.sennnen.mav.ui.mav.MavSignalCopy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -201,5 +203,38 @@ class AnalyticsStateTest {
         )
         assertEquals(2, signals.single().total)
         assertEquals(1, signals.single().runnable)
+    }
+
+    /**
+     * Every signal the core can plan has written-out copy. Title-casing the slug instead gives
+     * "Daytime Hrv" and "Ppg Foundation", which is how a product surface starts looking generated.
+     * The list is `Signal::name` in `core/crates/mav-analytic/src/model_zoo/pipeline.rs`; the iOS
+     * twin of this test is `testEverySignalHasCopyRatherThanATitleCasedSlug`.
+     */
+    @Test
+    fun every_signal_the_core_can_plan_has_a_written_out_name() {
+        val planned = listOf(
+            "activity", "energy_expenditure", "step_eligibility", "awake_heart_rate",
+            "daytime_hrv", "workout_heart_rate", "cardiovascular", "hypertension_risk",
+            "sleep", "illness_risk", "cycle_awareness", "ppg_foundation",
+        )
+        for (slug in planned) {
+            assertTrue("$slug has no written-out name", MavSignalCopy.knows(slug))
+        }
+    }
+
+    /**
+     * The core counts coverage on every plan so that two platforms do not each write the same
+     * loop. This proves the platform actually reads it rather than quietly recounting: the figures
+     * below are deliberately not what counting the group would produce.
+     */
+    @Test
+    fun the_cores_own_coverage_is_used_rather_than_recounted() {
+        val signals = MavSignalReducer.reduce(
+            listOf(stage("a", signal = "s", state = MavStageState.CACHED)),
+            coverage = mapOf("s" to MavSignalCoverage(total = 9, runnable = 4)),
+        )
+        assertEquals(9, signals.single().total)
+        assertEquals(4, signals.single().runnable)
     }
 }

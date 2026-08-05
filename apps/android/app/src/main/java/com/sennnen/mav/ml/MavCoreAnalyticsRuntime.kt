@@ -41,8 +41,15 @@ class MavCoreAnalyticsRuntime(private val runtime: MavRuntime) : MavAnalyticsRun
         atMs: Long,
         mode: MavRunMode,
         profileFields: List<String>,
-    ): List<MavPlannedStage> =
-        runtime.analyticsPlan(deviceId, atMs, mode.wire, profileFields).stages.map(::stageOf)
+    ): MavPlan {
+        val report = runtime.analyticsPlan(deviceId, atMs, mode.wire, profileFields)
+        return MavPlan(
+            stages = report.stages.map(::stageOf),
+            coverage = report.coverage.associate {
+                it.signal to MavSignalCoverage(it.total.toInt(), it.runnable.toInt())
+            },
+        )
+    }
 
     override fun profileFields(): List<String> = runtime.wearerProfileFields()
 

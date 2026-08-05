@@ -11,7 +11,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import com.sennnen.mav.ml.MavAnalyticsWorker
-import com.sennnen.mav.ml.MavRunMode
 import com.sennnen.mav.ml.MavUsagePattern
 import com.sennnen.mav.ui.AppViewModel
 import com.sennnen.mav.ui.AppearancePrefs
@@ -31,8 +30,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         AppearancePrefs.load(this)
         requestBluetoothPermissions()
-        // WorkManager builds its own workers, so the engine has to be reachable statically.
-        MavAnalyticsWorker.provider = { model.analyticsEngine(it) }
         MavAnalyticsWorker.schedulePeriodic(this)
         model.connectors.handleIntent(intent)
         enableEdgeToEdge()
@@ -62,6 +59,14 @@ class MainActivity : ComponentActivity() {
         MavAnalyticsWorker.precomputeDelayMinutes(pattern, hourNow)?.let { delay ->
             MavAnalyticsWorker.schedulePrecompute(this, delay)
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // `onStop`, not `onPause`: a partially covered activity is still on screen, and dropping
+        // the models behind a dialog would reload them the moment it closed. Queued behind any
+        // pass in flight, so this never releases a model mid-inference.
+        model.releaseAnalyticsResources()
     }
 
     /**

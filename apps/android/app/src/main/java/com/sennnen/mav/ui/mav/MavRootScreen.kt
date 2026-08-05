@@ -60,6 +60,14 @@ fun MavRootScreen(viewModel: AppViewModel, onChooseConnectorFile: () -> Unit) {
         val ecgCapture by viewModel.connectors.ecgCapture.collectAsState()
         val ecgResults by viewModel.connectors.ecgResults.collectAsState()
         val ecgError by viewModel.connectors.ecgError.collectAsState()
+        val analytics by viewModel.analytics.collectAsState()
+        // Null until a pass has produced signals, which is what hides the Today row: a link to a
+        // screen that can only say "nothing has run" is a link to an apology.
+        val analyticsSummary = if (analytics.signals.isEmpty() && !analytics.working) {
+            null
+        } else {
+            MavSignalCopy.rowDetail(context, analytics)
+        }
 
         var cycleStarts by remember { mutableStateOf(MavCycleLog.load(context)) }
         var journalAnswers by remember {
@@ -211,6 +219,11 @@ fun MavRootScreen(viewModel: AppViewModel, onChooseConnectorFile: () -> Unit) {
 
             is MavDestination.Reports -> MavReportsScreen(
                 days = effectiveDays,
+                onBack = { shell.destination = MavDestination.None },
+            )
+
+            is MavDestination.Analytics -> MavAnalyticsScreen(
+                viewModel = viewModel,
                 onBack = { shell.destination = MavDestination.None },
             )
 
@@ -394,6 +407,8 @@ fun MavRootScreen(viewModel: AppViewModel, onChooseConnectorFile: () -> Unit) {
                                 onOpenMetric = { shell.destination = MavDestination.Metric(it.id) },
                                 onOpenReports = { shell.destination = MavDestination.Reports },
                                 onOpenDiagnostics = { shell.destination = MavDestination.Diagnostics },
+                                analyticsSummary = analyticsSummary,
+                                onOpenAnalytics = { shell.destination = MavDestination.Analytics },
                             )
 
                             MavTab.VITALS -> MavVitalsScreen(

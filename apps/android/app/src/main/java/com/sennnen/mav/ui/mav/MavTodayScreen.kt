@@ -22,12 +22,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sennnen.mav.R
 import com.sennnen.mav.data.WorkoutRow
 import uniffi.mav_ffi.DailySnapshotReport
 import java.time.Instant
@@ -52,6 +54,13 @@ fun MavTodayScreen(
     onOpenMetric: (MavMetric) -> Unit,
     onOpenReports: () -> Unit,
     onOpenDiagnostics: () -> Unit,
+    /**
+     * The on-device analysis surface, and the live line the row shows for it. Null when no
+     * analytics engine exists yet: linking to a screen that can only say "nothing has run" is a
+     * link to an apology.
+     */
+    analyticsSummary: String? = null,
+    onOpenAnalytics: () -> Unit = {},
 ) {
     val narrative = MavStubNarrativeProvider
     MavTabScroll {
@@ -82,6 +91,16 @@ fun MavTodayScreen(
         MavSectionHeader("More")
         MavTile(padded = false) {
             MavNavRow("Weekly report", "Every day the core has scored", onOpenReports)
+            if (analyticsSummary != null) {
+                MavDivider()
+                // The row carries the live coverage, so it says something about this wearer's
+                // phone rather than only naming a destination.
+                MavNavRow(
+                    stringResource(R.string.analytics_title),
+                    analyticsSummary,
+                    onOpenAnalytics,
+                )
+            }
             MavDivider()
             MavNavRow("Diagnostics", "What the core recorded, and any errors", onOpenDiagnostics)
         }

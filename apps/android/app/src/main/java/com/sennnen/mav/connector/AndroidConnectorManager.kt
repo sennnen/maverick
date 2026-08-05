@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import com.sennnen.mav.BuildConfig
+import com.sennnen.mav.data.MavCoreRuntime
 import com.sennnen.mav.ecg.MavEcgClassifier
 import java.io.File
 import java.net.HttpURLConnection
@@ -681,21 +682,19 @@ class AndroidConnectorManager(
         ecgInferenceInFlight = null
     }
 
+    /**
+     * The process's one open core.
+     *
+     * Constructed by [MavCoreRuntime] rather than here, so a background worker that wakes a cold
+     * process opens the same handle over the same database instead of a second one. The bundled
+     * connector is installed on the first open only, which is what `onFirstOpen` is for.
+     */
     private fun ensureRuntime(): MavRuntime {
         runtime?.let { return it }
-        val database = File(appContext.noBackupFilesDir, "mav.sqlite")
-        return MavRuntime(
-            RuntimeConfig(
-                databasePath = database.absolutePath,
-                timezoneId = TimeZone.getDefault().id,
-                appVersion = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-            ),
-        ).also {
+        return MavCoreRuntime.open(appContext) { installBundledConnector(it) }.also {
             runtime = it
-            it.setTimezoneSpans(TimeZone.getDefault().id, offsetSpans(TimeZone.getDefault()))
             com.sennnen.mav.ui.AuraZoneMath.runtime = it
             com.sennnen.mav.ui.MavRepo.sharedRuntime = it
-            installBundledConnector(it)
         }
     }
 
@@ -741,33 +740,6 @@ class AndroidConnectorManager(
                 revocations = revocations,
             )
         }
-    }
-
-    /**
-     * The platform's own zone database, flattened into the explicit spans the core buckets days by.
-     * Rust holds no tzdata (ADR-024): the phone has a correct and updated one, and it is the only
-     * place the user's zone is genuinely known. Two years back and one forward covers every day the
-     * app can show plus the next transition.
-     */
-    private fun offsetSpans(zone: TimeZone): List<TimezoneSpan> {
-        val day = 86_400L
-        val now = System.currentTimeMillis() / 1000L
-        var cursor = now - 730 * day
-        val end = now + 365 * day
-        val spans = mutableListOf<TimezoneSpan>()
-        var last: Int? = null
-        while (cursor <= end) {
-            val offset = zone.getOffset(cursor * 1000L) / 1000
-            if (offset != last) {
-                spans.add(TimezoneSpan(startUnixSeconds = cursor, offsetSeconds = offset))
-                last = offset
-            }
-            cursor += day
-        }
-        if (spans.isEmpty()) {
-            spans.add(TimezoneSpan(startUnixSeconds = 0L, offsetSeconds = zone.rawOffset / 1000))
-        }
-        return spans
     }
 
     /**

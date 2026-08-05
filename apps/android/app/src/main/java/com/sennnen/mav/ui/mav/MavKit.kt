@@ -522,9 +522,10 @@ fun MavPrimaryButton(title: String, detail: String? = null, onClick: () -> Unit)
 
 /** A quiet secondary action — Material's `TextButton`. */
 @Composable
-fun MavQuietButton(title: String, onClick: () -> Unit) {
+fun MavQuietButton(title: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     TextButton(
         onClick = onClick,
+        modifier = modifier,
         colors = ButtonDefaults.textButtonColors(contentColor = MavTheme.palette.inkSecondary),
     ) {
         Text(title, style = MavType.body)

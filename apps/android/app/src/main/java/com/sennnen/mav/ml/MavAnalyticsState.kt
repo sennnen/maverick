@@ -38,10 +38,11 @@ sealed interface MavSignalState {
     data object Deferred : MavSignalState
 
     /**
-     * A stage failed. [attempts] is how many times it has been tried; [retryable] is false once
-     * the budget is spent, which is what turns a spinner into a retry button.
+     * A stage failed. [model] is the slug that could not run, [attempts] is how many times it has
+     * been tried, and [retryable] is true once the budget is spent, which is what turns a spinner
+     * into a retry button.
      */
-    data class Failed(val message: String, val attempts: Int, val retryable: Boolean) :
+    data class Failed(val model: String, val attempts: Int, val retryable: Boolean) :
         MavSignalState
 
     /** A permission the work needs has not been granted. */
@@ -98,6 +99,10 @@ object MavSignalReducer {
 
     /**
      * @param stages the plan's per-model rows, as the FFI reports them.
+     * @param coverage the core's own per-signal totals, keyed by signal name. The core computes
+     *   these on every plan precisely so two platforms do not each write the same counting loop;
+     *   a signal absent from the map falls back to counting its own group, which is what a test
+     *   that hands in stages without coverage relies on.
      * @param completedAtMs when each model last answered, from the persisted cache.
      * @param invalidated models whose remembered result no longer matches the current inputs.
      * @param failures attempts so far per model, kept by the engine across retries.
@@ -106,18 +111,23 @@ object MavSignalReducer {
      */
     fun reduce(
         stages: List<MavPlannedStage>,
+        coverage: Map<String, MavSignalCoverage> = emptyMap(),
         completedAtMs: Map<String, Long> = emptyMap(),
         invalidated: Set<String> = emptySet(),
         failures: Map<String, Int> = emptyMap(),
         deferred: Boolean = false,
         missingPermission: String? = null,
     ): List<MavSignal> =
+        // `groupBy` keeps first-appearance order, so the surface does not reshuffle between
+        // passes.
         stages.groupBy { it.signal }.map { (name, group) ->
+            val counts = coverage[name]
             MavSignal(
                 name = name,
                 state = stateOf(group, completedAtMs, invalidated, failures, deferred, missingPermission),
-                total = group.size,
-                runnable = group.count { it.state != MavStageState.UNAVAILABLE },
+                total = counts?.total ?: group.size,
+                runnable = counts?.runnable
+                    ?: group.count { it.state != MavStageState.UNAVAILABLE },
             )
         }
 
@@ -143,7 +153,7 @@ object MavSignalReducer {
         val spent = runnable.firstOrNull { (failures[it.model] ?: 0) >= RETRY_BUDGET }
         if (spent != null) {
             return MavSignalState.Failed(
-                message = spent.model,
+                model = spent.model,
                 attempts = failures[spent.model] ?: 0,
                 retryable = true,
             )
@@ -168,6 +178,15 @@ object MavSignalReducer {
 
 /** The states the core's plan reports, as an enum the reducer can switch on exhaustively. */
 enum class MavStageState { READY, BLOCKED, CACHED, UNAVAILABLE }
+
+/** How many of one signal's models this device can run, as the core counted them. */
+data class MavSignalCoverage(val total: Int, val runnable: Int)
+
+/** One plan: the per-model rows, and the core's own per-signal totals. */
+data class MavPlan(
+    val stages: List<MavPlannedStage> = emptyList(),
+    val coverage: Map<String, MavSignalCoverage> = emptyMap(),
+)
 
 /** One plan row, decoupled from the generated uniffi record so the reducer is host-testable. */
 data class MavPlannedStage(

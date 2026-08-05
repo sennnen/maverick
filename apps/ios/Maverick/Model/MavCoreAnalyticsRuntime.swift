@@ -21,13 +21,22 @@ struct MavCoreAnalyticsRuntime: MavAnalyticsRuntime {
     atMs: Int64,
     mode: MavAnalyticsEngine.RunMode,
     profileFields: [String]
-  ) throws -> [MavPlannedStage] {
-    try runtime.analyticsPlan(
+  ) throws -> MavPlan {
+    let report = try runtime.analyticsPlan(
       deviceId: deviceID,
       atMs: atMs,
       mode: mode.rawValue,
       profileFields: profileFields
-    ).stages.map(Self.stage(from:))
+    )
+    var coverage: [String: MavSignalCoverage] = [:]
+    coverage.reserveCapacity(report.coverage.count)
+    for item in report.coverage {
+      coverage[item.signal] = MavSignalCoverage(
+        total: Int(item.total),
+        runnable: Int(item.runnable)
+      )
+    }
+    return MavPlan(stages: try report.stages.map(Self.stage(from:)), coverage: coverage)
   }
 
   func profileFields() -> [String] { (try? runtime.wearerProfileFields()) ?? [] }

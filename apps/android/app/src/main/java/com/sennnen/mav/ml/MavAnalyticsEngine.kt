@@ -1,7 +1,10 @@
 package com.sennnen.mav.ml
 
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,6 +46,13 @@ class MavAnalyticsEngine(
     private val failures = mutableMapOf<String, Int>()
 
     /**
+     * Where housekeeping that must not block its caller runs. Deliberately not a view model's
+     * scope: this engine outlives any one of those, and a release cancelled by a rotation would
+     * leave the models resident it was asked to drop.
+     */
+    private val maintenance = CoroutineScope(dispatcher + SupervisorJob())
+
+    /**
      * Run one pass for [deviceId].
      *
      * Returns what the pass achieved. A pass that could not start because another was already
@@ -73,10 +83,13 @@ class MavAnalyticsEngine(
             // Queue whatever the day's stored optical signal can feed. The core reads the store
             // and builds the tensors; nothing here ever sees a raw sample.
             runCatching { runtime.admitPpgStages(deviceId, now) }
-                .onFailure { return failPass(it) }
+                .onFailure { return failPass() }
 
-            var completed = 0
             var failed = 0
+            // One bridge and one host for the whole pass. Building them per round allocated a
+            // fresh `Host` adapter up to sixteen times for a queue that is usually empty by the
+            // second.
+            val bridge = MavModelBridge(runtime.host(), runner, clock)
             // Drain until the queue is empty or the burst is spent. Each drained encoder can
             // queue its heads inside the core, so "empty" is the real terminating condition
             // rather than a fixed count.
@@ -84,20 +97,20 @@ class MavAnalyticsEngine(
             while (rounds < MAX_ROUNDS) {
                 coroutineContext.ensureActive()
                 rounds += 1
-                val outcome = MavModelBridge(runtime.host(), runner, clock).drain(mode.burst)
-                completed += outcome.completed
+                val outcome = bridge.drain(mode.burst)
                 failed += outcome.failed
                 if (outcome.completed == 0 && outcome.failed == 0) break
             }
 
             val plan = runtime.plan(deviceId, now, mode, runtime.profileFields())
             val cached = runtime.cacheCompletedAt()
-            recordFailures(plan, failed)
+            recordFailures(plan.stages, failed)
             mutable.value = MavAnalyticsSnapshot(
                 signals = MavSignalReducer.reduce(
-                    stages = plan,
+                    stages = plan.stages,
+                    coverage = plan.coverage,
                     completedAtMs = cached,
-                    failures = failures.toMap(),
+                    failures = failureCounts(),
                     deferred = mode == MavRunMode.DEFERRED && failed > 0,
                     missingPermission = permissionMissing,
                 ),
@@ -117,7 +130,7 @@ class MavAnalyticsEngine(
      * exhaust its own budget while the rest keep retrying — the alternative is a single global
      * failure that stops the whole zoo because one artefact is missing.
      */
-    private fun recordFailures(plan: List<MavPlannedStage>, failed: Int) {
+    private fun recordFailures(plan: List<MavPlannedStage>, failed: Int) = synchronized(failures) {
         if (failed <= 0) {
             for (stage in plan.filter { it.state == MavStageState.CACHED }) failures.remove(stage.model)
             return
@@ -127,14 +140,43 @@ class MavAnalyticsEngine(
         }
     }
 
-    private fun failPass(error: Throwable): Outcome {
-        mutable.value = mutable.value.copy(working = false)
-        return Outcome.FAILED
+    /** A stable copy of the retry budgets, for the reducer. Taken under the same monitor. */
+    private fun failureCounts(): Map<String, Int> = synchronized(failures) { failures.toMap() }
+
+    /**
+     * The pass could not even be planned.
+     *
+     * The `finally` in [onePass] clears `working` either way; this exists so the failure has one
+     * name rather than a bare `return Outcome.FAILED` inside a lambda. Nothing is logged here on
+     * purpose — the core has already journalled the error with its own code, and a second line
+     * from the platform would be the same fact under a worse name.
+     */
+    private fun failPass(): Outcome = Outcome.FAILED
+
+    /**
+     * Forget every retry budget, so a wearer tapping retry gets a genuine fresh attempt.
+     *
+     * Synchronised on the same monitor [recordFailures] uses. The map is touched from whichever
+     * thread the dispatcher gave the pass and from the main thread that handled the tap, and an
+     * unsynchronised `HashMap` written from two threads can corrupt its own table rather than
+     * merely losing an update.
+     */
+    fun resetRetries() {
+        synchronized(failures) { failures.clear() }
     }
 
-    /** Forget every retry budget, so a wearer tapping retry gets a genuine fresh attempt. */
-    fun resetRetries() {
-        failures.clear()
+    /**
+     * Drop whatever the runner is holding resident.
+     *
+     * Behind the pass lock rather than immediate, because releasing a model out from under a
+     * running inference is at best a reload and at worst a fault in native code — and off the
+     * caller's thread rather than blocking it, because the caller is `Activity.onStop` and a pass
+     * over the zoo takes seconds. Late is fine; an ANR is not.
+     */
+    fun releaseRunnerCache() {
+        maintenance.launch {
+            pass.withLock { runner.releaseCache() }
+        }
     }
 
     enum class Outcome { COMPLETED, PARTIAL, FAILED, SKIPPED_BUSY }
@@ -175,7 +217,7 @@ interface MavAnalyticsRuntime {
         atMs: Long,
         mode: MavRunMode,
         profileFields: List<String>,
-    ): List<MavPlannedStage>
+    ): MavPlan
 
     fun profileFields(): List<String>
 

@@ -3,14 +3,13 @@ package com.sennnen.mav
 import com.sennnen.mav.ml.MavAnalyticsEngine
 import com.sennnen.mav.ml.MavAnalyticsRuntime
 import com.sennnen.mav.ml.MavModelBridge
+import com.sennnen.mav.ml.MavPlan
 import com.sennnen.mav.ml.MavPlannedStage
 import com.sennnen.mav.ml.MavRunMode
 import com.sennnen.mav.ml.MavSignalState
 import com.sennnen.mav.ml.MavStageState
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -61,6 +60,8 @@ class AnalyticsEngineTest {
 
     private class FakeRunner(private val host: FakeHost) : MavModelBridge.Runner {
         var ran = 0
+        var released = 0
+
         override fun run(slug: String, inputs: Map<String, FloatArray>): Map<String, FloatArray> {
             ran += 1
             if (slug == host.failOn) throw IllegalStateException("$slug is not in the bundle")
@@ -68,6 +69,10 @@ class AnalyticsEngineTest {
         }
 
         override fun loadedSha256(slug: String): String = "a".repeat(64)
+
+        override fun releaseCache() {
+            released += 1
+        }
     }
 
     private class FakeRuntime(
@@ -76,7 +81,6 @@ class AnalyticsEngineTest {
         var completedAt: Map<String, Long> = emptyMap(),
     ) : MavAnalyticsRuntime {
         var admitCalls = 0
-        var admitGate: CompletableDeferred<Unit>? = null
 
         override fun host(): MavModelBridge.Host = host
 
@@ -89,7 +93,7 @@ class AnalyticsEngineTest {
             atMs: Long,
             mode: MavRunMode,
             profileFields: List<String>,
-        ): List<MavPlannedStage> = stages
+        ): MavPlan = MavPlan(stages = stages)
 
         override fun profileFields(): List<String> = listOf("sex", "age", "height", "weight")
 
@@ -221,6 +225,24 @@ class AnalyticsEngineTest {
         engine.runPass(1UL, MavRunMode.INTERACTIVE)
         assertTrue(!engine.snapshot.value.working)
         assertEquals(1_700_000_000_000L, engine.snapshot.value.lastPassAtMs)
+    }
+
+    /**
+     * Backgrounding must not release a model out from under a running inference, which is why the
+     * release takes the pass lock rather than calling the runner straight through.
+     */
+    @Test
+    fun releasing_the_cache_waits_for_the_pass_in_flight() = runTest {
+        val host = FakeHost(listOf("pulse_ppg", "cva_encoder"))
+        val runner = FakeRunner(host)
+        val engine = engine(FakeRuntime(host), runner)
+
+        engine.runPass(1UL, MavRunMode.INTERACTIVE)
+        engine.releaseRunnerCache()
+        advanceUntilIdle()
+
+        assertEquals(1, runner.released)
+        assertEquals("the release must not have cut the pass short", 2, host.submitted.size)
     }
 
     @Test

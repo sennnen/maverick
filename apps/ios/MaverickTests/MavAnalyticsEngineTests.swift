@@ -50,18 +50,23 @@ final class MavAnalyticsEngineTests: XCTestCase {
     }
   }
 
-  private struct FakeRunner: MavModelBridge.Runner {
+  private final class FakeRunner: MavModelBridge.Runner, @unchecked Sendable {
     let failOn: String?
+    private(set) var released = 0
+
+    init(failOn: String?) { self.failOn = failOn }
+
     func run(slug: String, inputs: [String: [Float]]) throws -> [String: [Float]] {
       if slug == failOn { throw MavModelError.unknown("\(slug) is not in the bundle") }
       return ["out": [1.0]]
     }
     func admittedSHA256(for slug: String) throws -> String { String(repeating: "a", count: 64) }
+    func releaseCache() { released += 1 }
   }
 
   private final class FakeRuntime: MavAnalyticsRuntime, @unchecked Sendable {
     let fakeHost: FakeHost
-    var stages: [MavPlannedStage] = []
+    var plan = MavPlan()
     var completedAt: [String: Int64] = [:]
     var admitCalls = 0
 
@@ -74,7 +79,7 @@ final class MavAnalyticsEngineTests: XCTestCase {
       atMs: Int64,
       mode: MavAnalyticsEngine.RunMode,
       profileFields: [String]
-    ) throws -> [MavPlannedStage] { stages }
+    ) throws -> MavPlan { plan }
     func profileFields() -> [String] { ["sex", "age", "height", "weight"] }
     func cacheCompletedAt() throws -> [String: Int64] { completedAt }
   }
@@ -161,6 +166,27 @@ final class MavAnalyticsEngineTests: XCTestCase {
     XCTAssertFalse(flag.testAndSet(), "the first caller should win")
     XCTAssertTrue(flag.testAndSet(), "the second caller must be told it lost")
     XCTAssertTrue(flag.testAndSet())
+  }
+
+  /// Backgrounding must not release a model out from under a running inference, which is why the
+  /// release goes through the engine's queue rather than straight to the runner.
+  func testReleasingTheCacheWaitsForThePassInFlight() {
+    let host = FakeHost(["pulse_ppg", "cva_encoder"])
+    let runner = FakeRunner(failOn: nil)
+    let engine = MavAnalyticsEngine(
+      runtime: FakeRuntime(host),
+      runner: runner,
+      clock: { 0 }
+    )
+    let released = expectation(description: "released")
+    engine.runPass(deviceID: 1, mode: .interactive) { _ in }
+    engine.releaseRunnerCache()
+    // Ordered behind the pass on the same serial queue, so by the time a third block runs both
+    // the pass and the release have happened.
+    engine.runPass(deviceID: 1, mode: .interactive) { _ in released.fulfill() }
+    wait(for: [released], timeout: 5)
+    XCTAssertEqual(runner.released, 1)
+    XCTAssertEqual(host.submitted.count, 2, "the release must not have cut the pass short")
   }
 
   func testTheDeferredModeAsksForLessWorkThanTheInteractiveOne() {

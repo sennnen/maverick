@@ -19,7 +19,25 @@
     <string name="analytics_permission_required">Needs permission: %1$s</string>
     <string name="analytics_empty">No analysis has run yet</string>
     <string name="analytics_coverage">%1$d of %2$d models can run here</string>
-    <string name="analytics_a11y_signal">%1$s, %2$s</string>
+    <string name="analytics_entry_detail">What the models on this phone can work out</string>
+    <string name="analytics_a11y_signal">%1$s, %2$s. %3$s</string>
     <string name="analytics_a11y_working">Analysis in progress</string>
     <string name="analytics_a11y_retry">Retry analysis for %1$s</string>
+
+    <!-- Signal names. One per `Signal::name` in
+         core/crates/mav-analytic/src/model_zoo/pipeline.rs. Written out rather than title-cased
+         from the slug, which turns `daytime_hrv` into "Daytime Hrv". Each names a family of
+         models, never a reading — nothing here promises a number. -->
+    <string name="analytics_signal_activity">Activity recognition</string>
+    <string name="analytics_signal_energy_expenditure">Energy burned</string>
+    <string name="analytics_signal_step_eligibility">Step detection</string>
+    <string name="analytics_signal_awake_heart_rate">Waking heart rate</string>
+    <string name="analytics_signal_daytime_hrv">Daytime variability</string>
+    <string name="analytics_signal_workout_heart_rate">Workout heart rate</string>
+    <string name="analytics_signal_cardiovascular">Cardiovascular age</string>
+    <string name="analytics_signal_hypertension_risk">Hypertension risk</string>
+    <string name="analytics_signal_sleep">Sleep staging</string>
+    <string name="analytics_signal_illness_risk">Illness signals</string>
+    <string name="analytics_signal_cycle_awareness">Cycle awareness</string>
+    <string name="analytics_signal_ppg_foundation">Optical foundation</string>
 </resources>

@@ -133,6 +133,26 @@ struct MavModelZooTests {
     }
   }
 
+  /// The cache is bounded.
+  ///
+  /// It was not: a pass over the zoo left every model it touched resident, and a compiled Core ML
+  /// model costs far more than its package does on disk. Runs more models than the budget so the
+  /// assertion is about eviction happening, not about the budget being generous.
+  @Test func loadingMoreModelsThanTheBudgetEvictsTheIdleOnes() throws {
+    let runner = MavModelRunner(bundle: .main)
+    let slugs = Array(MavModelCatalog.slugs.prefix(MavModelRunner.maxResident + 2))
+    try #require(slugs.count > MavModelRunner.maxResident)
+    for slug in slugs {
+      _ = try runner.model(for: slug)
+    }
+    #expect(runner.residentCount <= MavModelRunner.maxResident)
+    // The one asked for last is the one still there; evicting it would make the cache a treadmill.
+    #expect(try runner.model(for: try #require(slugs.last)) != nil)
+
+    runner.releaseCache()
+    #expect(runner.residentCount == 0)
+  }
+
   @Test func anUnknownSlugIsRefused() throws {
     let runner = MavModelRunner(bundle: .main)
     do {
@@ -186,6 +206,8 @@ struct MavModelZooTests {
     }
 
     func admittedSHA256(for slug: String) throws -> String { String(repeating: "a", count: 64) }
+
+    func releaseCache() {}
   }
 
   @Test func theDrainLoopCompletesWhatItCanAndCancelsWhatItCannot() {

@@ -166,7 +166,7 @@ private fun CaptureCard(capture: EcgCaptureReport, onStop: () -> Unit) {
                         },
                     color = MavTheme.palette.accent,
                 )
-                MavQuietButton("Cancel", onStop)
+                MavQuietButton("Cancel", onClick = onStop)
             }
         }
     }

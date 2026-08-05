@@ -27,6 +27,8 @@ struct MavModelBridge {
   protocol Runner {
     func run(slug: String, inputs: [String: [Float]]) throws -> [String: [Float]]
     func admittedSHA256(for slug: String) throws -> String
+    /// Drop every model held resident. Cheap to call; a runner holding nothing does nothing.
+    func releaseCache()
   }
 
   /// What one drain pass did. Failures are counted, not thrown: one model missing from the

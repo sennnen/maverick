@@ -85,6 +85,9 @@ sealed interface MavDestination {
     data object Connectors : MavDestination
     data object Diagnostics : MavDestination
     data object Reports : MavDestination
+
+    /** What the on-device models can work out, and why anything absent is absent. */
+    data object Analytics : MavDestination
     data object Ecg : MavDestination
     data class EcgResult(val captureId: ULong) : MavDestination
     data object WorkoutStart : MavDestination

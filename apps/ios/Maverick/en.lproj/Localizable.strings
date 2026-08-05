@@ -2,6 +2,7 @@
    never a health claim, and the model outputs behind them are provisional. */
 "analytics.title" = "On-device analysis";
 "analytics.subtitle" = "Everything here is computed on this phone. Nothing is sent anywhere.";
+"analytics.entry.detail" = "What the models on this phone can work out";
 "analytics.state.idle" = "Not started";
 "analytics.state.working" = "Analysing %d of %d";
 "analytics.state.ready" = "Up to date";
@@ -17,6 +18,22 @@
 "analytics.permissionRequired" = "Needs permission: %@";
 "analytics.empty" = "No analysis has run yet";
 "analytics.coverage" = "%d of %d models can run here";
-"analytics.a11y.signal" = "%@, %@";
+"analytics.a11y.signal" = "%1$@, %2$@. %3$@";
 "analytics.a11y.working" = "Analysis in progress";
 "analytics.a11y.retry" = "Retry analysis for %@";
+
+/* Signal names. One per `Signal::name` in core/crates/mav-analytic/src/model_zoo/pipeline.rs.
+   Written out rather than title-cased from the slug, which turns `daytime_hrv` into "Daytime Hrv".
+   Each names a family of models, never a reading — nothing here promises a number. */
+"analytics.signal.activity" = "Activity recognition";
+"analytics.signal.energy_expenditure" = "Energy burned";
+"analytics.signal.step_eligibility" = "Step detection";
+"analytics.signal.awake_heart_rate" = "Waking heart rate";
+"analytics.signal.daytime_hrv" = "Daytime variability";
+"analytics.signal.workout_heart_rate" = "Workout heart rate";
+"analytics.signal.cardiovascular" = "Cardiovascular age";
+"analytics.signal.hypertension_risk" = "Hypertension risk";
+"analytics.signal.sleep" = "Sleep staging";
+"analytics.signal.illness_risk" = "Illness signals";
+"analytics.signal.cycle_awareness" = "Cycle awareness";
+"analytics.signal.ppg_foundation" = "Optical foundation";

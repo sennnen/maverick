@@ -231,10 +231,17 @@ class MavModelRunner internal constructor(
     }
 
     /**
-     * Close every interpreter. Called when the app backgrounds: the zoo's assets total well over
-     * a hundred megabytes, and a mapped interpreter holds its buffer resident.
+     * Close every interpreter.
+     *
+     * The one caller is `MavAnalyticsEngine.releaseRunnerCache`, behind the pass lock, from
+     * `MainActivity.onStop`. It matters more than the size on disk suggests: the zoo's assets are
+     * 86.8 MB, and loading all of them took a Pixel 7 to 1.05 GB of native heap, because the
+     * interpreter builds tensor arenas and XNNPACK repacks float16 weights to float32. A
+     * backgrounded process holding that is the first one the system reclaims.
      */
-    override fun close() {
+    override fun close() = releaseCache()
+
+    override fun releaseCache() {
         val closing = synchronized(registry) {
             val snapshot = loaded.values.toList()
             loaded.clear()

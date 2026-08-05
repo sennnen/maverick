@@ -129,6 +129,8 @@ class ModelZooContractTest {
             }
 
             override fun loadedSha256(slug: String) = "a".repeat(64)
+
+            override fun releaseCache() = Unit
         }
 
         val outcome = MavModelBridge(host, runner).drain(limit = 8)
@@ -162,6 +164,8 @@ class ModelZooContractTest {
                 mapOf("embeddings" to floatArrayOf(1f))
 
             override fun loadedSha256(slug: String) = "b".repeat(64)
+
+            override fun releaseCache() = Unit
         }
 
         val outcome = MavModelBridge(host, runner).drain(limit = 3)
