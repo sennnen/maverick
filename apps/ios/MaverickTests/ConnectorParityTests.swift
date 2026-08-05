@@ -8,9 +8,9 @@ final class ConnectorParityTests: XCTestCase {
       // ConnectorParityTest.kt carries the same two constants; both move together with
       // CONNECTORS_REF, never on their own.
       ("whoop4", "dev.maverick.whoop4", 18,
-       "d3dae33eb0849f6eec489473d5ddd38ff39506e74ec40c6ca57a2b513491a145"),
+       "085369dacb6ae747e9bec0a1f8588e18a0e5539e6ea07a4bc41253d607e47304"),
       ("whoop5", "dev.maverick.whoop5", 16,
-       "a37e0acdaf161ad1a94fd81d65be9c0572285124a3ee17e262b1bf492b86a7b5"),
+       "e2b730f03ce313ea0f7d2e234d0412d775ad7aac8bedc9b20cc3c93a55eb9f7c"),
     ]
     for (family, connectorID, fixtureCount, artifactHash) in expected {
       let url = try XCTUnwrap(

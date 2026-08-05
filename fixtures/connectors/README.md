@@ -8,15 +8,16 @@ is linked into Maverick.
 - `generic_hr_v1.mavconn` (1.0.0): SHA-256
   `17f1ee6eee7eea6cd2a03fbcb8c9eada80ae0f4a5a39cab708a949ff5251041a`.
 - `whoop4_v1.mavconn` (1.0.3): SHA-256
-  `d3dae33eb0849f6eec489473d5ddd38ff39506e74ec40c6ca57a2b513491a145`.
+  `085369dacb6ae747e9bec0a1f8588e18a0e5539e6ea07a4bc41253d607e47304`.
 - `whoop5_v1.mavconn` (1.0.7): SHA-256
-  `a37e0acdaf161ad1a94fd81d65be9c0572285124a3ee17e262b1bf492b86a7b5`.
+  `e2b730f03ce313ea0f7d2e234d0412d775ad7aac8bedc9b20cc3c93a55eb9f7c`.
 
 Each of those is an `artifact_sha256` the signed registry names at the commit `CONNECTORS_REF`
 pins, and `ConnectorParityTest` recomputes them from the bytes on disk rather than trusting this
-list. They last moved when ECG capture landed — whoop4 1.0.2 to 1.0.3, whoop5 1.0.5 to 1.0.7 —
-and the pin, this list and the frozen expectations in that test all have to move with them, in
-the same commit. Missing that is what left the three disagreeing.
+list. They last moved when a refused ECG capture started reporting why instead of returning an
+empty batch — both connectors, because the shared protocol crate changed with them. The pin, this
+list and the frozen expectations in that test all have to move together, in the same commit;
+missing that is what left the three disagreeing once before.
 - `*_parity_v1.expected.json`: canonical event, action, sample, final-state, fuel, and linear-memory
   results produced by `mavconn-test --report` from those exact bytes.
 
