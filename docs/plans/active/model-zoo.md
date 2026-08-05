@@ -42,10 +42,12 @@ The decision that opened it is [ADR-035](../../adr/ADR-035.md); the contracts ar
 | MZ-P24 | Two more deterministic ports, `daily_medians` and `atlas_trendline`, and a generator (`deterministic_vectors.py`) that runs each archive to produce the golden vectors the ports are tested against — refusal codes included. |
 | MZ-P25 | Five more: `astd_event_detection`, `cva_calibrator`, `steps_motion_decoder`, `meal_timing` and `training_stress_score`. Two defects the golden vectors caught that a reading of the decompilation had not: `cva_calibrator`'s VO₂max table keys female as zero and everything else as one, not the reverse; and its score floor is applied *after* the fitness scaling, not before. |
 | MZ-P26 | The last three deterministic archives — `pregnancy_biometrics`, `stress_resilience`, `cumulative_stress` — and `atlas_2_1_0`'s sixty regression coefficients. Every archive is now implemented and the parameter ledger closes at 41,008,090 of 41,008,090. Three more defects the vectors caught: `torch.slice`'s four-argument form is `[:n]` and not `[::n]`, which had the pregnancy filter restoring every third day instead of the opening three; `cumulative_stress` matches its temperature clock in seconds, not milliseconds; and `argmax` takes the *first* maximum, where taking the last moved atlas's settled impedance by most of a kernel width. |
+| MZ-P27 | The scheduler and the passes around it: `mav_engine::analytics` decides which models are worth running on a device, in what order, and what is already known, against a fingerprint of the inputs *and* the artefact hash that produced them. Each platform contributes only its own half — when a pass happens, how hard it pushes, and getting all of it off the thread that draws. |
+| MZ-P28 | Lifecycle, and the surface. `releaseCache()` and `close()` had no caller and no bound on iOS at all, so a pass left every model it touched resident; both are wired to backgrounding behind the pass lock, and iOS gained an LRU. Background windows on both platforms — `BGTaskScheduler` and `WorkManager` — with the Android worker fixed to reach a process-wide engine, because it used to wake a cold process, find a null static the activity was supposed to have filled in, and report success without running anything. And the screen: reachable from Today, built from `MavKit`, one honest state per signal, no model output rendered as a reading. |
 
 ## Open
 
-### MZ-P26 — Golden vectors for the ported front-ends
+### MZ-P29 — Golden vectors for the ported front-ends
 
 The front-ends in `model_zoo::ppg` are tested against synthesised signals and their own properties,
 which catches a broken filter but not a subtly wrong one. What they are missing is the thing
@@ -58,60 +60,15 @@ from a 1% error caused by an off-by-one in the reflect padding.
 
 Owned files: `fixtures/ml/`, `core/crates/mav-analytic/src/model_zoo/ppg.rs`.
 
-### MZ-P27 — Admit one model end to end
+### MZ-P30 — Admit one model end to end
 
 Pick the model with the clearest ground truth available and take it all the way: fixture with
 labels, output decoding into a typed result with provenance, a `MetadataId`, storage, and a surface
 that states its standing. `sleepnet_bdi` is the candidate — interbeat intervals are a stream
 Maverick already decodes, and polysomnography-labelled data exists to score against.
 
-Blocked on MZ-P19 for the input side, and on a decision about the staging class order, which has not
+Blocked on MZ-P29 for the input side, and on a decision about the staging class order, which has not
 been mapped onto Maverick's sleep-stage vocabulary and must not be guessed.
-
-### MZ-P26 — Golden vectors for the ported front-ends
-
-The front-ends in `model_zoo::ppg` are tested against synthesised signals and their own properties,
-which catches a broken filter but not a subtly wrong one. What they are missing is the thing
-[ml.md](../../ml.md) demands of preprocessing: a stored input signal and a byte-identical expected
-tensor, generated from the training wrapper.
-
-This is the highest-value open packet, because every model downstream of a PPG front-end inherits
-whatever the front-end gets wrong, and a 1% embedding difference from float16 is indistinguishable
-from a 1% error caused by an off-by-one in the reflect padding.
-
-Owned files: `fixtures/ml/`, `core/crates/mav-analytic/src/model_zoo/ppg.rs`.
-
-### MZ-P27 — Admit one model end to end
-
-Pick the model with the clearest ground truth available and take it all the way: fixture with
-labels, output decoding into a typed result with provenance, a `MetadataId`, storage, and a surface
-that states its standing. `sleepnet_bdi` is the candidate — interbeat intervals are a stream
-Maverick already decodes, and polysomnography-labelled data exists to score against.
-
-Blocked on MZ-P19 for the input side, and on a decision about the staging class order, which has not
-been mapped onto Maverick's sleep-stage vocabulary and must not be guessed.
-
-### MZ-P29 — Retired: the last three deterministic ports
-
-Three of the twelve zero-parameter archives still need Rust; nine are done. Each follows the same
-shape: read the decompiled TorchScript, port it, add a recipe to `deterministic_vectors.py`, and
-test the port against what the archive itself returns — refusal codes included, because the error
-codes are contract too.
-
-None of the three is blocked. `pregnancy_biometrics` was previously noted as needing gestational-day
-range tables from outside the archive; that was wrong. `pop_median`, `population_baseline`,
-`biometric_quantile_range` and the validation bounds are all attributes of the archive itself.
-
-- `pregnancy_biometrics` — a fifteen-day baseline-window search over temperature-masked samples, a
-  population-median adjustment per biometric, a `nanmean` filter that demands more than half its
-  window, and quantile ranges indexed by gestational day. 350 days, four biometrics, 21 outputs.
-- `stress_resilience` (15 inputs) and `cumulative_stress` (27) are the largest in the set.
-
-### MZ-P28 — Lifecycle on both platforms
-
-`releaseCache()` and `close()` exist and nothing calls them. A backgrounded app holding a large
-Core ML model resident is a straightforward way to get killed, and the drain loop is not yet wired
-into either app's lifecycle at all — `MavModelBridge` is constructed by tests and by nothing else.
 
 ## Decisions taken here
 

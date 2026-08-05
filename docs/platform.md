@@ -376,6 +376,36 @@ Native owns only accelerated tensor inference and presentation: Core ML on iOS, 
 text-first result/history screens, and a local native PDF renderer. A native model response is
 accepted only with the admitted model hash and the capture id from the outstanding request.
 
+### Analytics passes
+
+The model zoo runs the same way, generalised: the core decides *what*, the platform decides *when*.
+`analytics_plan` answers what this device can run for a day, in dependency order, with a named
+reason for everything it cannot; `admit_analytics_stage` and `admit_ppg_stages` queue tensors the
+core assembled; the existing `next_model_inference` / `submit_model_inference` drain is unchanged.
+No platform ever sees a raw sample or carries an input fingerprint, so no platform can file a result
+against the wrong inputs.
+
+What is genuinely the platform's is four things, and each app has exactly one place for each:
+
+- **When.** A foreground activation, a background window, or a wearer's explicit retry. iOS uses two
+  `BGTaskScheduler` identifiers — processing for the long window, refresh for the short one — and
+  Android a `WorkManager` periodic request plus a precompute aimed at the next likely open. Nothing
+  downstream may assume any of them ran: every one degrades to the interactive pass on next open,
+  and that fallback is the contract while the window is the optimisation.
+- **How hard.** `interactive` or `deferred`, which the core turns into a stage count.
+- **Once at a time.** One engine per process holds a single-pass lock; a second caller is turned
+  away rather than queued, so a background window granted a second before the app is opened costs
+  nothing. On Android that engine is a process-wide holder rather than the view model's, because
+  `WorkManager` can start the process with no activity in it at all.
+- **What stays resident.** A loaded model costs far more than its artefact does on disk — all
+  forty-one took a Pixel 7 to 1.05 GB of native heap from an 86.8 MB bundle — so each runner bounds
+  what it holds idle and releases the rest when the app leaves the foreground, behind the pass lock
+  so a release never lands mid-inference.
+
+One surface renders the result on both platforms: per signal, what state it is in and why anything
+absent is absent, in the same four causes the core distinguishes. It renders no model output as a
+reading. A signal whose vocabulary `docs/ml.md` does not admit says it was computed and stops.
+
 ### Unavailable analytics
 
 One unavailable component per platform, same wording, is how an absent metric is shown.
