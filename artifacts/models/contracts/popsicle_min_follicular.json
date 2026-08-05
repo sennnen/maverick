@@ -1,0 +1,199 @@
+{
+  "algorithm": "popsicle_min_follicular",
+  "core_path": "_model_runner.min_follicular_runner.trained_prediction_model",
+  "coreml": {
+    "artifact": "popsicle_min_follicular.mlpackage",
+    "bytes": 8257,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 4.76837158203125e-07,
+            "max_rel": 1.282493413434452e-07
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 4.76837158203125e-07,
+            "max_rel": 1.282493413434452e-07
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 4.76837158203125e-07,
+            "max_rel": 1.282493413434452e-07
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 4.76837158203125e-07,
+            "max_rel": 1.282493413434452e-07
+          }
+        }
+      ],
+      "constants_rounded": 0,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 5
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 5
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 6
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 6
+          },
+          "parity": {
+            "max_abs": 0.0012507438659667969,
+            "max_rel": 0.0003804181004603327
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 6
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 6
+          },
+          "parity": {
+            "max_abs": 0.0012507438659667969,
+            "max_rel": 0.0003804181004603327
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 6
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 6
+          },
+          "parity": {
+            "max_abs": 0.0012507438659667969,
+            "max_rel": 0.0003804181004603327
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 6
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 6
+          },
+          "parity": {
+            "max_abs": 0.0012507438659667969,
+            "max_rel": 0.0003804181004603327
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 5
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 5
+          },
+          "parity": {
+            "max_abs": 4.76837158203125e-07,
+            "max_rel": 1.282493413434452e-07
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "c4a4b3560d19f71618a1f54b2276c7f6b7e3ab0d6e4b877f07ed383ef208655b",
+      "Data/com.apple.CoreML/weights/weight.bin": "2e812a9cb690f3c988129132763568b94d73a518b6a4288b89e8762912e7a1a8",
+      "Manifest.json": "102781a92fbf5969aa48bb7bc6bc80987ae4f78f03499831731fb8826e267277",
+      "executorch_debug_handle_mapping.json": "7871394d4f0688e8d7f7fed7a54f396872db4c4b415567550d895a2a44168465"
+    },
+    "parity": {
+      "max_abs": 4.76837158203125e-07,
+      "max_rel": 1.282493413434452e-07
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "5d2ab60dcc88287cbb726bd830e38f92e1ee63d7b14b80ea93a4434f8943d0d8"
+  },
+  "cross_platform": {
+    "max_abs": 4.76837158203125e-07,
+    "max_rel": 1.3830233332632601e-07
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "features",
+      "shape": [
+        1,
+        9
+      ]
+    }
+  ],
+  "model": "popsicle_min_follicular",
+  "notes": "A three-layer perceptron; the archive's only head with no recurrent layer in it.",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "min_follicular_days",
+      "shape": [
+        1,
+        1
+      ]
+    }
+  ],
+  "parameters": 865,
+  "role": "Predicts the shortest plausible follicular phase for this wearer",
+  "source_asset": "popsicle_1_8_1.pt",
+  "source_asset_sha256": "69710d7cd0c8cc58c90bef05db0b00567d8f6b5f75b79de3444bb6109d3d0ad3",
+  "tflite": {
+    "artifact": "popsicle_min_follicular.tflite",
+    "bytes": 5116,
+    "parity": {
+      "max_abs": 7.152557373046875e-07,
+      "max_rel": 1.9237401201516778e-07
+    },
+    "passes": {
+      "bytes_full_width": 5084,
+      "bytes_halved": 5116,
+      "constants_rounded": 0,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 0
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "54c55f54ab37cfb603a38da64528f817e227122e55fbadfe35cf9b2a168bb69f"
+  },
+  "trace_max_abs_error": 0.0,
+  "version": "1.8.1",
+  "weights_kept_full": 6,
+  "weights_rounded": 0
+}

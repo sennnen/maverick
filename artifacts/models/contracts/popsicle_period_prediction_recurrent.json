@@ -1,0 +1,76 @@
+{
+  "algorithm": "popsicle_period_prediction_recurrent",
+  "core_path": "_model_runner.period_prediction_runner.trained_prediction_model.lstm",
+  "coreml": {
+    "artifact": "popsicle_period_prediction_recurrent.mlpackage",
+    "bytes": 1096571,
+    "compute_units": "ALL",
+    "configuration_attempts": [],
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "5ba75b37f8841c27b89e560c25bc627a383ec10decb0ad42a59fc59dc3750d3b",
+      "Data/com.apple.CoreML/weights/weight.bin": "412ea56f90ed7364ab5f70a92e0f06813cdf24c54d0677be852afae18ccf7c54",
+      "Manifest.json": "097f688e1d47e54d2ae548f2cae24fa9a9e78222356f61b70d93f78e3cf8439d",
+      "executorch_debug_handle_mapping.json": "360dfcffdf828467930e6005e6e8154716efb451f4fd86ad561479060c5e020e"
+    },
+    "parity": {
+      "max_abs": 0.0017112493515014648,
+      "max_rel": 0.0017112493515014648
+    },
+    "precision": "float16",
+    "sha256": "3251b129898293074bf81cc4f5cccd12e53417c58abf9efb4aa4c9e8bdf750ac",
+    "torchscript_error": "TypeError: iteration over a 0-d tensor"
+  },
+  "cross_platform": {
+    "max_abs": 5.662441253662109e-07,
+    "max_rel": 5.662441253662109e-07
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "time_series",
+      "shape": [
+        1,
+        40,
+        3
+      ]
+    }
+  ],
+  "model": "popsicle_period_prediction_recurrent",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "encoded",
+      "shape": [
+        1,
+        40,
+        64
+      ]
+    }
+  ],
+  "parameters": 84224,
+  "role": "Recurrent encoder behind the period prediction head",
+  "source_asset": "popsicle_1_8_1.pt",
+  "source_asset_sha256": "69710d7cd0c8cc58c90bef05db0b00567d8f6b5f75b79de3444bb6109d3d0ad3",
+  "tflite": {
+    "artifact": "popsicle_period_prediction_recurrent.tflite",
+    "bytes": 436392,
+    "parity": {
+      "max_abs": 0.0017113983631134033,
+      "max_rel": 0.0017113983631134033
+    },
+    "passes": {
+      "bytes_full_width": 591836,
+      "bytes_halved": 436392,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 5
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "a80930b0cfdd8a3fe6fffd0156b1ed059095cc9832144eda85c13bd2c62326f1"
+  },
+  "trace_max_abs_error": 0.0,
+  "version": "1.8.1"
+}

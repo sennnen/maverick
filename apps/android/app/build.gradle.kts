@@ -221,8 +221,18 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.material3:material3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    // Background analytics. WorkManager rather than a service: nothing in the model zoo is
+    // urgent, and the OS is a better judge than this app of when the phone can afford it.
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("net.java.dev.jna:jna:5.12.0@aar")
     implementation("org.tensorflow:tensorflow-lite:2.17.0")
+    // The half-precision execution paths. `-gpu` carries the GPU delegate, whose default
+    // precision is float16 and which is the closest Android analogue of Core ML's Neural
+    // Engine admission on iOS; `-gpu-api` carries the CompatibilityList that says whether a
+    // given device should be trusted with it. Without these the interpreter runs float32 on
+    // the CPU and the two platforms compute different numbers from the same weights.
+    implementation("org.tensorflow:tensorflow-lite-gpu:2.17.0")
+    implementation("org.tensorflow:tensorflow-lite-gpu-api:2.17.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")

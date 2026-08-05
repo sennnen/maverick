@@ -1,0 +1,206 @@
+{
+  "algorithm": "activity_transition_segmentation",
+  "core_path": "segmentation.activity_transition_predictor",
+  "coreml": {
+    "artifact": "activity_transition.mlpackage",
+    "bytes": 223838,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.000637054443359375,
+            "max_rel": 0.0006516184347293604
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.000637054443359375,
+            "max_rel": 0.0006516184347293604
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.000637054443359375,
+            "max_rel": 0.0006516184347293604
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.000637054443359375,
+            "max_rel": 0.0006516184347293604
+          }
+        }
+      ],
+      "constants_rounded": 7,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 34,
+          "unassigned": 7
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 41
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 18,
+              "NeuralEngine": 19
+            },
+            "fraction": 0.5135135135135135,
+            "on_neural_engine": 19,
+            "operations": 37
+          },
+          "parity": {
+            "max_abs": 0.00498199462890625,
+            "max_rel": 0.005095890273991286
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 18,
+              "NeuralEngine": 19
+            },
+            "fraction": 0.5135135135135135,
+            "on_neural_engine": 19,
+            "operations": 37
+          },
+          "parity": {
+            "max_abs": 0.00498199462890625,
+            "max_rel": 0.005095890273991286
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 29,
+              "NeuralEngine": 16
+            },
+            "fraction": 0.35555555555555557,
+            "on_neural_engine": 16,
+            "operations": 45
+          },
+          "parity": {
+            "max_abs": 0.00522613525390625,
+            "max_rel": 0.005345612308857627
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 29,
+              "NeuralEngine": 16
+            },
+            "fraction": 0.35555555555555557,
+            "on_neural_engine": 16,
+            "operations": 45
+          },
+          "parity": {
+            "max_abs": 0.00522613525390625,
+            "max_rel": 0.005345612308857627
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 34,
+              "unassigned": 7
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 41
+          },
+          "parity": {
+            "max_abs": 0.000637054443359375,
+            "max_rel": 0.0006516184347293604
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "c00a67a9ee40a3dd4516a9291316b2eeb0b256527eb7fb48ea85b9d244457bdd",
+      "Data/com.apple.CoreML/weights/weight.bin": "de6dac4e9fd9f93fadbbcee4a6f1ecf1bb5073ad04451eb658a42c71dd151be0",
+      "Manifest.json": "b45189173b8dc6138aff52617355eaf28658977ad3af3efcfc920d4fd61a8117",
+      "executorch_debug_handle_mapping.json": "10cbdf611dd465a4c8d7f0777a27a1b72a9b231672f18400b3eb68699b843aa4"
+    },
+    "parity": {
+      "max_abs": 0.000637054443359375,
+      "max_rel": 0.0006516184347293604
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "b2c720fd7cabd8e8fe911a4af10cf5f9ea935950a8c8e8dfc71a744aca81b9e0"
+  },
+  "cross_platform": {
+    "max_abs": 5.960464477539062e-07,
+    "max_rel": 5.961479305320739e-07
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "features",
+      "shape": [
+        1,
+        64,
+        29
+      ]
+    }
+  ],
+  "model": "activity_transition",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "transition_logits",
+      "shape": [
+        1,
+        64
+      ]
+    }
+  ],
+  "parameters": 86971,
+  "role": "Activity-transition segmentation over a 64-minute window",
+  "source_asset": "automatic_activity_detection_3_1_11.pt",
+  "source_asset_sha256": "130d8a20ee0958b79cd19945a227665fcea709a81867e7d2c4a3aa83324e1159",
+  "tflite": {
+    "artifact": "activity_transition.tflite",
+    "bytes": 196272,
+    "parity": {
+      "max_abs": 0.0006366968154907227,
+      "max_rel": 0.0006512526309673492
+    },
+    "passes": {
+      "bytes_full_width": 366256,
+      "bytes_halved": 196272,
+      "constants_rounded": 7,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 7
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "4eb572738b956f0f79c28a59dbd1b7dd8b96c01767171c23856deca123ef9252"
+  },
+  "trace_max_abs_error": 0.0005195885896682739,
+  "version": "3.1.11",
+  "weights_kept_full": 29,
+  "weights_rounded": 7
+}

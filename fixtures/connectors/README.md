@@ -5,12 +5,18 @@ exact `mavconn-parity/v1` reports. They are product-runtime inputs, not bundled 
 connectors: tests install bytes through the public API, and WC-P12 proves no device implementation
 is linked into Maverick.
 
-- `generic_hr_v1.mavconn`: SHA-256
-  `68386e9d4c34f901183a00b746f790925dce049f9ed5086569e477a4b484bc98`.
-- `whoop4_v1.mavconn`: SHA-256
-  `43039ce95960505f465ae6c11fb6014e97b3852d5d95add28f8f9a6a1e15ff14`.
-- `whoop5_v1.mavconn`: SHA-256
-  `e9b5f0ee29c4836bf1013983bff2f82c2d6d6c932fd491a81a0606a6b31932d5`.
+- `generic_hr_v1.mavconn` (1.0.0): SHA-256
+  `17f1ee6eee7eea6cd2a03fbcb8c9eada80ae0f4a5a39cab708a949ff5251041a`.
+- `whoop4_v1.mavconn` (1.0.3): SHA-256
+  `d3dae33eb0849f6eec489473d5ddd38ff39506e74ec40c6ca57a2b513491a145`.
+- `whoop5_v1.mavconn` (1.0.7): SHA-256
+  `a37e0acdaf161ad1a94fd81d65be9c0572285124a3ee17e262b1bf492b86a7b5`.
+
+Each of those is an `artifact_sha256` the signed registry names at the commit `CONNECTORS_REF`
+pins, and `ConnectorParityTest` recomputes them from the bytes on disk rather than trusting this
+list. They last moved when ECG capture landed — whoop4 1.0.2 to 1.0.3, whoop5 1.0.5 to 1.0.7 —
+and the pin, this list and the frozen expectations in that test all have to move with them, in
+the same commit. Missing that is what left the three disagreeing.
 - `*_parity_v1.expected.json`: canonical event, action, sample, final-state, fuel, and linear-memory
   results produced by `mavconn-test --report` from those exact bytes.
 

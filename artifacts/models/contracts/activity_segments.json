@@ -1,0 +1,72 @@
+{
+  "algorithm": "activity_segments",
+  "core_path": "predictor",
+  "coreml": {
+    "error": "RuntimeError: no core ml precision policy converted: NotImplementedError: inplace_ops pass doesn't yet support append op inside conditional; NotImplementedError: inplace_ops pass doesn't yet support append op inside conditional; NotImplementedError: inp",
+    "exir_error": "RuntimeError: torch.fx.experimental.proxy_tensor._ModuleNotInstalledAsSubmoduleError | RuntimeError: The following operation failed in the TorchScript interpreter. | RuntimeError: Cannot access data pointer of Tensor (e.g. FakeTensor, FunctionalTensor). If you're using torch.compile/export/fx, it is likely that we are erroneously tracing into a custom kernel. To fix this, please wrap the custom ke"
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "segments",
+      "shape": [
+        1,
+        16,
+        128
+      ]
+    }
+  ],
+  "model": "activity_segments",
+  "notes": "The 3.1.11 archive's main head, 3.45 M of its 3.56 M parameters. The activity_transition core that shipped first is its 87 k segmentation companion.",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "primary",
+      "shape": [
+        1,
+        16,
+        262
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "attention",
+      "shape": [
+        1,
+        1,
+        6,
+        16,
+        18
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "secondary",
+      "shape": [
+        1,
+        16,
+        262
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "combined",
+      "shape": [
+        1,
+        16,
+        262
+      ]
+    }
+  ],
+  "parameters": 3451144,
+  "role": "Segment-level activity prediction over a 16-segment window",
+  "source_asset": "automatic_activity_detection_3_1_11.pt",
+  "source_asset_sha256": "130d8a20ee0958b79cd19945a227665fcea709a81867e7d2c4a3aa83324e1159",
+  "tflite": {
+    "error": "RuntimeError: torch.fx.experimental.proxy_tensor._ModuleNotInstalledAsSubmoduleError | RuntimeError: The following operation failed in the TorchScript interpreter. | RuntimeError: Cannot access data pointer of Tensor (e.g. FakeTensor, FunctionalTensor). If you're using torch.compile/export/fx, it is likely that we are erroneously tracing into a custom kernel. To fix this, please wrap the custom ke"
+  },
+  "trace_max_abs_error": 0.006379127502441406,
+  "version": "3.1.11",
+  "weights_kept_full": 67,
+  "weights_rounded": 47
+}

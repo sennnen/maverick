@@ -64,6 +64,17 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>bluetooth-central</string>
+		<!-- Analytics passes while the app is backgrounded. `processing` is the long window a
+		     foundation encoder needs; `fetch` is the short top-up before a likely open. -->
+		<string>processing</string>
+		<string>fetch</string>
+	</array>
+	<!-- Every identifier BGTaskScheduler will accept a registration for. An identifier missing
+	     here is refused at launch, which is a crash rather than a degraded feature. -->
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.sennnen.mav.analytics.processing</string>
+		<string>com.sennnen.mav.analytics.refresh</string>
 	</array>
 	<key>MAVConnectorManagerEnabled</key>
 	<true/>

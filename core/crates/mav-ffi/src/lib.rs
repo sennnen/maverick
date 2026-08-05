@@ -8,9 +8,12 @@
 //! in CI, and the simulator link is a documented local step until the app milestone.
 #![forbid(unsafe_code)]
 
+mod analytics;
 mod connector;
+mod models;
 
 pub use connector::*;
+pub use models::*;
 
 use mav_model::error::MavError;
 use mav_model::ids::{DeviceId, EcgCaptureId};
@@ -70,6 +73,18 @@ pub struct MavRuntime {
     /// stamps the report bundle drawn from it.
     ring: Arc<mav_obs::RingLog>,
     app_version: String,
+    /// The pull-based queue between the core and the platform inference runtimes (see
+    /// `models.rs`). Outlives any one connector session: an embedding queued from stored
+    /// samples does not need a strap connected.
+    models: Mutex<mav_engine::ModelHost>,
+    /// Which of the forty-one models are worth running on this device, in what order, and what
+    /// has already been answered. Outlives a connector session for the same reason `models`
+    /// does: yesterday's night is still worth analysing with no strap in range.
+    scheduler: Mutex<mav_engine::AnalyticsScheduler>,
+    /// The wearer's own figures, as the profile heads take them. Held here rather than passed
+    /// per call so the core can complete a chained head — including picking the probe branch a
+    /// sex selects — without either platform reimplementing the substitution.
+    profile: Mutex<Option<mav_engine::WearerProfile>>,
 }
 
 /// How many stage events the ring log holds. Bounded on purpose: observability that grows without
@@ -301,6 +316,9 @@ impl MavRuntime {
             database_path,
             ring: Arc::new(mav_obs::RingLog::new(RING_CAPACITY)),
             app_version: config.app_version,
+            models: Mutex::new(mav_engine::ModelHost::new()),
+            scheduler: Mutex::new(mav_engine::AnalyticsScheduler::new()),
+            profile: Mutex::new(None),
         }))
     }
 
@@ -1218,11 +1236,11 @@ fn ecg_result_report(result: mav_model::ecg::EcgResult) -> EcgResultReport {
 }
 
 impl MavRuntime {
-    fn spine_lock(&self) -> Result<MutexGuard<'_, mav_engine::Spine>, FfiError> {
+    pub(crate) fn spine_lock(&self) -> Result<MutexGuard<'_, mav_engine::Spine>, FfiError> {
         self.spine.lock().map_err(|_| poisoned("analytic spine"))
     }
 
-    fn reader_lock(&self) -> Result<MutexGuard<'_, mav_engine::Store>, FfiError> {
+    pub(crate) fn reader_lock(&self) -> Result<MutexGuard<'_, mav_engine::Store>, FfiError> {
         self.reader.lock().map_err(|_| poisoned("evidence store"))
     }
 
@@ -1256,7 +1274,7 @@ impl MavRuntime {
     }
 }
 
-fn poisoned(owner: &str) -> FfiError {
+pub(crate) fn poisoned(owner: &str) -> FfiError {
     MavError::fatal(
         mav_model::error::codes::INTERNAL_INVARIANT,
         format!("{owner} lock is poisoned"),

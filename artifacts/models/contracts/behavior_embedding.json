@@ -1,0 +1,201 @@
+{
+  "algorithm": "behavior_embedding",
+  "core_path": "behavior_embedding",
+  "coreml": {
+    "artifact": "behavior_embedding.mlpackage",
+    "bytes": 51718,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.0001220703125,
+            "max_rel": 0.00033849270257333786
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.0001220703125,
+            "max_rel": 0.00033849270257333786
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.0001220703125,
+            "max_rel": 0.00033849270257333786
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.0001220703125,
+            "max_rel": 0.00033849270257333786
+          }
+        }
+      ],
+      "constants_rounded": 1,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 7
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 7
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 7
+          },
+          "parity": {
+            "max_abs": 0.0001220703125,
+            "max_rel": 0.00033849270257333786
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 7
+          },
+          "parity": {
+            "max_abs": 0.0001220703125,
+            "max_rel": 0.00033849270257333786
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 7
+          },
+          "parity": {
+            "max_abs": 0.0001220703125,
+            "max_rel": 0.00033849270257333786
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 7
+          },
+          "parity": {
+            "max_abs": 0.0001220703125,
+            "max_rel": 0.00033849270257333786
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 4,
+              "unassigned": 1
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 5
+          },
+          "parity": {
+            "max_abs": 0.0001220703125,
+            "max_rel": 0.00033849270257333786
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "half",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "9449b3d48267d8cfb35ebf71fac016d1f25e71e253ce3b2a46280c60b985255a",
+      "Data/com.apple.CoreML/weights/weight.bin": "71fde48f149b1548e3a4c3b6401f8e73b055269d090cf7de232461f8cbc06dc3",
+      "Manifest.json": "deeccb31ea267c038334c118a244a9fa41ca53a3a506c2db4a8987592f3f7b05",
+      "executorch_debug_handle_mapping.json": "c77888c8830887eadd6e2c89d94bf127fb74951435a44cf412efab300db21622"
+    },
+    "parity": {
+      "max_abs": 0.0001220703125,
+      "max_rel": 0.00033849270257333786
+    },
+    "precision": "float16",
+    "sha256": "481f2367ed36dca9f5f0a8b14baf2bffe9f91a25a77e486b356350531e19aeb1"
+  },
+  "cross_platform": {
+    "max_abs": 0.0,
+    "max_rel": 0.0
+  },
+  "inputs": [
+    {
+      "dtype": "int64",
+      "name": "behavior_ids",
+      "shape": [
+        1,
+        16
+      ]
+    }
+  ],
+  "model": "behavior_embedding",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "embeddings",
+      "shape": [
+        1,
+        16,
+        256
+      ]
+    }
+  ],
+  "parameters": 22784,
+  "role": "Embeds sixteen behaviour ids into the activity model's 256-d space",
+  "source_asset": "automatic_activity_detection_3_1_11.pt",
+  "source_asset_sha256": "130d8a20ee0958b79cd19945a227665fcea709a81867e7d2c4a3aa83324e1159",
+  "tflite": {
+    "artifact": "behavior_embedding.tflite",
+    "bytes": 47132,
+    "parity": {
+      "max_abs": 0.0001220703125,
+      "max_rel": 0.00033849270257333786
+    },
+    "passes": {
+      "bytes_full_width": 92556,
+      "bytes_halved": 47132,
+      "constants_rounded": 1,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 1
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "c4071ac408da7dc1cdbd4b9fc6ca001c6be13e422d94114bb546020dbf3e0667"
+  },
+  "trace_max_abs_error": 0.0001220703125,
+  "version": "3.1.11",
+  "weights_kept_full": 0,
+  "weights_rounded": 1
+}

@@ -1,0 +1,219 @@
+§
+
+features
+*
+	†ÄR!
+min_follicular_days
+*
+†Ä¢Â¢4
+#com.github.apple.coremltools.sourcetorch==2.12.1¢:
+,com.github.apple.coremltools.conversion_date
+2026-08-03¢@
++com.github.apple.coremltools.source_dialectTorchExport::ATEN¢+
+$com.github.apple.coremltools.version9.0≤ï°
+mainò
+
+features
+
+
+	CoreML7Ï
+CoreML7‡min_follicular_daysé
+const!
+transpose_0
+
+ 
+	*!
+name
+
+"
+transpose_0*?
+val8
+
+ 
+	*"
+@model_path/weights/weight.bin@Ö
+const
+addmm_bias_0
+
+
+ *"
+name
+
+"
+addmm_bias_0*:
+val3
+
+
+ *#
+@model_path/weights/weight.binÄ
+ä
+linear
+bias
+
+addmm_bias_0
+weight
+
+transpose_0
+x
+
+
+features
+addmm
+
+
+ *
+name
+
+	"
+addmmN
+relu
+x	
+
+addmm
+relu
+
+
+ *
+name
+
+
+"
+reluè
+const!
+transpose_1
+
+
+ *!
+name
+
+"
+transpose_1*@
+val9
+
+
+ *#
+@model_path/weights/weight.bin¿â
+const
+addmm_1_bias_0
+
+
+*$
+name
+
+"
+addmm_1_bias_0*:
+val3
+
+
+*#
+@model_path/weights/weight.binÄå
+linear
+bias
+
+addmm_1_bias_0
+weight
+
+transpose_1
+x
+
+relu
+addmm_1
+
+
+*
+name
+
+"	
+addmm_1T
+relu
+x
+	
+addmm_1
+relu_1
+
+
+*
+name
+
+
+"
+relu_1è
+const!
+transpose_2
+
+
+*!
+name
+
+"
+transpose_2*@
+val9
+
+
+*#
+@model_path/weights/weight.binÄà
+const*
+min_follicular_days_bias_0
+
+
+*0
+name(
+ 
+"
+min_follicular_days_bias_0*!
+val
+
+
+
+
+
+
+µEã?≤
+linear&
+bias
+
+min_follicular_days_bias_0
+weight
+
+transpose_2
+x
+
+
+relu_1)
+min_follicular_days
+
+
+*)
+name!
+
+"
+min_follicular_days"Ï
+	buildInfoﬁ"
+
+
+À"»
+6
+!
+
+"
+coremltools-version
+	
+"
+9.0
+A
+)
+!
+"
+coremltools-component-torch
+
+
+"
+2.12.1
+K
+(
+ 
+"
+coremltools-source-dialect
+
+"
+TorchExport::ATEN

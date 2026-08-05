@@ -1,6 +1,7 @@
 package com.sennnen.mav
 
 import java.io.File
+import java.security.MessageDigest
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -20,14 +21,14 @@ class ConnectorParityTest {
             Expected(
                 "whoop4",
                 "dev.maverick.whoop4",
-                16,
-                "e5f625b8cd4645cb0b09e69ae9ef5ce496293bab5e944d102284ab4af2a45989",
+                18,
+                "d3dae33eb0849f6eec489473d5ddd38ff39506e74ec40c6ca57a2b513491a145",
             ),
             Expected(
                 "whoop5",
                 "dev.maverick.whoop5",
                 16,
-                "3062689f5278ae2c2d0c6a744a854badae7f91d172da518670394aa8fee83632",
+                "a37e0acdaf161ad1a94fd81d65be9c0572285124a3ee17e262b1bf492b86a7b5",
                 setOf(
                     "history-cursor-retry",
                     "state-restart",
@@ -57,17 +58,56 @@ class ConnectorParityTest {
         }
     }
 
+    /**
+     * Every report must name the SHA-256 of the artifact sitting beside it.
+     *
+     * The frozen hashes above cannot tell a legitimate connector release from a report that has
+     * drifted away from its own bytes — both look like one changed constant. This computes the
+     * hash instead, so the two failures are distinguishable: if this passes and the frozen list
+     * does not, a new release was vendored and the list needs bumping against the signed
+     * registry; if this fails, the report and the artifact disagree and neither can be trusted.
+     *
+     * It was written because the list went stale in exactly that way. `whoop4` moved 1.0.2 to
+     * 1.0.3 and `whoop5` 1.0.5 to 1.0.7 when ECG capture landed, the artifacts and reports were
+     * regenerated together and correctly, and the frozen constants were updated to two values
+     * that matched neither the old release nor the new one.
+     */
+    @Test
+    fun everyReportNamesTheHashOfTheArtifactBesideIt() {
+        for (family in listOf("generic_hr", "whoop4", "whoop5")) {
+            val report = connectorFixture(family)
+            val artifact = connectorArtifact(family)
+            val digest = MessageDigest.getInstance("SHA-256")
+                .digest(artifact.readBytes())
+                .joinToString("") { "%02x".format(it) }
+            assertEquals(
+                "${artifact.name} hashes to $digest, its report claims another artifact",
+                report.getString("artifact_sha256"),
+                digest,
+            )
+            assertEquals(
+                "$family reports a fixture_count its own fixture list does not have",
+                report.getJSONArray("fixtures").length(),
+                report.getInt("fixture_count"),
+            )
+        }
+    }
+
+    private fun connectorArtifact(family: String): File = resolve("${family}_v1.mavconn")
+
     private fun connectorFixture(family: String): JSONObject {
+        return JSONObject(resolve("${family}_parity_v1.expected.json").readText())
+    }
+
+    /** Walk up from the module directory until `fixtures/connectors/` comes into view. */
+    private fun resolve(name: String): File {
         var dir: File? = File(requireNotNull(System.getProperty("user.dir")))
         while (dir != null) {
-            val candidate = File(
-                dir,
-                "fixtures/connectors/${family}_parity_v1.expected.json",
-            )
-            if (candidate.exists()) return JSONObject(candidate.readText())
+            val candidate = File(dir, "fixtures/connectors/$name")
+            if (candidate.exists()) return candidate
             dir = dir.parentFile
         }
-        error("connector parity fixture not found above ${System.getProperty("user.dir")}")
+        error("$name not found above ${System.getProperty("user.dir")}")
     }
 
     private data class Expected(

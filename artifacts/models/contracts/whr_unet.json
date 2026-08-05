@@ -1,0 +1,71 @@
+{
+  "algorithm": "workout_heart_rate",
+  "core_path": "predictor.unet_model",
+  "coreml": {
+    "error": "RuntimeError: no core ml precision policy converted: TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d tensor",
+    "exir_error": "RuntimeError: torch.fx.experimental.proxy_tensor._ModuleNotInstalledAsSubmoduleError |     raise RuntimeError( | RuntimeError: It appears that you're trying to get value out of a tracing tensor with aten.equal.default - erroring out! It's likely that this is caused by data-dependent control flow or similar.  It may be possible to trace this with dynamic shapes; try setting tracing_mode='symbolic' "
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "images",
+      "shape": [
+        1,
+        2,
+        128,
+        128
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "vectors",
+      "shape": [
+        1,
+        1,
+        128
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "scalars",
+      "shape": [
+        1,
+        9
+      ]
+    }
+  ],
+  "model": "whr_unet",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "heart_rate",
+      "shape": [
+        1,
+        2,
+        128
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "segmentation",
+      "shape": [
+        1,
+        2,
+        128,
+        128
+      ]
+    }
+  ],
+  "parameters": 983891,
+  "role": "U-Net workout heart-rate regressor over a 128-bin PPG spectrogram window",
+  "source_asset": "whr_2_7_1.pt",
+  "source_asset_sha256": "a5ca4f5b903d7dae8509e84c29f357b1190134d61dd6da29fb253142883c06d6",
+  "tflite": {
+    "error": "RuntimeError: torch.fx.experimental.proxy_tensor._ModuleNotInstalledAsSubmoduleError |     raise RuntimeError( | RuntimeError: It appears that you're trying to get value out of a tracing tensor with aten.equal.default - erroring out! It's likely that this is caused by data-dependent control flow or similar.  It may be possible to trace this with dynamic shapes; try setting tracing_mode='symbolic' "
+  },
+  "trace_max_abs_error": 0.0647125244140625,
+  "version": "2.7.1",
+  "weights_kept_full": 58,
+  "weights_rounded": 25
+}

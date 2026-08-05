@@ -1,0 +1,50 @@
+{
+  "algorithm": "popsicle_ovulation_detection",
+  "core_path": "_model_runner.ovulation_detection_runner.trained_detection_model",
+  "coreml": {
+    "error": "RuntimeError: torch.fx.experimental.proxy_tensor._ModuleNotInstalledAsSubmoduleError | RuntimeError: The following operation failed in the TorchScript interpreter. | RuntimeError: GuardOnDataDependentSymNode: Could not extract specialized integer from data-dependent expression u0 (unhinted: u0).  (Size-like symbols: u0)",
+    "torchscript_error": "TypeError: iteration over a 0-d tensor"
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "time_series",
+      "shape": [
+        1,
+        40,
+        3
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "scalars",
+      "shape": [
+        1,
+        40,
+        4
+      ]
+    }
+  ],
+  "model": "popsicle_ovulation_v16",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "ovulation_logits",
+      "shape": [
+        1,
+        40,
+        1
+      ]
+    }
+  ],
+  "parameters": 84385,
+  "role": "Previous-generation ovulation detector",
+  "source_asset": "popsicle_1_6_0.pt",
+  "source_asset_sha256": "9109e2090638153a6f2c4b7aec05cf7b880d954e00e2175e49bcd61e550861ff",
+  "tflite": {
+    "error": "RuntimeError: torch.fx.experimental.proxy_tensor._ModuleNotInstalledAsSubmoduleError | RuntimeError: The following operation failed in the TorchScript interpreter. | RuntimeError: GuardOnDataDependentSymNode: Could not extract specialized integer from data-dependent expression u0 (unhinted: u0).  (Size-like symbols: u0)"
+  },
+  "trace_max_abs_error": 0.0,
+  "version": "1.6.0"
+}

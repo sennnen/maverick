@@ -1,0 +1,97 @@
+{
+  "algorithm": "cva_predictor",
+  "core_path": "cva_pd",
+  "coreml": {
+    "error": "RuntimeError: no core ml precision policy converted: ValueError: Input 23 has rank 0 != other inputs rank 1; ValueError: Input 23 has rank 0 != other inputs rank 1; ValueError: Input 23 has rank 0 != other inputs rank 1; ValueError: Input 23 has rank 0 ",
+    "exir_error": "RuntimeError: torch.fx.experimental.proxy_tensor._ModuleNotInstalledAsSubmoduleError | RuntimeError: The following operation failed in the TorchScript interpreter. | RuntimeError: GuardOnDataDependentSymNode: Could not extract specialized integer from data-dependent expression u0 (unhinted: u0).  (Size-like symbols: u0)"
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "pulses",
+      "shape": [
+        1,
+        1473
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "vpgs",
+      "shape": [
+        1,
+        1473
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "apgs",
+      "shape": [
+        1,
+        1473
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "signal_quality_features",
+      "shape": [
+        10,
+        5
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "demographics",
+      "shape": [
+        10,
+        5
+      ]
+    }
+  ],
+  "model": "cva_predictor_v1",
+  "notes": "The 1,473-sample pulse train is consumed as ten 136-sample windows.",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "cva",
+      "shape": [
+        10,
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "pwv",
+      "shape": [
+        10,
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "prediction_quality",
+      "shape": [
+        10,
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "signal_quality",
+      "shape": [
+        10,
+        1
+      ]
+    }
+  ],
+  "parameters": 317522,
+  "role": "Previous-generation CNN cardiovascular-age predictor over pulse/VPG/APG triples",
+  "source_asset": "cva_1_3_0.pt",
+  "source_asset_sha256": "c67b03c772fb086e456604c2fa747bf448fbe93302e0e9436151eed33261fdb0",
+  "tflite": {
+    "error": "RuntimeError: torch.fx.experimental.proxy_tensor._ModuleNotInstalledAsSubmoduleError | RuntimeError: The following operation failed in the TorchScript interpreter. | RuntimeError: GuardOnDataDependentSymNode: Could not extract specialized integer from data-dependent expression u0 (unhinted: u0).  (Size-like symbols: u0)"
+  },
+  "trace_max_abs_error": 0.0561065673828125,
+  "version": "1.3.0",
+  "weights_kept_full": 34,
+  "weights_rounded": 6
+}

@@ -1,0 +1,207 @@
+{
+  "algorithm": "awake_heart_rate_imputation",
+  "core_path": "impute_net",
+  "coreml": {
+    "artifact": "awhr_imputation.mlpackage",
+    "bytes": 2283024,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.02056121826171875,
+            "max_rel": 9.165778770818391e-05
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.0206146240234375,
+            "max_rel": 9.189585988404933e-05
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.02056121826171875,
+            "max_rel": 9.165778770818391e-05
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.0206146240234375,
+            "max_rel": 9.189585988404933e-05
+          }
+        }
+      ],
+      "constants_rounded": 11,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "GPU": 4099,
+          "unassigned": 11
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 4110
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 4099
+            },
+            "fraction": 0.9997560975609756,
+            "on_neural_engine": 4099,
+            "operations": 4100
+          },
+          "parity": {
+            "max_abs": 2.2004165649414062,
+            "max_rel": 0.010066575513917058
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 4099
+            },
+            "fraction": 0.9997560975609756,
+            "on_neural_engine": 4099,
+            "operations": 4100
+          },
+          "parity": {
+            "max_abs": 2.2004165649414062,
+            "max_rel": 0.010066575513917058
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 4099
+            },
+            "fraction": 0.9997560975609756,
+            "on_neural_engine": 4099,
+            "operations": 4100
+          },
+          "parity": {
+            "max_abs": 2.2004165649414062,
+            "max_rel": 0.010066575513917058
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 4099
+            },
+            "fraction": 0.9997560975609756,
+            "on_neural_engine": 4099,
+            "operations": 4100
+          },
+          "parity": {
+            "max_abs": 2.2004165649414062,
+            "max_rel": 0.010066575513917058
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 4099,
+              "unassigned": 11
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 4110
+          },
+          "parity": {
+            "max_abs": 0.02056121826171875,
+            "max_rel": 9.165778770818391e-05
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 2.3807217586541596e-07
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "240f31e5d2bc43118ee07485ca7956d75780f302b45649b9f7733204f15d3adc",
+      "Data/com.apple.CoreML/weights/weight.bin": "8390b30cc7df6f3816f6944c73e53c6b0c4fbb9e2f30664fab6eb91b3bbf996c",
+      "Manifest.json": "d7316dafb993161d4feb827f7cb043e225dcec4fa4d7044c335745be468da365",
+      "executorch_debug_handle_mapping.json": "a907cddc81cfbf98412ab348eddd1d0540aaf4a85f85b0368c5f027b931e24ac"
+    },
+    "parity": {
+      "max_abs": 0.02056121826171875,
+      "max_rel": 9.165778770818391e-05
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "28246aec80ee39a3c1ab4cacfa6e9142bae43a20f9e4cef35699972ad9b1b959"
+  },
+  "cross_platform": {
+    "max_abs": 3.814697265625e-05,
+    "max_rel": 1.703336085924448e-07
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "window",
+      "shape": [
+        1,
+        60,
+        13
+      ]
+    }
+  ],
+  "model": "awhr_imputation",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "imputed_hr",
+      "shape": [
+        1,
+        60,
+        1
+      ]
+    }
+  ],
+  "parameters": 209665,
+  "role": "Bidirectional LSTM imputing awake heart rate over a 60-step context window",
+  "source_asset": "awhr_imputation_1_2_0.pt",
+  "source_asset_sha256": "d52f3fd28611f210ae16fdf9fd03d7387457b3821fc07a508ba6d077c946855c",
+  "tflite": {
+    "artifact": "awhr_imputation.tflite",
+    "bytes": 972736,
+    "parity": {
+      "max_abs": 0.02062225341796875,
+      "max_rel": 9.192987019488724e-05
+    },
+    "passes": {
+      "bytes_full_width": 1369964,
+      "bytes_halved": 972736,
+      "constants_rounded": 11,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 11
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "9a621a3f9741a06466943b1800e38a0319d85a765bfe12e04a7cfc967458ea32"
+  },
+  "trace_max_abs_error": 0.01517486572265625,
+  "version": "1.2.0",
+  "weights_kept_full": 13,
+  "weights_rounded": 11
+}

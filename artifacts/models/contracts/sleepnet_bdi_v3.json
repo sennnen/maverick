@@ -1,0 +1,220 @@
+{
+  "algorithm": "sleepnet_bdi",
+  "core_path": "_model_runner.trained_model",
+  "coreml": {
+    "artifact": "sleepnet_bdi_v3.mlpackage",
+    "bytes": 2093281,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.008562296628952026,
+            "max_rel": 0.002649823535458522
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.016677379608154297,
+            "max_rel": 0.006528253535780406
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.006983645260334015,
+            "max_rel": 0.0019757207594805048
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.03129017353057861,
+            "max_rel": 0.00790722304893789
+          }
+        }
+      ],
+      "constants_rounded": 53,
+      "nearest_downsamples_rewritten": 5,
+      "neural_engine": {
+        "devices": {
+          "CPU": 39,
+          "GPU": 99,
+          "NeuralEngine": 44
+        },
+        "fraction": 0.24175824175824176,
+        "on_neural_engine": 44,
+        "operations": 182
+      },
+      "norms_folded": 28,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 13,
+              "NeuralEngine": 153
+            },
+            "fraction": 0.9216867469879518,
+            "on_neural_engine": 153,
+            "operations": 166
+          },
+          "parity": {
+            "max_abs": 0.031206101179122925,
+            "max_rel": 0.013447718660561167
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 39,
+              "GPU": 99,
+              "NeuralEngine": 44
+            },
+            "fraction": 0.24175824175824176,
+            "on_neural_engine": 44,
+            "operations": 182
+          },
+          "parity": {
+            "max_abs": 0.008562296628952026,
+            "max_rel": 0.002649823535458522
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 39,
+              "GPU": 99,
+              "NeuralEngine": 44
+            },
+            "fraction": 0.24175824175824176,
+            "on_neural_engine": 44,
+            "operations": 182
+          },
+          "parity": {
+            "max_abs": 0.008562296628952026,
+            "max_rel": 0.002649823535458522
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 39,
+              "GPU": 99,
+              "NeuralEngine": 44
+            },
+            "fraction": 0.24175824175824176,
+            "on_neural_engine": 44,
+            "operations": 182
+          },
+          "parity": {
+            "max_abs": 0.008562296628952026,
+            "max_rel": 0.002649823535458522
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 165,
+              "unassigned": 31
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 196
+          },
+          "parity": {
+            "max_abs": 0.002551436424255371,
+            "max_rel": 0.0006188070860606785
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "half_pooled",
+      "policy_reason": "half-width arithmetic on the Neural Engine",
+      "unit_spread": 0.005931502289457385
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "911c44310cd6a04deba5d9eb716bc92b387cc539b81211ff7dde690b9747d0c4",
+      "Data/com.apple.CoreML/weights/weight.bin": "9d981d6da77eb6c0ffe4f86af33c3fed09d1ba355b1713bca1806d27cfae2e55",
+      "Manifest.json": "fcc5b884a0ef2ce607d174ee291407181bcd8bccb98d425828b304665c960ee2",
+      "executorch_debug_handle_mapping.json": "1ced576c83a1d791fd16be10e5aceb742f66ec6febb852888ea8a4ac45f56f99"
+    },
+    "parity": {
+      "max_abs": 0.008562296628952026,
+      "max_rel": 0.002649823535458522
+    },
+    "precision": "float16, pooling reductions at float32",
+    "sha256": "b7bb56f135e6dc97e4b041e2c7275274778d90b60ca314fe8d388c5938ac0a0a"
+  },
+  "cross_platform": {
+    "max_abs": 0.006586313247680664,
+    "max_rel": 0.0016188135177428588
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "high_res",
+      "shape": [
+        1,
+        115200,
+        2
+      ]
+    }
+  ],
+  "model": "sleepnet_bdi_v3",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "staging_logits",
+      "shape": [
+        1,
+        4,
+        1800
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "apnea_logits",
+      "shape": [
+        1,
+        1,
+        1800
+      ]
+    }
+  ],
+  "parameters": 290960,
+  "role": "Previous-generation interbeat-interval sleep-staging network",
+  "source_asset": "sleepnet_bdi_0_3_0.pt",
+  "source_asset_sha256": "7737509050663ee6f75e473a80ed8963ee6cf032e7e6730ae66f81af7e3026f8",
+  "tflite": {
+    "artifact": "sleepnet_bdi_v3.tflite",
+    "bytes": 705736,
+    "parity": {
+      "max_abs": 0.00256270170211792,
+      "max_rel": 0.0006248559925369936
+    },
+    "passes": {
+      "bytes_full_width": 1270464,
+      "bytes_halved": 705736,
+      "constants_rounded": 53,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 5,
+      "norms_folded": 28,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 31
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "dd144e71757fe443b587f95b947a89c54790654d8c5eef9392adae97f5e7b4a4"
+  },
+  "trace_max_abs_error": 0.001651465892791748,
+  "version": "0.3.0",
+  "weights_kept_full": 147,
+  "weights_rounded": 31
+}

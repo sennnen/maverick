@@ -1,0 +1,1282 @@
+{
+ "rows": [
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float16",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0003669756101179459,
+    "between_platforms": 0.0025345635619067873,
+    "between_platforms_abs": 0.000967860221862793,
+    "coreml_vs_reference": 0.0026076857177207372,
+    "model": "activity_context_embedding"
+   },
+   "error": {
+    "accelerator": 0.006748994830557151,
+    "graph": null,
+    "graph_note": "not separable: the program itself is half precision",
+    "shipped": 0.0022546898558658815
+   },
+   "model": "activity_context_embedding",
+   "neural_engine": {
+    "devices": {
+     "CPU": 1,
+     "NeuralEngine": 35
+    },
+    "fraction": 0.9722222222222222,
+    "on_neural_engine": 35,
+    "operations": 36
+   },
+   "policy": "half",
+   "precision": "float16",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0013622570923470286,
+    "between_platforms": 0.00016116791009154882,
+    "between_platforms_abs": 0.02169036865234375,
+    "coreml_vs_reference": 0.0013037535630130903,
+    "model": "activity_detection"
+   },
+   "error": {
+    "accelerator": 1.890739889627681e-07,
+    "graph": 0.00011522168015974179,
+    "graph_note": null,
+    "shipped": 0.00011518387407611831
+   },
+   "model": "activity_detection",
+   "neural_engine": {
+    "devices": {
+     "GPU": 187,
+     "unassigned": 26
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 213
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float16",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.00023395972079600258,
+    "between_platforms": 0.00048309550017191323,
+    "between_platforms_abs": 0.003927707672119141,
+    "coreml_vs_reference": 0.00061648321135191,
+    "model": "activity_ensemble"
+   },
+   "error": {
+    "accelerator": 0.005728835136855506,
+    "graph": null,
+    "graph_note": "not separable: the program itself is half precision",
+    "shipped": 0.000531561430816359
+   },
+   "model": "activity_ensemble",
+   "neural_engine": {
+    "devices": {
+     "CPU": 2,
+     "NeuralEngine": 24
+    },
+    "fraction": 0.9230769230769231,
+    "on_neural_engine": 24,
+    "operations": 26
+   },
+   "policy": "half",
+   "precision": "float16",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float16",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.00046395932647364766,
+    "between_platforms": 0.002509912326710868,
+    "between_platforms_abs": 0.013422966003417969,
+    "coreml_vs_reference": 0.0024582244345337377,
+    "model": "activity_history_transformer"
+   },
+   "error": {
+    "accelerator": 0.0054858934169279,
+    "graph": null,
+    "graph_note": "not separable: the program itself is half precision",
+    "shipped": 0.002105712890625
+   },
+   "model": "activity_history_transformer",
+   "neural_engine": {
+    "devices": {
+     "CPU": 1,
+     "NeuralEngine": 49
+    },
+    "fraction": 0.98,
+    "on_neural_engine": 49,
+    "operations": 50
+   },
+   "policy": "half",
+   "precision": "float16",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0014700264457018874,
+    "between_platforms": 1.2776549364467737e-06,
+    "between_platforms_abs": 1.2516975402832031e-06,
+    "coreml_vs_reference": 0.0014699209161652255,
+    "model": "activity_primary_segments"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 1.136786961533764e-06,
+    "graph_note": null,
+    "shipped": 1.136786961533764e-06
+   },
+   "model": "activity_primary_segments",
+   "neural_engine": {
+    "devices": {
+     "CPU": 616,
+     "unassigned": 20
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 636
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float16",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0003693546807187025,
+    "between_platforms": 0.002500491232863774,
+    "between_platforms_abs": 0.0014138519763946533,
+    "coreml_vs_reference": 0.0026020231738224106,
+    "model": "activity_secondary_segments"
+   },
+   "error": {
+    "accelerator": 0.006810897435897436,
+    "graph": null,
+    "graph_note": "not separable: the program itself is half precision",
+    "shipped": 0.0023391674726437298
+   },
+   "model": "activity_secondary_segments",
+   "neural_engine": {
+    "devices": {
+     "CPU": 1,
+     "NeuralEngine": 26
+    },
+    "fraction": 0.9629629629629629,
+    "on_neural_engine": 26,
+    "operations": 27
+   },
+   "policy": "half",
+   "precision": "float16",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0005274781611175976,
+    "between_platforms": 7.757049218477291e-07,
+    "between_platforms_abs": 7.748603820800781e-07,
+    "coreml_vs_reference": 0.0005272952418616327,
+    "model": "activity_transition"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 5.664643673341346e-07,
+    "graph_note": null,
+    "shipped": 5.664643673341346e-07
+   },
+   "model": "activity_transition",
+   "neural_engine": {
+    "devices": {
+     "CPU": 34,
+     "unassigned": 7
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 41
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.00012872639856618596,
+    "between_platforms": 3.000661045628352e-07,
+    "between_platforms_abs": 6.103515625e-05,
+    "coreml_vs_reference": 0.0001285763677986263,
+    "model": "awhr_imputation"
+   },
+   "error": {
+    "accelerator": 2.8951809857251655e-07,
+    "graph": 2.895181195277004e-07,
+    "graph_note": null,
+    "shipped": 1.4475904928625828e-07
+   },
+   "model": "awhr_imputation",
+   "neural_engine": {
+    "devices": {
+     "GPU": 4099,
+     "unassigned": 11
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 4110
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.00038740451462054024,
+    "between_platforms": 0.00019440365798399309,
+    "between_platforms_abs": 0.01320648193359375,
+    "coreml_vs_reference": 0.00026818978485504673,
+    "model": "awhr_profile_core"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 0.00019150679537584855,
+    "graph_note": null,
+    "shipped": 0.00019150679537584855
+   },
+   "model": "awhr_profile_core",
+   "neural_engine": {
+    "devices": {
+     "CPU": 315,
+     "unassigned": 7
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 322
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 2.2049001996022654e-07,
+    "between_platforms": 2.2049001996022654e-07,
+    "between_platforms_abs": 2.86102294921875e-06,
+    "coreml_vs_reference": 0.0,
+    "model": "awhr_profile_head"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 1.4934285782343387e-07,
+    "graph_note": null,
+    "shipped": 1.4934285782343387e-07
+   },
+   "model": "awhr_profile_head",
+   "neural_engine": {
+    "devices": {
+     "CPU": 1
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 1
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.002964066170092151,
+    "between_platforms": 1.5816638721948744e-06,
+    "between_platforms_abs": 1.5795230865478516e-06,
+    "coreml_vs_reference": 0.002962484507163978,
+    "model": "awhr_profile_recurrent"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 8.346801991380019e-07,
+    "graph_note": null,
+    "shipped": 8.346801991380019e-07
+   },
+   "model": "awhr_profile_recurrent",
+   "neural_engine": {
+    "devices": {
+     "CPU": 2043,
+     "unassigned": 2
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 2045
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float16",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0003227355875237482,
+    "between_platforms": 0.0,
+    "between_platforms_abs": 0.0,
+    "coreml_vs_reference": 0.0003227355875237482,
+    "model": "behavior_embedding"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": null,
+    "graph_note": "not separable: the program itself is half precision",
+    "shipped": 0.0
+   },
+   "model": "behavior_embedding",
+   "neural_engine": {
+    "devices": {
+     "CPU": 7
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 7
+   },
+   "policy": "half",
+   "precision": "float16",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0015381726282140268,
+    "between_platforms": 0.0006020165855855129,
+    "between_platforms_abs": 0.027799606323242188,
+    "coreml_vs_reference": 0.001526943478025493,
+    "model": "cva_encoder"
+   },
+   "error": {
+    "accelerator": 9.994135316469603e-07,
+    "graph": 0.0005874679133520745,
+    "graph_note": null,
+    "shipped": 0.0005879050099913245
+   },
+   "model": "cva_encoder",
+   "neural_engine": {
+    "devices": {
+     "GPU": 424,
+     "unassigned": 40
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 464
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0005333194600223759,
+    "between_platforms": 0.0008183834220000917,
+    "between_platforms_abs": 0.05078887939453125,
+    "coreml_vs_reference": 0.0013505975753570017,
+    "model": "cva_predictor_v1_base"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 0.00011560468253827519,
+    "graph_note": null,
+    "shipped": 0.00011560468253827519
+   },
+   "model": "cva_predictor_v1_base",
+   "neural_engine": {
+    "devices": {
+     "CPU": 35,
+     "unassigned": 6
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 41
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 1.42648010684336e-06,
+    "between_platforms": 1.3076069200460183e-06,
+    "between_platforms_abs": 8.392333984375e-05,
+    "coreml_vs_reference": 1.3263303093002282e-07,
+    "model": "cva_probes_female"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 2.9923008100158294e-07,
+    "graph_note": null,
+    "shipped": 2.9923008100158294e-07
+   },
+   "model": "cva_probes_female",
+   "neural_engine": {
+    "devices": {
+     "CPU": 47
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 47
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0001246527479655502,
+    "between_platforms": 4.620680270411451e-07,
+    "between_platforms_abs": 3.0517578125e-05,
+    "coreml_vs_reference": 0.0001246527479655502,
+    "model": "cva_probes_male"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 3.785616021938402e-07,
+    "graph_note": null,
+    "shipped": 3.785616021938402e-07
+   },
+   "model": "cva_probes_male",
+   "neural_engine": {
+    "devices": {
+     "CPU": 47,
+     "unassigned": 1
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 48
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 6.421135957790028e-05,
+    "between_platforms": 0.0,
+    "between_platforms_abs": 0.0,
+    "coreml_vs_reference": 6.421135957790028e-05,
+    "model": "dhrv_imputation"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 7.492633617259192e-08,
+    "graph_note": null,
+    "shipped": 7.492633617259192e-08
+   },
+   "model": "dhrv_imputation",
+   "neural_engine": {
+    "devices": {
+     "CPU": 7,
+     "unassigned": 2
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 9
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0009216776473555866,
+    "between_platforms": 0.00047005004700148795,
+    "between_platforms_abs": 0.0015933513641357422,
+    "coreml_vs_reference": 0.0004634322377575228,
+    "model": "energy_expenditure_hr"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 0.0004303329775456804,
+    "graph_note": null,
+    "shipped": 0.0004303329775456804
+   },
+   "model": "energy_expenditure_hr",
+   "neural_engine": {
+    "devices": {
+     "CPU": 22,
+     "unassigned": 4
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 26
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0006010621049260937,
+    "between_platforms": 0.0001403632855882219,
+    "between_platforms_abs": 0.0003757476806640625,
+    "coreml_vs_reference": 0.00046076349361571486,
+    "model": "energy_expenditure_no_hr"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 0.00037335946536106845,
+    "graph_note": null,
+    "shipped": 0.00037335946536106845
+   },
+   "model": "energy_expenditure_no_hr",
+   "neural_engine": {
+    "devices": {
+     "CPU": 22,
+     "unassigned": 4
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 26
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 1.2624951512295598e-06,
+    "between_platforms": 2.2093644226678265e-06,
+    "between_platforms_abs": 6.258487701416016e-07,
+    "coreml_vs_reference": 9.468713634221699e-07,
+    "model": "halite_ppg_score"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 0.0,
+    "graph_note": null,
+    "shipped": 0.0
+   },
+   "model": "halite_ppg_score",
+   "neural_engine": {
+    "devices": {
+     "CPU": 2
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 2
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 3.414602124607703e-05,
+    "between_platforms": 1.7637137207615066e-08,
+    "between_platforms_abs": 1.4901161193847656e-08,
+    "coreml_vs_reference": 3.413779923277434e-05,
+    "model": "halite_risk_tree"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 8.221732630833419e-09,
+    "graph_note": null,
+    "shipped": 8.221732630833419e-09
+   },
+   "model": "halite_risk_tree",
+   "neural_engine": {
+    "devices": {
+     "CPU": 75,
+     "unassigned": 3
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 78
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.005381537729315386,
+    "between_platforms": 0.0026455184693612854,
+    "between_platforms_abs": 0.000333249568939209,
+    "coreml_vs_reference": 0.0037149587711385462,
+    "model": "illness_detection"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 0.0036473179830268576,
+    "graph_note": null,
+    "shipped": 0.0036473179830268576
+   },
+   "model": "illness_detection",
+   "neural_engine": {
+    "devices": {
+     "CPU": 31,
+     "unassigned": 4
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 35
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 1.1386184891375227e-07,
+    "between_platforms": 1.1386184891375227e-07,
+    "between_platforms_abs": 4.76837158203125e-07,
+    "coreml_vs_reference": 0.0,
+    "model": "popsicle_min_follicular"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 1.1046841812870698e-07,
+    "graph_note": null,
+    "shipped": 1.1046841812870698e-07
+   },
+   "model": "popsicle_min_follicular",
+   "neural_engine": {
+    "devices": {
+     "CPU": 5
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 5
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 1.1386184891375227e-07,
+    "between_platforms": 1.1386184891375227e-07,
+    "between_platforms_abs": 4.76837158203125e-07,
+    "coreml_vs_reference": 0.0,
+    "model": "popsicle_min_follicular_v16"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 1.1046841812870698e-07,
+    "graph_note": null,
+    "shipped": 1.1046841812870698e-07
+   },
+   "model": "popsicle_min_follicular_v16",
+   "neural_engine": {
+    "devices": {
+     "CPU": 5
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 5
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0006572761391168341,
+    "between_platforms": 5.85056989231207e-07,
+    "between_platforms_abs": 3.725290298461914e-08,
+    "coreml_vs_reference": 0.0006570615883940932,
+    "model": "popsicle_ovulation_detection"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 6.622843312468066e-07,
+    "graph_note": null,
+    "shipped": 6.622843312468066e-07
+   },
+   "model": "popsicle_ovulation_detection",
+   "neural_engine": {
+    "devices": {
+     "CPU": 2051,
+     "unassigned": 5
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 2056
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 5.793737923006945e-05,
+    "between_platforms": 3.8744132201178134e-07,
+    "between_platforms_abs": 3.8743019104003906e-07,
+    "coreml_vs_reference": 5.754993790805767e-05,
+    "model": "popsicle_ovulation_detection_v16"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 1.7881853876166015e-07,
+    "graph_note": null,
+    "shipped": 1.7881853876166015e-07
+   },
+   "model": "popsicle_ovulation_detection_v16",
+   "neural_engine": {
+    "devices": {
+     "CPU": 2051,
+     "unassigned": 5
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 2056
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 5.038758677088963e-05,
+    "between_platforms": 2.8403416681076666e-07,
+    "between_platforms_abs": 4.76837158203125e-06,
+    "coreml_vs_reference": 5.038758677088963e-05,
+    "model": "popsicle_ovulation_prediction"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 2.8084646225013514e-07,
+    "graph_note": null,
+    "shipped": 2.8084646225013514e-07
+   },
+   "model": "popsicle_ovulation_prediction",
+   "neural_engine": {
+    "devices": {
+     "CPU": 2050,
+     "unassigned": 5
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 2055
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.00021292406816414295,
+    "between_platforms": 4.790751473443523e-07,
+    "between_platforms_abs": 9.5367431640625e-06,
+    "coreml_vs_reference": 0.00021292406816414295,
+    "model": "popsicle_ovulation_prediction_v16"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 3.292899816486693e-07,
+    "graph_note": null,
+    "shipped": 3.292899816486693e-07
+   },
+   "model": "popsicle_ovulation_prediction_v16",
+   "neural_engine": {
+    "devices": {
+     "CPU": 2050,
+     "unassigned": 5
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 2055
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 7.531447823110321e-05,
+    "between_platforms": 3.5029489225209353e-07,
+    "between_platforms_abs": 4.76837158203125e-06,
+    "coreml_vs_reference": 7.524441825135335e-05,
+    "model": "popsicle_period_prediction"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 3.034150885289375e-07,
+    "graph_note": null,
+    "shipped": 3.034150885289375e-07
+   },
+   "model": "popsicle_period_prediction",
+   "neural_engine": {
+    "devices": {
+     "CPU": 2050,
+     "unassigned": 5
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 2055
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.00018321464168906054,
+    "between_platforms": 5.871866861551753e-07,
+    "between_platforms_abs": 4.291534423828125e-06,
+    "coreml_vs_reference": 0.00018335949830013663,
+    "model": "popsicle_period_prediction_v16"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 5.118344768248707e-07,
+    "graph_note": null,
+    "shipped": 5.118344768248707e-07
+   },
+   "model": "popsicle_period_prediction_v16",
+   "neural_engine": {
+    "devices": {
+     "CPU": 2050,
+     "unassigned": 5
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 2055
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float16",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0014612711561737444,
+    "between_platforms": 0.0023529025751547303,
+    "between_platforms_abs": 0.083160400390625,
+    "coreml_vs_reference": 0.0024762800084716756,
+    "model": "pulse_ppg"
+   },
+   "error": {
+    "accelerator": 0.006326148078725398,
+    "graph": null,
+    "graph_note": "not separable: the program itself is half precision",
+    "shipped": 0.0020136310323556113
+   },
+   "model": "pulse_ppg",
+   "neural_engine": {
+    "devices": {
+     "CPU": 1,
+     "NeuralEngine": 131
+    },
+    "fraction": 0.9924242424242424,
+    "on_neural_engine": 131,
+    "operations": 132
+   },
+   "policy": "half",
+   "precision": "float16",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.003107207181366387,
+    "between_platforms": 0.0003852260410460365,
+    "between_platforms_abs": 0.0007054805755615234,
+    "coreml_vs_reference": 0.0031208349984146308,
+    "model": "pulsenet_foundation"
+   },
+   "error": {
+    "accelerator": 8.774417256690489e-07,
+    "graph": 0.00039926499335654777,
+    "graph_note": null,
+    "shipped": 0.0003995110938414547
+   },
+   "model": "pulsenet_foundation",
+   "neural_engine": {
+    "devices": {
+     "GPU": 106,
+     "unassigned": 39
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 145
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float16",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0008357510358097205,
+    "between_platforms": 0.006231582615753811,
+    "between_platforms_abs": 0.021554946899414062,
+    "coreml_vs_reference": 0.00617001749319253,
+    "model": "sleepnet_bdi"
+   },
+   "error": {
+    "accelerator": 0.007677543186180422,
+    "graph": null,
+    "graph_note": "not separable: the program itself is half precision",
+    "shipped": 0.004142657664027149
+   },
+   "model": "sleepnet_bdi",
+   "neural_engine": {
+    "devices": {
+     "CPU": 57,
+     "GPU": 26,
+     "NeuralEngine": 99
+    },
+    "fraction": 0.5439560439560439,
+    "on_neural_engine": 99,
+    "operations": 182
+   },
+   "policy": "half_pooled",
+   "precision": "float16, pooling reductions at float32",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float16",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0006527501446731436,
+    "between_platforms": 0.002359698461759632,
+    "between_platforms_abs": 0.008338689804077148,
+    "coreml_vs_reference": 0.0021378707326794926,
+    "model": "sleepnet_bdi_v3"
+   },
+   "error": {
+    "accelerator": 0.006708875464684015,
+    "graph": null,
+    "graph_note": "not separable: the program itself is half precision",
+    "shipped": 0.0017363040547975351
+   },
+   "model": "sleepnet_bdi_v3",
+   "neural_engine": {
+    "devices": {
+     "CPU": 39,
+     "GPU": 99,
+     "NeuralEngine": 44
+    },
+    "fraction": 0.24175824175824176,
+    "on_neural_engine": 44,
+    "operations": 182
+   },
+   "policy": "half_pooled",
+   "precision": "float16, pooling reductions at float32",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float16",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0005830394659878933,
+    "between_platforms": 0.004046711168791119,
+    "between_platforms_abs": 0.02506422996520996,
+    "coreml_vs_reference": 0.004113602580940268,
+    "model": "sleepnet_moonstone"
+   },
+   "error": {
+    "accelerator": 0.008306709265175719,
+    "graph": null,
+    "graph_note": "not separable: the program itself is half precision",
+    "shipped": 0.003347495569588658
+   },
+   "model": "sleepnet_moonstone",
+   "neural_engine": {
+    "devices": {
+     "CPU": 51,
+     "GPU": 26,
+     "NeuralEngine": 108
+    },
+    "fraction": 0.5837837837837838,
+    "on_neural_engine": 108,
+    "operations": 185
+   },
+   "policy": "half_pooled",
+   "precision": "float16, pooling reductions at float32",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float16",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0,
+    "between_platforms": 0.0,
+    "between_platforms_abs": 0.0,
+    "coreml_vs_reference": 0.0,
+    "model": "source_embedding"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": null,
+    "graph_note": "not separable: the program itself is half precision",
+    "shipped": 0.0
+   },
+   "model": "source_embedding",
+   "neural_engine": {
+    "devices": {
+     "CPU": 7
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 7
+   },
+   "policy": "half",
+   "precision": "float16",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.00023188890556832259,
+    "between_platforms": 0.0004065062155312581,
+    "between_platforms_abs": 0.001154184341430664,
+    "coreml_vs_reference": 0.0001745463557844108,
+    "model": "step_eligibility"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 1.448893330444562e-06,
+    "graph_note": null,
+    "shipped": 1.448893330444562e-06
+   },
+   "model": "step_eligibility",
+   "neural_engine": {
+    "devices": {
+     "CPU": 338,
+     "unassigned": 6
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 344
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 1.9082980979720243e-06,
+    "between_platforms": 6.815337808693059e-08,
+    "between_platforms_abs": 5.960464477539063e-08,
+    "coreml_vs_reference": 1.8401445944730234e-06,
+    "model": "step_head"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 1.889877767430697e-06,
+    "graph_note": null,
+    "shipped": 1.889877767430697e-06
+   },
+   "model": "step_head",
+   "neural_engine": {
+    "devices": {
+     "CPU": 2
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 2
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0,
+    "between_platforms": 0.0,
+    "between_platforms_abs": 0.0,
+    "coreml_vs_reference": 0.0,
+    "model": "step_multiplier"
+   },
+   "error": {
+    "accelerator": 0.0,
+    "graph": 0.0,
+    "graph_note": null,
+    "shipped": 0.0
+   },
+   "model": "step_multiplier",
+   "neural_engine": {
+    "devices": {
+     "CPU": 6
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 6
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  },
+  {
+   "android": "gpu delegate (float32)",
+   "arithmetic": "float16",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.0003443594502832556,
+    "between_platforms": 0.0007137845701834104,
+    "between_platforms_abs": 0.0057468414306640625,
+    "coreml_vs_reference": 0.0009395917994412505,
+    "model": "whr_unet_encoder"
+   },
+   "error": {
+    "accelerator": 0.003902439024390244,
+    "graph": null,
+    "graph_note": "not separable: the program itself is half precision",
+    "shipped": 0.0008313881478658536
+   },
+   "model": "whr_unet_encoder",
+   "neural_engine": {
+    "devices": {
+     "CPU": 1,
+     "NeuralEngine": 31
+    },
+    "fraction": 0.96875,
+    "on_neural_engine": 31,
+    "operations": 32
+   },
+   "policy": "half",
+   "precision": "float16",
+   "weights": "float16"
+  },
+  {
+   "android": "xnnpack (float32)",
+   "arithmetic": "float32",
+   "compute_units": "ALL",
+   "device": {
+    "android_vs_reference": 0.00018396321862844612,
+    "between_platforms": 3.064421932656141e-07,
+    "between_platforms_abs": 3.814697265625e-05,
+    "coreml_vs_reference": 0.00018413505051582558,
+    "model": "whr_unet_head"
+   },
+   "error": {
+    "accelerator": 1.2050687118128788e-07,
+    "graph": 1.8076030677193184e-07,
+    "graph_note": null,
+    "shipped": 1.8076030677193184e-07
+   },
+   "model": "whr_unet_head",
+   "neural_engine": {
+    "devices": {
+     "GPU": 9233,
+     "unassigned": 8
+    },
+    "fraction": 0.0,
+    "on_neural_engine": 0,
+    "operations": 9241
+   },
+   "policy": "full",
+   "precision": "float16 weights, float32 arithmetic",
+   "weights": "float16"
+  }
+ ],
+ "summary": {
+  "device_models": 41,
+  "half_arithmetic": 11,
+  "measurable_graph_errors": 30,
+  "models": 41,
+  "neural_engine_operations": 547,
+  "on_neural_engine": 9,
+  "total_operations": 31090,
+  "worst_between_platforms": 0.006231582615753811,
+  "worst_device_vs_reference": 0.005381537729315386,
+  "worst_graph_error": 0.0036473179830268576,
+  "worst_shipped_error": 0.004142657664027149
+ }
+}

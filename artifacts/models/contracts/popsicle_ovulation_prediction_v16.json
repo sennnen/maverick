@@ -1,0 +1,212 @@
+{
+  "algorithm": "popsicle_ovulation_prediction",
+  "core_path": "_model_runner.ovulation_prediction_runner.trained_prediction_model",
+  "coreml": {
+    "artifact": "popsicle_ovulation_prediction_v16.mlpackage",
+    "bytes": 1102319,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.008112907409667969,
+            "max_rel": 0.00040966617624227044
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.008112907409667969,
+            "max_rel": 0.00040966617624227044
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.008112907409667969,
+            "max_rel": 0.00040966617624227044
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.008112907409667969,
+            "max_rel": 0.00040966617624227044
+          }
+        }
+      ],
+      "constants_rounded": 5,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 2050,
+          "unassigned": 5
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 2055
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2052
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2052
+          },
+          "parity": {
+            "max_abs": 0.12545299530029297,
+            "max_rel": 0.006334825024819789
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2052
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2052
+          },
+          "parity": {
+            "max_abs": 0.12545299530029297,
+            "max_rel": 0.006334825024819789
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2052
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2052
+          },
+          "parity": {
+            "max_abs": 0.12545299530029297,
+            "max_rel": 0.006334825024819789
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2052
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2052
+          },
+          "parity": {
+            "max_abs": 0.12545299530029297,
+            "max_rel": 0.006334825024819789
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2050,
+              "unassigned": 5
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2055
+          },
+          "parity": {
+            "max_abs": 0.008112907409667969,
+            "max_rel": 0.00040966617624227044
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "a64e1c8565ef2f9fe5662b5211393bc1a528c715bf50019951c67a074dd0610a",
+      "Data/com.apple.CoreML/weights/weight.bin": "6dde370d48701037d3fd44ddc2848fa6bb6150a4708e6360d1c6ea42e7a959e6",
+      "Manifest.json": "5bb8c7f8a9654ee288294b7782817d480881a25f2672dcec916b37c35ba8db16",
+      "executorch_debug_handle_mapping.json": "842ba4e522a77a4bdf93650c9c1c9e45c10fe30b443fe3537ea15396fecbe5e0"
+    },
+    "parity": {
+      "max_abs": 0.008112907409667969,
+      "max_rel": 0.00040966617624227044
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "88d31302b995e1315cb9c0d950b3bcee537e14c50ee33789f22511c97ffee561"
+  },
+  "cross_platform": {
+    "max_abs": 7.62939453125e-06,
+    "max_rel": 3.5171752018396934e-07
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "time_series",
+      "shape": [
+        1,
+        40,
+        3
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "scalars",
+      "shape": [
+        1,
+        40,
+        4
+      ]
+    }
+  ],
+  "model": "popsicle_ovulation_prediction_v16",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "days",
+      "shape": [
+        1,
+        40,
+        1
+      ]
+    }
+  ],
+  "parameters": 84385,
+  "role": "The previous generation of the ovulation predictor",
+  "source_asset": "popsicle_1_6_0.pt",
+  "source_asset_sha256": "9109e2090638153a6f2c4b7aec05cf7b880d954e00e2175e49bcd61e550861ff",
+  "tflite": {
+    "artifact": "popsicle_ovulation_prediction_v16.tflite",
+    "bytes": 449868,
+    "parity": {
+      "max_abs": 0.008112907409667969,
+      "max_rel": 0.00040966617624227044
+    },
+    "passes": {
+      "bytes_full_width": 605280,
+      "bytes_halved": 449868,
+      "constants_rounded": 5,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 5
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "d8139c89cf715f16b6a9c41e54b3e5f849c75f908bc8462ff7a019cf670cc9bc"
+  },
+  "trace_max_abs_error": 0.0036449432373046875,
+  "version": "1.6.0",
+  "weights_kept_full": 11,
+  "weights_rounded": 5
+}

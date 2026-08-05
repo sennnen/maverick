@@ -1,0 +1,798 @@
+{
+ "accuracy_tolerance": 1.1,
+ "device": {
+  "abi": "arm64-v8a",
+  "api": 37,
+  "model": "Pixel 7",
+  "soc": "GS201"
+ },
+ "gpu_full_width": [
+  "whr_unet_encoder"
+ ],
+ "measurements": {
+  "activity_context_embedding": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 2.132,
+    "relative": 0.0003669756
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 3.302,
+    "relative": 0.01176897
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 5.251,
+    "relative": 0.0003672555
+   }
+  },
+  "activity_detection": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 11.28,
+    "relative": 0.001362257
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 11.471,
+    "relative": 0.7236507
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 12.929,
+    "relative": 0.723822
+   }
+  },
+  "activity_ensemble": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 1.961,
+    "relative": 0.0002339597
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 3.825,
+    "relative": 0.00478743
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 4.707,
+    "relative": 0.0002339224
+   }
+  },
+  "activity_history_transformer": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 3.171,
+    "relative": 0.0004639593
+   },
+   "GPU": {
+    "attached": "CPU",
+    "median_ms": 3.172,
+    "relative": 0.0004639593
+   },
+   "GPU_FULL": {
+    "attached": "CPU",
+    "median_ms": 3.14,
+    "relative": 0.0004639593
+   }
+  },
+  "activity_primary_segments": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 2.223,
+    "relative": 0.001470026
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 12.24,
+    "relative": 0.003500837
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 12.148,
+    "relative": 0.001470062
+   }
+  },
+  "activity_secondary_segments": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 1.768,
+    "relative": 0.0003693547
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 3.03,
+    "relative": 0.006129429
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 4.267,
+    "relative": 0.0003690579
+   }
+  },
+  "activity_transition": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.803,
+    "relative": 0.0005274782
+   },
+   "GPU": {
+    "attached": "CPU",
+    "median_ms": 0.98,
+    "relative": 0.0005274782
+   },
+   "GPU_FULL": {
+    "attached": "CPU",
+    "median_ms": 0.883,
+    "relative": 0.0005274782
+   }
+  },
+  "awhr_imputation": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 3.393,
+    "relative": 0.0001287264
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 46.486,
+    "relative": 0.0003982008
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 40.798,
+    "relative": 0.0001287264
+   }
+  },
+  "awhr_profile_core": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.344,
+    "relative": 0.0003874045
+   },
+   "GPU": {
+    "attached": "CPU",
+    "median_ms": 0.495,
+    "relative": 0.0003874045
+   },
+   "GPU_FULL": {
+    "attached": "CPU",
+    "median_ms": 0.403,
+    "relative": 0.0003874045
+   }
+  },
+  "awhr_profile_head": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.22,
+    "relative": 2.2049e-07
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 0.634,
+    "relative": 0.001576724
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 0.616,
+    "relative": 0.0
+   }
+  },
+  "awhr_profile_recurrent": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.534,
+    "relative": 0.002964066
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 29.199,
+    "relative": 0.003258341
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 31.364,
+    "relative": 0.002964066
+   }
+  },
+  "behavior_embedding": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.574,
+    "relative": 0.0003227356
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 1.097,
+    "relative": 0.0003227356
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 1.12,
+    "relative": 0.0003227356
+   }
+  },
+  "cva_encoder": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 16.642,
+    "relative": 0.001538173
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 24.325,
+    "relative": 16.09697
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 25.3,
+    "relative": 16.13317
+   }
+  },
+  "cva_predictor_v1_base": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.543,
+    "relative": 0.0005333195
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 3.667,
+    "relative": 0.006505392
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 4.51,
+    "relative": 0.0005338961
+   }
+  },
+  "cva_probes_female": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.573,
+    "relative": 1.42648e-06
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 2.5,
+    "relative": 0.00281813
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 2.32,
+    "relative": 2.377467e-07
+   }
+  },
+  "cva_probes_male": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.562,
+    "relative": 0.0001246527
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 2.784,
+    "relative": 0.001233904
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 2.314,
+    "relative": 0.0001246527
+   }
+  },
+  "dhrv_imputation": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.068,
+    "relative": 6.421136e-05
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 0.736,
+    "relative": 0.001024468
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 0.543,
+    "relative": 6.421136e-05
+   }
+  },
+  "energy_expenditure_hr": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.116,
+    "relative": 0.0009216776
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 0.82,
+    "relative": 0.002497036
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 1.028,
+    "relative": 0.0009216073
+   }
+  },
+  "energy_expenditure_no_hr": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.1,
+    "relative": 0.0006010621
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 0.832,
+    "relative": 0.003570568
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 1.069,
+    "relative": 0.0006010621
+   }
+  },
+  "halite_ppg_score": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.08,
+    "relative": 1.262495e-06
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 0.663,
+    "relative": 0.03165044
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 0.566,
+    "relative": 2.52499e-06
+   }
+  },
+  "halite_risk_tree": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.224,
+    "relative": 3.414602e-05
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 1.091,
+    "relative": 0.00017228
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 0.761,
+    "relative": 3.41378e-05
+   }
+  },
+  "illness_detection": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.19,
+    "relative": 0.005381538
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 1.886,
+    "relative": 0.008398829
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 1.908,
+    "relative": 0.005382558
+   }
+  },
+  "popsicle_min_follicular": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.067,
+    "relative": 1.138618e-07
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 0.551,
+    "relative": 0.0004038977
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 0.478,
+    "relative": 1.09772e-07
+   }
+  },
+  "popsicle_min_follicular_v16": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.071,
+    "relative": 1.138618e-07
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 0.482,
+    "relative": 0.0004038977
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 0.454,
+    "relative": 1.09772e-07
+   }
+  },
+  "popsicle_ovulation_detection": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 1.107,
+    "relative": 0.0006572761
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 27.188,
+    "relative": 0.002098292
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 33.974,
+    "relative": 0.0006570616
+   }
+  },
+  "popsicle_ovulation_detection_v16": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 1.149,
+    "relative": 5.793738e-05
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 37.027,
+    "relative": 0.0003470282
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 28.85,
+    "relative": 5.793738e-05
+   }
+  },
+  "popsicle_ovulation_prediction": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 1.107,
+    "relative": 5.038759e-05
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 30.656,
+    "relative": 0.0002249644
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 40.036,
+    "relative": 5.033078e-05
+   }
+  },
+  "popsicle_ovulation_prediction_v16": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 1.137,
+    "relative": 0.0002129241
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 33.425,
+    "relative": 0.0005210927
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 30.172,
+    "relative": 0.0002129241
+   }
+  },
+  "popsicle_period_prediction": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 1.097,
+    "relative": 7.531448e-05
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 31.744,
+    "relative": 0.0004429192
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 36.103,
+    "relative": 7.531448e-05
+   }
+  },
+  "popsicle_period_prediction_v16": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 1.116,
+    "relative": 0.0001832146
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 29.68,
+    "relative": 0.001650666
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 30.615,
+    "relative": 0.0001830988
+   }
+  },
+  "pulse_ppg": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 2544.994,
+    "relative": 0.001461271
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 561.637,
+    "relative": 0.02984527
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 1567.329,
+    "relative": 0.02920513
+   }
+  },
+  "pulsenet_foundation": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 8.942,
+    "relative": 0.003107207
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 12.809,
+    "relative": 0.02307233
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 19.834,
+    "relative": 0.003106688
+   }
+  },
+  "sleepnet_bdi": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 415.797,
+    "relative": 0.000835751
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 448.017,
+    "relative": 0.001509071
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 442.928,
+    "relative": 0.0008359398
+   }
+  },
+  "sleepnet_bdi_v3": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 294.97,
+    "relative": 0.0006527501
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 322.471,
+    "relative": 0.001306477
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 322.801,
+    "relative": 0.0006525316
+   }
+  },
+  "sleepnet_moonstone": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 635.23,
+    "relative": 0.0005830395
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 672.436,
+    "relative": 0.0007000453
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 669.193,
+    "relative": 0.0005830778
+   }
+  },
+  "source_embedding": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.085,
+    "relative": 0.0
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 0.47,
+    "relative": 0.0
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 0.565,
+    "relative": 0.0
+   }
+  },
+  "step_eligibility": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.107,
+    "relative": 0.0002318889
+   },
+   "GPU": {
+    "attached": "CPU",
+    "median_ms": 0.099,
+    "relative": 0.0002318889
+   },
+   "GPU_FULL": {
+    "attached": "CPU",
+    "median_ms": 0.096,
+    "relative": 0.0002318889
+   }
+  },
+  "step_head": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.063,
+    "relative": 1.908298e-06
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 0.452,
+    "relative": 1.0
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 0.387,
+    "relative": 1.976452e-06
+   }
+  },
+  "step_multiplier": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 0.064,
+    "relative": 0.0
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 0.582,
+    "relative": 0.0007946166
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 0.389,
+    "relative": 0.0
+   }
+  },
+  "whr_unet_encoder": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 61.784,
+    "relative": 0.0003441175
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 23.108,
+    "relative": 0.005692256
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 28.852,
+    "relative": 0.0003443595
+   }
+  },
+  "whr_unet_head": {
+   "CPU": {
+    "attached": "CPU",
+    "median_ms": 16.01,
+    "relative": 0.0001839632
+   },
+   "GPU": {
+    "attached": "GPU",
+    "median_ms": 123.589,
+    "relative": 0.0008030184
+   },
+   "GPU_FULL": {
+    "attached": "GPU_FULL",
+    "median_ms": 121.665,
+    "relative": 0.0001839289
+   }
+  }
+ },
+ "paths": {
+  "activity_context_embedding": "CPU",
+  "activity_detection": "CPU",
+  "activity_ensemble": "CPU",
+  "activity_history_transformer": "CPU",
+  "activity_primary_segments": "CPU",
+  "activity_secondary_segments": "CPU",
+  "activity_transition": "CPU",
+  "awhr_imputation": "CPU",
+  "awhr_profile_core": "CPU",
+  "awhr_profile_head": "CPU",
+  "awhr_profile_recurrent": "CPU",
+  "behavior_embedding": "CPU",
+  "cva_encoder": "CPU",
+  "cva_predictor_v1_base": "CPU",
+  "cva_probes_female": "CPU",
+  "cva_probes_male": "CPU",
+  "dhrv_imputation": "CPU",
+  "energy_expenditure_hr": "CPU",
+  "energy_expenditure_no_hr": "CPU",
+  "halite_ppg_score": "CPU",
+  "halite_risk_tree": "CPU",
+  "illness_detection": "CPU",
+  "popsicle_min_follicular": "CPU",
+  "popsicle_min_follicular_v16": "CPU",
+  "popsicle_ovulation_detection": "CPU",
+  "popsicle_ovulation_detection_v16": "CPU",
+  "popsicle_ovulation_prediction": "CPU",
+  "popsicle_ovulation_prediction_v16": "CPU",
+  "popsicle_period_prediction": "CPU",
+  "popsicle_period_prediction_v16": "CPU",
+  "pulse_ppg": "CPU",
+  "pulsenet_foundation": "CPU",
+  "sleepnet_bdi": "CPU",
+  "sleepnet_bdi_v3": "CPU",
+  "sleepnet_moonstone": "CPU",
+  "source_embedding": "CPU",
+  "step_eligibility": "CPU",
+  "step_head": "CPU",
+  "step_multiplier": "CPU",
+  "whr_unet_encoder": "GPU_FULL",
+  "whr_unet_head": "CPU"
+ },
+ "reasons": {
+  "activity_context_embedding": "the CPU is the fastest accurate path",
+  "activity_detection": "the CPU is the fastest accurate path",
+  "activity_ensemble": "the CPU is the fastest accurate path",
+  "activity_history_transformer": "the CPU is the fastest accurate path",
+  "activity_primary_segments": "the CPU is the fastest accurate path",
+  "activity_secondary_segments": "the CPU is the fastest accurate path",
+  "activity_transition": "the CPU is the fastest accurate path",
+  "awhr_imputation": "the CPU is the fastest accurate path",
+  "awhr_profile_core": "the CPU is the fastest accurate path",
+  "awhr_profile_head": "the CPU is the fastest accurate path",
+  "awhr_profile_recurrent": "the CPU is the fastest accurate path",
+  "behavior_embedding": "the CPU is the fastest accurate path",
+  "cva_encoder": "the CPU is the fastest accurate path",
+  "cva_predictor_v1_base": "the CPU is the fastest accurate path",
+  "cva_probes_female": "the CPU is the fastest accurate path",
+  "cva_probes_male": "the CPU is the fastest accurate path",
+  "dhrv_imputation": "the CPU is the fastest accurate path",
+  "energy_expenditure_hr": "the CPU is the fastest accurate path",
+  "energy_expenditure_no_hr": "the CPU is the fastest accurate path",
+  "halite_ppg_score": "the CPU is the fastest accurate path",
+  "halite_risk_tree": "the CPU is the fastest accurate path",
+  "illness_detection": "the CPU is the fastest accurate path",
+  "popsicle_min_follicular": "the CPU is the fastest accurate path",
+  "popsicle_min_follicular_v16": "the CPU is the fastest accurate path",
+  "popsicle_ovulation_detection": "the CPU is the fastest accurate path",
+  "popsicle_ovulation_detection_v16": "the CPU is the fastest accurate path",
+  "popsicle_ovulation_prediction": "the CPU is the fastest accurate path",
+  "popsicle_ovulation_prediction_v16": "the CPU is the fastest accurate path",
+  "popsicle_period_prediction": "the CPU is the fastest accurate path",
+  "popsicle_period_prediction_v16": "the CPU is the fastest accurate path",
+  "pulse_ppg": "the CPU is the fastest accurate path",
+  "pulsenet_foundation": "the CPU is the fastest accurate path",
+  "sleepnet_bdi": "the CPU is the fastest accurate path",
+  "sleepnet_bdi_v3": "the CPU is the fastest accurate path",
+  "sleepnet_moonstone": "the CPU is the fastest accurate path",
+  "source_embedding": "the CPU is the fastest accurate path",
+  "step_eligibility": "the CPU is the fastest accurate path",
+  "step_head": "the CPU is the fastest accurate path",
+  "step_multiplier": "the CPU is the fastest accurate path",
+  "whr_unet_encoder": "61.78 ms on the CPU against 28.85 ms here, at 3.44e-04 against 3.44e-04",
+  "whr_unet_head": "the CPU is the fastest accurate path"
+ },
+ "speed_margin": 0.5
+}

@@ -49,7 +49,15 @@ targets:
               public.mime-type: application/vnd.maverick.connector
         LSSupportsOpeningDocumentsInPlace: true
         NSBluetoothAlwaysUsageDescription: Mav connects to wearables through the signed connector you approve.
-        UIBackgroundModes: [bluetooth-central]
+        # `processing` is the long window a foundation encoder over a night of PPG needs;
+        # `fetch` is the short top-up before a likely app open. Both degrade to the interactive
+        # pass on next launch when iOS declines them, which it may always do.
+        UIBackgroundModes: [bluetooth-central, processing, fetch]
+        # BGTaskScheduler refuses to register an identifier that is not listed here, and a
+        # refused registration is a crash at launch rather than a missing feature.
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.sennnen.mav.analytics.processing
+          - com.sennnen.mav.analytics.refresh
         MAVConnectorManagerEnabled: true
         MAVAllowRemoteConnectorImport: true
         MAVOfficialPublisherKeys: []

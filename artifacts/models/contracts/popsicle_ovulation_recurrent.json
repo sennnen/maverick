@@ -1,0 +1,76 @@
+{
+  "algorithm": "popsicle_ovulation_recurrent",
+  "core_path": "_model_runner.ovulation_detection_runner.trained_detection_model.lstm",
+  "coreml": {
+    "artifact": "popsicle_ovulation_recurrent.mlpackage",
+    "bytes": 1096571,
+    "compute_units": "ALL",
+    "configuration_attempts": [],
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "c43cb50e61acfd1f5af1d14d9f976c969ec5dab7bb7756eb4ecf3969afbef3a7",
+      "Data/com.apple.CoreML/weights/weight.bin": "0a82030ec5d1dd79c5bfbfab78e6b2e8ee661bc532e15faa220bd883f380173a",
+      "Manifest.json": "288338429fcaf510844603939717bf0c6f91f147415ffde440b36dd6d56dba85",
+      "executorch_debug_handle_mapping.json": "360dfcffdf828467930e6005e6e8154716efb451f4fd86ad561479060c5e020e"
+    },
+    "parity": {
+      "max_abs": 0.0014404356479644775,
+      "max_rel": 0.0014409618838705108
+    },
+    "precision": "float16",
+    "sha256": "9278e041d81e3201f6227e03f37d6dd6e3865bf183125709a8be2bb76cae8675",
+    "torchscript_error": "TypeError: iteration over a 0-d tensor"
+  },
+  "cross_platform": {
+    "max_abs": 8.493661880493164e-07,
+    "max_rel": 8.496808956316384e-07
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "time_series",
+      "shape": [
+        1,
+        40,
+        3
+      ]
+    }
+  ],
+  "model": "popsicle_ovulation_recurrent",
+  "notes": "84,224 of the ovulation head's 84,385 parameters. The packed-sequence length its parent reads is what blocked the parent, and padding is Rust's job anyway.",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "encoded",
+      "shape": [
+        1,
+        40,
+        64
+      ]
+    }
+  ],
+  "parameters": 84224,
+  "role": "Three-layer recurrent encoder over up to forty cycle days",
+  "source_asset": "popsicle_1_8_1.pt",
+  "source_asset_sha256": "69710d7cd0c8cc58c90bef05db0b00567d8f6b5f75b79de3444bb6109d3d0ad3",
+  "tflite": {
+    "artifact": "popsicle_ovulation_recurrent.tflite",
+    "bytes": 436392,
+    "parity": {
+      "max_abs": 0.001441068947315216,
+      "max_rel": 0.001441595414585183
+    },
+    "passes": {
+      "bytes_full_width": 591836,
+      "bytes_halved": 436392,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 5
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "527b080a63fbcc1931366f8b4659e8d083f81bc1c7c86aa985d884a147755bb7"
+  },
+  "trace_max_abs_error": 0.0,
+  "version": "1.8.1"
+}

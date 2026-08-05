@@ -1,0 +1,200 @@
+{
+  "algorithm": "activity_source_embedding",
+  "core_path": "history_preprocessor.source_extractor.source_embedding",
+  "coreml": {
+    "artifact": "source_embedding.mlpackage",
+    "bytes": 6336,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        }
+      ],
+      "constants_rounded": 0,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 7
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 7
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 7
+          },
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 7
+          },
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 7
+          },
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 7
+          },
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 4
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 4
+          },
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "half",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "0c63d3c6e643cdae7b004a4dd171705e096b737bd916bd7b1f7c657cda55e478",
+      "Data/com.apple.CoreML/weights/weight.bin": "703cb048aa1704eb6931bf599cca0e56b5a7cec8360ed2d2d877eda64e20ce33",
+      "Manifest.json": "48f6ca600661d8440dc9bfd1017b884013e7128ace12ec25b320cc4822c1096d",
+      "executorch_debug_handle_mapping.json": "61797664f2a36118d75c6ce4e243edd793b9760af604ab5f0fa7a185c1d4f431"
+    },
+    "parity": {
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "precision": "float16",
+    "sha256": "054325c329dae958661c0c32990111210e7924c7e152f78a365e9586aaff4b27"
+  },
+  "cross_platform": {
+    "max_abs": 0.0,
+    "max_rel": 0.0
+  },
+  "inputs": [
+    {
+      "dtype": "int64",
+      "name": "source_ids",
+      "shape": [
+        1,
+        16
+      ]
+    }
+  ],
+  "model": "source_embedding",
+  "notes": "An eleven-row table, the archive's last 88 parameters. Its wrapper clamps an out-of-range id to row zero and then writes three of the eight values back over the is_labeling, is_workout and is_sleep feature slots; both are Rust's.",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "source_features",
+      "shape": [
+        1,
+        16,
+        8
+      ]
+    }
+  ],
+  "parameters": 88,
+  "role": "Embeds each segment's provenance \u2014 how the activity was recorded \u2014 into eight values",
+  "source_asset": "automatic_activity_detection_3_1_11.pt",
+  "source_asset_sha256": "130d8a20ee0958b79cd19945a227665fcea709a81867e7d2c4a3aa83324e1159",
+  "tflite": {
+    "artifact": "source_embedding.tflite",
+    "bytes": 1792,
+    "parity": {
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "passes": {
+      "bytes_full_width": 1772,
+      "bytes_halved": 1792,
+      "constants_rounded": 0,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 0
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "84a1d9a9b6fa7c6523912801190faece00c579afa6c59e66fb145de4c35d14b8"
+  },
+  "trace_max_abs_error": 0.0,
+  "version": "3.1.11",
+  "weights_kept_full": 1,
+  "weights_rounded": 0
+}

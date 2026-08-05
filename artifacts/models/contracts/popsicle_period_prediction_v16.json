@@ -1,0 +1,212 @@
+{
+  "algorithm": "popsicle_period_prediction",
+  "core_path": "_model_runner.period_prediction_runner.trained_prediction_model",
+  "coreml": {
+    "artifact": "popsicle_period_prediction_v16.mlpackage",
+    "bytes": 1102319,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.003722667694091797,
+            "max_rel": 0.00048799166707504533
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.003722667694091797,
+            "max_rel": 0.00048799166707504533
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.003722667694091797,
+            "max_rel": 0.00048799166707504533
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.003722667694091797,
+            "max_rel": 0.00048799166707504533
+          }
+        }
+      ],
+      "constants_rounded": 5,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 2050,
+          "unassigned": 5
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 2055
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2052
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2052
+          },
+          "parity": {
+            "max_abs": 0.04533076286315918,
+            "max_rel": 0.005633073817676968
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2052
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2052
+          },
+          "parity": {
+            "max_abs": 0.04533076286315918,
+            "max_rel": 0.005633073817676968
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2052
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2052
+          },
+          "parity": {
+            "max_abs": 0.04533076286315918,
+            "max_rel": 0.005633073817676968
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2052
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2052
+          },
+          "parity": {
+            "max_abs": 0.04533076286315918,
+            "max_rel": 0.005633073817676968
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2050,
+              "unassigned": 5
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2055
+          },
+          "parity": {
+            "max_abs": 0.003722667694091797,
+            "max_rel": 0.00048799166707504533
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "2814ec41deb31e7e5ed5e16d8b15156e840dff8a94192f8ea12466a2a59d4834",
+      "Data/com.apple.CoreML/weights/weight.bin": "6d22b8b485324fa126e47299651e54e57f26b9d7c48cc4151c64a2345c29a78a",
+      "Manifest.json": "8a506ccec90ec2858e6392513f548f1e011b3992eb111c9710250a0c794956c6",
+      "executorch_debug_handle_mapping.json": "842ba4e522a77a4bdf93650c9c1c9e45c10fe30b443fe3537ea15396fecbe5e0"
+    },
+    "parity": {
+      "max_abs": 0.003722667694091797,
+      "max_rel": 0.00048799166707504533
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "1ee86b583253987880fbf6323f7f40fa38aee62e47319ecb687168dcdec2312d"
+  },
+  "cross_platform": {
+    "max_abs": 2.86102294921875e-06,
+    "max_rel": 3.27351386835062e-07
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "time_series",
+      "shape": [
+        1,
+        40,
+        3
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "scalars",
+      "shape": [
+        1,
+        40,
+        4
+      ]
+    }
+  ],
+  "model": "popsicle_period_prediction_v16",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "days",
+      "shape": [
+        1,
+        40,
+        1
+      ]
+    }
+  ],
+  "parameters": 84385,
+  "role": "The previous generation of the period predictor",
+  "source_asset": "popsicle_1_6_0.pt",
+  "source_asset_sha256": "9109e2090638153a6f2c4b7aec05cf7b880d954e00e2175e49bcd61e550861ff",
+  "tflite": {
+    "artifact": "popsicle_period_prediction_v16.tflite",
+    "bytes": 449868,
+    "parity": {
+      "max_abs": 0.0037169456481933594,
+      "max_rel": 0.00048724158381580355
+    },
+    "passes": {
+      "bytes_full_width": 605280,
+      "bytes_halved": 449868,
+      "constants_rounded": 5,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 5
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "f6853eadbab0f79d77d65f5bdf3928ddbacf42f89b021217a481bf1e746ebc00"
+  },
+  "trace_max_abs_error": 0.0010404586791992188,
+  "version": "1.6.0",
+  "weights_kept_full": 11,
+  "weights_rounded": 5
+}

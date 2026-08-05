@@ -1,0 +1,334 @@
+{
+ "archive": "stress_daytime_sensing_1_1_0",
+ "order": [
+  "dhrv_value",
+  "dhrv_value_timestamp",
+  "bedtime_start",
+  "bedtime_end",
+  "dhrv_baseline",
+  "night_hrv_baseline",
+  "ring_met"
+ ],
+ "vectors": [
+  {
+   "inputs": {
+    "dhrv_value": [
+     46.0
+    ],
+    "dhrv_value_timestamp": [
+     1700050400.0
+    ],
+    "bedtime_start": [
+     1700003600.0
+    ],
+    "bedtime_end": [
+     1700028800.0
+    ],
+    "dhrv_baseline": [
+     46.0
+    ],
+    "night_hrv_baseline": [
+     60.0
+    ],
+    "ring_met": [
+     1.1
+    ]
+   },
+   "outputs": [
+    [
+     [
+      0.0
+     ]
+    ],
+    [
+     [
+      -3.0
+     ]
+    ],
+    [
+     [
+      3.0
+     ]
+    ],
+    [
+     [
+      -29.0
+     ]
+    ],
+    [
+     [
+      37.0
+     ]
+    ],
+    [
+     [
+      0.0
+     ]
+    ],
+    [
+     [
+      -0.12931035459041595
+     ]
+    ],
+    [
+     [
+      0.10135135054588318
+     ]
+    ]
+   ]
+  },
+  {
+   "inputs": {
+    "dhrv_value": [
+     30.0
+    ],
+    "dhrv_value_timestamp": [
+     1700050400.0
+    ],
+    "bedtime_start": [
+     1700003600.0
+    ],
+    "bedtime_end": [
+     1700028800.0
+    ],
+    "dhrv_baseline": [
+     46.0
+    ],
+    "night_hrv_baseline": [
+     60.0
+    ],
+    "ring_met": [
+     1.1
+    ]
+   },
+   "outputs": [
+    [
+     [
+      -16.0
+     ]
+    ],
+    [
+     [
+      -3.0
+     ]
+    ],
+    [
+     [
+      3.0
+     ]
+    ],
+    [
+     [
+      -29.0
+     ]
+    ],
+    [
+     [
+      37.0
+     ]
+    ],
+    [
+     [
+      -0.6264367816091954
+     ]
+    ],
+    [
+     [
+      -0.12931035459041595
+     ]
+    ],
+    [
+     [
+      0.10135135054588318
+     ]
+    ]
+   ]
+  },
+  {
+   "inputs": {
+    "dhrv_value": [
+     70.0
+    ],
+    "dhrv_value_timestamp": [
+     1700050400.0
+    ],
+    "bedtime_start": [
+     1700003600.0
+    ],
+    "bedtime_end": [
+     1700028800.0
+    ],
+    "dhrv_baseline": [
+     46.0
+    ],
+    "night_hrv_baseline": [
+     60.0
+    ],
+    "ring_met": [
+     1.1
+    ]
+   },
+   "outputs": [
+    [
+     [
+      24.0
+     ]
+    ],
+    [
+     [
+      -3.0
+     ]
+    ],
+    [
+     [
+      3.0
+     ]
+    ],
+    [
+     [
+      -29.0
+     ]
+    ],
+    [
+     [
+      37.0
+     ]
+    ],
+    [
+     [
+      0.7072072072072072
+     ]
+    ],
+    [
+     [
+      -0.12931035459041595
+     ]
+    ],
+    [
+     [
+      0.10135135054588318
+     ]
+    ]
+   ]
+  },
+  {
+   "inputs": {
+    "dhrv_value": [
+     46.0
+    ],
+    "dhrv_value_timestamp": [
+     1700010800.0
+    ],
+    "bedtime_start": [
+     1700003600.0
+    ],
+    "bedtime_end": [
+     1700028800.0
+    ],
+    "dhrv_baseline": [
+     46.0
+    ],
+    "night_hrv_baseline": [
+     60.0
+    ],
+    "ring_met": [
+     1.1
+    ]
+   },
+   "error": "builtins.Exception: 6, Silent Condition, Sleep detected."
+  },
+  {
+   "inputs": {
+    "dhrv_value": [
+     46.0
+    ],
+    "dhrv_value_timestamp": [
+     1700050400.0
+    ],
+    "bedtime_start": [
+     1700003600.0
+    ],
+    "bedtime_end": [
+     1700028800.0
+    ],
+    "dhrv_baseline": [
+     46.0
+    ],
+    "night_hrv_baseline": [
+     60.0
+    ],
+    "ring_met": [
+     3.5
+    ]
+   },
+   "error": "builtins.Exception: 3, Silent Condition, Ring MET exceeded limit for activity."
+  },
+  {
+   "inputs": {
+    "dhrv_value": [
+     52.0
+    ],
+    "dhrv_value_timestamp": [
+     1700072000.0
+    ],
+    "bedtime_start": [
+     1700003600.0
+    ],
+    "bedtime_end": [
+     1700028800.0
+    ],
+    "dhrv_baseline": [
+     40.0
+    ],
+    "night_hrv_baseline": [
+     55.0
+    ],
+    "ring_met": [
+     1.0
+    ]
+   },
+   "outputs": [
+    [
+     [
+      12.0
+     ]
+    ],
+    [
+     [
+      -3.0
+     ]
+    ],
+    [
+     [
+      3.0
+     ]
+    ],
+    [
+     [
+      -28.0
+     ]
+    ],
+    [
+     [
+      35.0
+     ]
+    ],
+    [
+     [
+      0.4285714285714286
+     ]
+    ],
+    [
+     [
+      -0.1339285671710968
+     ]
+    ],
+    [
+     [
+      0.1071428582072258
+     ]
+    ]
+   ]
+  }
+ ]
+}

@@ -1,0 +1,198 @@
+{
+  "algorithm": "step_count_multiplier",
+  "core_path": "model.step_count_multiplier",
+  "coreml": {
+    "artifact": "step_multiplier.mlpackage",
+    "bytes": 4238,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        }
+      ],
+      "constants_rounded": 0,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 6
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 6
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 7
+          },
+          "parity": {
+            "max_abs": 0.0005781650543212891,
+            "max_rel": 0.0008098036668577914
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 7
+          },
+          "parity": {
+            "max_abs": 0.0005781650543212891,
+            "max_rel": 0.0008098036668577914
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 7
+          },
+          "parity": {
+            "max_abs": 0.0005781650543212891,
+            "max_rel": 0.0008098036668577914
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 7
+          },
+          "parity": {
+            "max_abs": 0.0005781650543212891,
+            "max_rel": 0.0008098036668577914
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 6
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 6
+          },
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "7861cf28e0c8d045319a58a4f4055e3ee70cbe92d763e62b4f23f834cd8bda89",
+      "Manifest.json": "3a7367bfc43618452ce57ee8af828c836812a963c4117be6cc51a5824d303c50",
+      "executorch_debug_handle_mapping.json": "b1159c082e41a3f442b6954c07c67d9f6c3bd093998e43b25971a6a04194b0e4"
+    },
+    "parity": {
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "46b73d0d7229e9e8fd4f7fc14a2f4cacba060ca934c86646e7256397ab5411be"
+  },
+  "cross_platform": {
+    "max_abs": 0.0,
+    "max_rel": 0.0
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "eligibility",
+      "shape": [
+        1,
+        1
+      ]
+    }
+  ],
+  "model": "step_multiplier",
+  "notes": "Two parameters. Converted rather than ported so the whole archive is accounted for.",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "multiplier",
+      "shape": [
+        1,
+        1
+      ]
+    }
+  ],
+  "parameters": 2,
+  "role": "Parameterised sigmoid scaling the raw step count by eligibility",
+  "source_asset": "step_counter_1_3_0.pt",
+  "source_asset_sha256": "e062373c0b74a281c6aeca098af3fc9a43dbd829147acd13910281f54c29857d",
+  "tflite": {
+    "artifact": "step_multiplier.tflite",
+    "bytes": 1816,
+    "parity": {
+      "max_abs": 1.1920928955078125e-07,
+      "max_rel": 1.6696982821810133e-07
+    },
+    "passes": {
+      "bytes_full_width": 1812,
+      "bytes_halved": 1816,
+      "constants_rounded": 0,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 0
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "fb966f78975654198304b8391c1827b423427962acf262f08ed6748c5b37abbb"
+  },
+  "trace_max_abs_error": 0.0,
+  "version": "1.3.0",
+  "weights_kept_full": 2,
+  "weights_rounded": 0
+}

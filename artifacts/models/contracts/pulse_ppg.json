@@ -1,0 +1,210 @@
+{
+  "algorithm": "pulse_ppg_embeddings",
+  "architecture": "ResNet1D",
+  "architecture_config": {
+    "base_filters": 128,
+    "finalpool": "max",
+    "groups": 1,
+    "in_channels": 1,
+    "kernel_size": 11,
+    "n_block": 12,
+    "stride": 2
+  },
+  "citation": "Pulse-PPG: An Open-Source Field-Trained PPG Foundation Model, UbiComp 2025",
+  "coreml": {
+    "artifact": "pulse_ppg.mlpackage",
+    "bytes": 57174572,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.14286375045776367,
+            "max_rel": 0.004108275486070584
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.14286375045776367,
+            "max_rel": 0.004108275486070584
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.10935831069946289,
+            "max_rel": 0.0030310374556038345
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.47358226776123047,
+            "max_rel": 0.013037121958196526
+          }
+        }
+      ],
+      "constants_rounded": 25,
+      "neural_engine": {
+        "devices": {
+          "CPU": 1,
+          "NeuralEngine": 131
+        },
+        "fraction": 0.9924242424242424,
+        "on_neural_engine": 131,
+        "operations": 132
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 131
+            },
+            "fraction": 0.9924242424242424,
+            "on_neural_engine": 131,
+            "operations": 132
+          },
+          "parity": {
+            "max_abs": 0.14286375045776367,
+            "max_rel": 0.004108275486070584
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 8,
+              "NeuralEngine": 127
+            },
+            "fraction": 0.9407407407407408,
+            "on_neural_engine": 127,
+            "operations": 135
+          },
+          "parity": {
+            "max_abs": 0.13493728637695312,
+            "max_rel": 0.0039451922423822255
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 52,
+              "NeuralEngine": 105
+            },
+            "fraction": 0.6687898089171974,
+            "on_neural_engine": 105,
+            "operations": 157
+          },
+          "parity": {
+            "max_abs": 0.12203598022460938,
+            "max_rel": 0.0033594964714313107
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 58,
+              "NeuralEngine": 102
+            },
+            "fraction": 0.6375,
+            "on_neural_engine": 102,
+            "operations": 160
+          },
+          "parity": {
+            "max_abs": 0.12723875045776367,
+            "max_rel": 0.0036589536373568994
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 131,
+              "unassigned": 25
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 156
+          },
+          "parity": {
+            "max_abs": 0.10419416427612305,
+            "max_rel": 0.0028879050211756707
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "half",
+      "policy_reason": "half-width arithmetic on the Neural Engine",
+      "unit_spread": 0.010006084502592692
+    },
+    "frontend": "exir",
+    "input_name": "ppg",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "568ac0eeb548663db4a0f25375d45aefb4a4289fa3e8c607713bd10e30c1a354",
+      "Data/com.apple.CoreML/weights/weight.bin": "60c6a97e04c5e1cb14a98dc7c156ce6e4c1ea6bb826307eeb1bb09aaab9f050f",
+      "Manifest.json": "f364ff1e2f69ccfa95506d0cea56ddf669b9e41064bbb66351423d19bcd114cd",
+      "executorch_debug_handle_mapping.json": "31bcd22e9e59362025e1c831604c5c9bb10bdc4f632b7096506c1f9d973682e4"
+    },
+    "parity": {
+      "max_abs": 0.14286375045776367,
+      "max_rel": 0.004108275486070584
+    },
+    "precision": "float16",
+    "sha256": "c444483ac6ce3670f4d78d16f40a1bbf8e36218011a8f8d5e9891d6e148f65df"
+  },
+  "cross_platform": {
+    "max_abs": 0.4317169189453125,
+    "max_rel": 0.011888374578971784
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "ppg",
+      "shape": [
+        1,
+        1,
+        12000
+      ]
+    }
+  ],
+  "licence": "MIT, Max Xu and contributors",
+  "model": "pulse_ppg",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "embeddings",
+      "shape": [
+        1,
+        512
+      ]
+    }
+  ],
+  "parameters": 28497920,
+  "role": "Open-weight PPG foundation encoder: 240 s at 50 Hz to a 512-d embedding, pre-trained on uncurated field PPG",
+  "sample_rate_hz": 50,
+  "source_epoch": 5,
+  "source_url": "https://github.com/maxxu05/pulseppg (weights: Zenodo 10.5281/zenodo.17270930)",
+  "source_weights": "checkpoint_best.pkl",
+  "source_weights_sha256": "485ade5033b3baa9b82e252fc131042dda897d7bdfc0d1a030d9746a1e98857c",
+  "tflite": {
+    "artifact": "pulse_ppg.tflite",
+    "bytes": 57155796,
+    "constants_rounded": 25,
+    "norms_folded": 0,
+    "parity": {
+      "max_abs": 0.05428028106689453,
+      "max_rel": 0.0015044633001565656
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "4d6359ab1e37d7a47bb4ff94ca74fe2b19604283dcdece0a256a48ea440c78fb",
+    "weights_halved": 25
+  },
+  "version": "1.0.0",
+  "window_seconds": 240
+}

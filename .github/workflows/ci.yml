@@ -82,6 +82,15 @@ jobs:
           python3 tools/gen_design_tokens.py
           git diff --exit-code -- apps/ios/Maverick/UI/AuraTokens.generated.swift \
             apps/android/app/src/main/java/com/sennnen/mav/ui/aura/AuraTokens.generated.kt
+      # check_docs.sh above already runs check_model_assets, check_claims and model_matrix
+      # --check; this step is the rest — the generators, and the gates' own tests.
+      - name: the model manifest is the single source
+        run: |
+          python3 tools/ml/generate_bindings.py --check
+          python3 tools/ml/build_ledger.py --check
+          python3 tools/test_check_model_assets.py
+          python3 tools/ml/test_build_manifest.py
+          python3 tools/ml/test_android_delegate.py
 
   vendored-connectors:
     runs-on: ubuntu-latest
@@ -143,6 +152,15 @@ jobs:
       - run: test -f apps/ios/build/mav-core/MavCore.xcframework/Info.plist
       - run: test -f apps/ios/build/mav-core/Sources/mav_ffi.swift
       - run: test -f apps/ios/build/mav-core/SHA256SUMS
+      # The iOS unit tests, which include loading and running all forty-one Core ML packages at
+      # their contracted shapes. They could not run before the model-zoo sources and packages
+      # were in the target; now that they are, a package that stops loading fails here rather
+      # than on a phone.
+      - name: iOS unit tests
+        working-directory: apps/ios
+        run: >-
+          xcodebuild test -project Maverick.xcodeproj -scheme Maverick
+          -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max'
       - name: Verify the iOS model bundle
         if: github.event_name == 'push'
         run: >-

@@ -1,0 +1,181 @@
+{
+  "algorithm": "awake_heart_rate_profile",
+  "core_path": "model",
+  "coreml": {
+    "artifact": "awhr_profile_selector.mlpackage",
+    "bytes": 1258014,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.00012809038162231445,
+            "max_rel": 0.00021692654951825448
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.00012809038162231445,
+            "max_rel": 0.00021692654951825448
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.00012809038162231445,
+            "max_rel": 0.00021692654951825448
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.00012809038162231445,
+            "max_rel": 0.00021692654951825448
+          }
+        }
+      ],
+      "constants_rounded": 8,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 2409,
+          "unassigned": 10
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 2419
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2412
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2412
+          },
+          "parity": {
+            "max_abs": 0.001020178198814392,
+            "max_rel": 0.001406439094666282
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2415
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2415
+          },
+          "parity": {
+            "max_abs": 0.001020178198814392,
+            "max_rel": 0.001406439094666282
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2433
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2433
+          },
+          "parity": {
+            "max_abs": 0.0017081499099731445,
+            "max_rel": 0.0019279660019227186
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2432
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2432
+          },
+          "parity": {
+            "max_abs": 0.0017081499099731445,
+            "max_rel": 0.0019279660019227186
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2409,
+              "unassigned": 10
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2419
+          },
+          "parity": {
+            "max_abs": 0.00012809038162231445,
+            "max_rel": 0.00021692654951825448
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "65d03e5c3a18ccd1fa98bbeaa8f5b8ddfcca9c8143c4252926aa17e876cb1122",
+      "Data/com.apple.CoreML/weights/weight.bin": "f4050edb0b9f7d0f4734acb720f80a0c666f7ff4cf5eb035fb3f0f0a5eb2bcdd",
+      "Manifest.json": "3d1bd9204d1f9b4b096298b24de6611e06cefcd72dc6ebb1f2221f28db43ea2e",
+      "executorch_debug_handle_mapping.json": "8980101d6eb14bbf5a5e4bdd7cd13411c6e3e8f0d8be46c938bd5b60c2e8552d"
+    },
+    "parity": {
+      "max_abs": 0.00012809038162231445,
+      "max_rel": 0.00021692654951825448
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "5925c437987dd093ee94752bf065c74f0ef9783ad34ee7f6b28dac7432fbc7c0"
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "features",
+      "shape": [
+        1,
+        60,
+        19
+      ]
+    }
+  ],
+  "model": "awhr_profile_selector",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "profile_logits",
+      "shape": [
+        1,
+        3
+      ]
+    }
+  ],
+  "parameters": 10843,
+  "role": "Activity-profile classifier selecting the awake-HR imputation profile",
+  "source_asset": "awhr_profile_selector_1_0_1.pt",
+  "source_asset_sha256": "337046911cdbe4fd6820b068dfb7fa8ccb89fc2d765322c82ee9859a4ab38e58",
+  "tflite": {
+    "error": "RuntimeError:     raise errors.NonConcreteBooleanIndexError(core.typeof(idx.index)) | jax.errors.NonConcreteBooleanIndexError: Array boolean indices must be concrete; got bool[1,60] | See https://docs.jax.dev/en/latest/errors.html#jax.errors.NonConcreteBooleanIndexError"
+  },
+  "trace_max_abs_error": 6.693601608276367e-05,
+  "version": "1.0.1",
+  "weights_kept_full": 54,
+  "weights_rounded": 8
+}

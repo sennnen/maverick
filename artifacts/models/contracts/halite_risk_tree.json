@@ -1,0 +1,208 @@
+{
+  "algorithm": "halite_hypertension_risk",
+  "core_path": "tree_model",
+  "coreml": {
+    "artifact": "halite_risk_tree.mlpackage",
+    "bytes": 88035,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 9.40561294555664e-05,
+            "max_rel": 0.00013552310501468984
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 9.40561294555664e-05,
+            "max_rel": 0.00013552310501468984
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 9.40561294555664e-05,
+            "max_rel": 0.00013552310501468984
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 9.40561294555664e-05,
+            "max_rel": 0.00013552310501468984
+          }
+        }
+      ],
+      "constants_rounded": 3,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 75,
+          "unassigned": 3
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 78
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 74
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 74
+          },
+          "parity": {
+            "max_abs": 0.0002727508544921875,
+            "max_rel": 0.00031692208813980033
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 76
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 76
+          },
+          "parity": {
+            "max_abs": 0.0002727508544921875,
+            "max_rel": 0.00031692208813980033
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 76
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 76
+          },
+          "parity": {
+            "max_abs": 0.0002727508544921875,
+            "max_rel": 0.00031692208813980033
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 76
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 76
+          },
+          "parity": {
+            "max_abs": 0.0002727508544921875,
+            "max_rel": 0.00031692208813980033
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 75,
+              "unassigned": 3
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 78
+          },
+          "parity": {
+            "max_abs": 9.40561294555664e-05,
+            "max_rel": 0.00013552310501468984
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "d31b0f24d2778cb7a4ac68dd3fc70c94f93222df788689d537f124d0a9c1790d",
+      "Data/com.apple.CoreML/weights/weight.bin": "44e29887db65935a8150a58487f7d3b7ceacc4986be620e8a39e76136541fb7f",
+      "Manifest.json": "74771c7d6bde8489a84336d3f47fb2819f1ed9d10cc838f5eec7de5279bc0c66",
+      "executorch_debug_handle_mapping.json": "33c5764249c706345da71b6e32f46bae8b3272d41dd9c22aafca4391173d408a"
+    },
+    "parity": {
+      "max_abs": 9.40561294555664e-05,
+      "max_rel": 0.00013552310501468984
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "cea5e1ae3ed9660f462394fd097951701f099ad035ef3a83d92d2203c91d0b11"
+  },
+  "cross_platform": {
+    "max_abs": 1.4901161193847656e-08,
+    "max_rel": 1.7218762169360162e-08
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "features",
+      "shape": [
+        1,
+        13
+      ]
+    }
+  ],
+  "model": "halite_risk_tree",
+  "notes": "Feature vector is user_info(4) || baselines(8) || aggregated ppg score(1).",
+  "outputs": [
+    {
+      "dtype": "int64",
+      "name": "label",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "probabilities",
+      "shape": [
+        1,
+        2
+      ]
+    }
+  ],
+  "parameters": 19100,
+  "role": "Gradient-boosted head over user info, baselines and the aggregated PPG score",
+  "source_asset": "halite_1_2_0.pt",
+  "source_asset_sha256": "1a61c6b23e6f1b0a4a92e2b33b2cc045e0eee13cf540c02b4cb199a6582b0ea5",
+  "tflite": {
+    "artifact": "halite_risk_tree.tflite",
+    "bytes": 107076,
+    "parity": {
+      "max_abs": 9.399652481079102e-05,
+      "max_rel": 0.00013543722218514945
+    },
+    "passes": {
+      "bytes_full_width": 127860,
+      "bytes_halved": 107076,
+      "constants_rounded": 3,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 3
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "b7d4e75090e2dd98067277a2ad7572bd6f0ede686addc80416461f002d08d4a5"
+  },
+  "trace_max_abs_error": 7.301568984985352e-07,
+  "version": "1.2.0",
+  "weights_kept_full": 4,
+  "weights_rounded": 3
+}

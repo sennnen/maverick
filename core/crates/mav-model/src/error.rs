@@ -92,6 +92,16 @@ pub mod codes {
     pub const ML_ECG_CAPTURE_STATE: u16 = 8001;
     pub const ML_ECG_INFERENCE_INVALID: u16 = 8002;
     pub const ML_ECG_PREPROCESSING: u16 = 8003;
+    /// A tensor handed to, or returned by, a model does not match its registered contract.
+    pub const ML_MODEL_TENSOR_INVALID: u16 = 8004;
+    /// A model returned values the contract cannot accept, such as a non-finite output.
+    pub const ML_MODEL_INFERENCE_INVALID: u16 = 8005;
+    /// The platform reported an artefact hash this build does not admit for that model.
+    pub const ML_MODEL_NOT_ADMITTED: u16 = 8006;
+    /// A model-zoo preprocessing stage could not produce a tensor from the signal it was given.
+    pub const ML_MODEL_PREPROCESSING: u16 = 8007;
+    /// No inference is outstanding for the id the platform submitted a result for.
+    pub const ML_MODEL_REQUEST_UNKNOWN: u16 = 8008;
 
     pub const FFI_RUNTIME_STATE: u16 = 9001;
     pub const FFI_ACTION_QUEUE_FULL: u16 = 9002;

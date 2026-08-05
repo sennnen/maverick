@@ -8,6 +8,11 @@ import com.sennnen.mav.MavSnapshot
 import com.sennnen.mav.ble.LiveState
 import com.sennnen.mav.connector.AndroidConnectorManager
 import com.sennnen.mav.data.MetricSeriesRow
+import com.sennnen.mav.ml.MavAnalyticsEngine
+import com.sennnen.mav.ml.MavAnalyticsSnapshot
+import com.sennnen.mav.ml.MavCoreAnalyticsRuntime
+import com.sennnen.mav.ml.MavModelRunner
+import com.sennnen.mav.ml.MavRunMode
 import com.sennnen.mav.data.SleepSession
 import com.sennnen.mav.data.WorkoutRow
 import kotlinx.coroutines.Dispatchers
@@ -78,6 +83,63 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val mlEngine: MavMlSignals = MavMlSignals()
     val connectors = AndroidConnectorManager(application, viewModelScope)
 
+    private val mutableAnalytics = MutableStateFlow(MavAnalyticsSnapshot())
+    /**
+     * Per-signal analytics state, straight from the core's plan. The only source of a model
+     * reading or of a reason one is missing; a surface that cannot find what it wants here
+     * renders the state, never a locally computed substitute.
+     */
+    val analytics: StateFlow<MavAnalyticsSnapshot> = mutableAnalytics.asStateFlow()
+
+    private var engine: MavAnalyticsEngine? = null
+    private var analyticsJob: Job? = null
+
+    /**
+     * Start an analytics pass, if the runtime is open.
+     *
+     * Cancels nothing: [MavAnalyticsEngine] holds a single-pass lock and a second caller returns
+     * immediately, so a resume during a background pass is free rather than a race.
+     */
+    fun runAnalytics(mode: MavRunMode) {
+        val runtime = MavRepo.sharedRuntime ?: return
+        val engine = engine ?: MavAnalyticsEngine(
+            runtime = MavCoreAnalyticsRuntime(runtime),
+            runner = MavModelRunner(getApplication()),
+        ).also {
+            this.engine = it
+            // Mirror the engine's own state onto the view model's flow rather than exposing the
+            // engine: the UI should not be able to start a pass by touching a state holder.
+            viewModelScope.launch { it.snapshot.collect { snapshot -> mutableAnalytics.value = snapshot } }
+        }
+        if (analyticsJob?.isActive == true) return
+        analyticsJob = viewModelScope.launch(Dispatchers.Default) {
+            engine.runPass(ACTIVE_DEVICE_ID, mode)
+        }
+    }
+
+    /**
+     * The engine a background worker should use.
+     *
+     * Shares this view model's instance when the app is alive, so a background pass and a
+     * foreground pass contend for the same single-pass lock rather than running the zoo twice.
+     * When the process was started by WorkManager with no UI, there is no view model to share
+     * and a standalone engine over the same runtime is built instead.
+     */
+    fun analyticsEngine(context: android.content.Context): MavAnalyticsEngine {
+        engine?.let { return it }
+        val runtime = MavRepo.sharedRuntime ?: throw IllegalStateException("core runtime is not open")
+        return MavAnalyticsEngine(
+            runtime = MavCoreAnalyticsRuntime(runtime),
+            runner = MavModelRunner(context),
+        ).also { engine = it }
+    }
+
+    /** Clear the retry budgets and run again, for the retry affordance on a failed signal. */
+    fun retryAnalytics() {
+        engine?.resetRetries()
+        runAnalytics(MavRunMode.INTERACTIVE)
+    }
+
     /** Generic source id used until stored read models carry the active connector identity. */
     val activeDeviceSource: String get() = "active-device"
 
@@ -108,6 +170,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 mutableSyncNote.value = null
                 mutableSnapshot.value =
                     connectors.dailySnapshot(ACTIVE_DEVICE_ID, System.currentTimeMillis())
+                // The wearer is looking at the screen, so this pass is allowed to be expensive.
+                runAnalytics(MavRunMode.INTERACTIVE)
                 MavAppState.Ready
             }.getOrElse(::failureState)
         }
@@ -261,7 +325,16 @@ class MavRepo {
         emptyList()
 }
 
-/** On-device ML signal surface (AuraMlSignalsCard). Inert until the native-inference lane lands. */
+/**
+ * On-device ML signal surface.
+ *
+ * What this used to be: three hardcoded nulls and a comment saying the inference lane had not
+ * landed. It has now — [AppViewModel.analytics] carries the real per-signal state from the core's
+ * plan. This class keeps only the fields the older Aura card binds to, and every one of them is
+ * still null on purpose: they name analytics (VO2 max, stress load, respiration) that no admitted
+ * model in this build produces, and inventing them from a model that measures something else is
+ * exactly the substitution `docs/ml.md` forbids.
+ */
 class MavMlSignals {
     val backboneActive: StateFlow<Boolean> = MutableStateFlow(false)
     val stressLoad: StateFlow<Double?> = MutableStateFlow(null)

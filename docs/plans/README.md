@@ -27,6 +27,7 @@ Milestones are gated by exit criteria, not dates. The full table with scope and 
 | ECG | ECG discovery | Finding the MG's undecoded ECG waveform on the wire: the raw-data flag, packet type 43, and the probe build | [active/ecg-discovery.md](active/ecg-discovery.md) |
 | UX | UX overhaul | Three tabs (Today, Vitals, Workouts), one device sheet, connector-declared controls, and the deletion of the four-hub shell | [active/ux-overhaul.md](active/ux-overhaul.md) |
 | ECG-P | ECG product | Generic captured ECG, MG-only session gating, native inference, result history, and downloadable Maverick reports | [completed/ecg-product.md](completed/ecg-product.md) |
+| MZ | Model zoo | Recovered and open-weight models converted for Core ML and TFLite, behind one registry, one queue, one scheduler and one runner per platform | [active/model-zoo.md](active/model-zoo.md) |
 
 One series of packets has no plan file. The `WHOOP-P*` tags in `mav-analytic` source comments —
 `WHOOP-P5`, `WHOOP-P6`, `WHOOP-P8` — name the analytics-porting work that admitted HR zones, VO2max,

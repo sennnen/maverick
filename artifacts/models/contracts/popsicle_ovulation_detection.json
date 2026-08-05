@@ -1,0 +1,212 @@
+{
+  "algorithm": "popsicle_ovulation_detection",
+  "core_path": "_model_runner.ovulation_detection_runner.trained_detection_model",
+  "coreml": {
+    "artifact": "popsicle_ovulation_detection.mlpackage",
+    "bytes": 1102638,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 5.4039061069488525e-05,
+            "max_rel": 0.0006764818174337052
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 5.4039061069488525e-05,
+            "max_rel": 0.0006764818174337052
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 5.4039061069488525e-05,
+            "max_rel": 0.0006764818174337052
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 5.4039061069488525e-05,
+            "max_rel": 0.0006764818174337052
+          }
+        }
+      ],
+      "constants_rounded": 5,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 2051,
+          "unassigned": 5
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 2056
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2053
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2053
+          },
+          "parity": {
+            "max_abs": 0.0007916837930679321,
+            "max_rel": 0.008585933348761262
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2053
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2053
+          },
+          "parity": {
+            "max_abs": 0.0007916837930679321,
+            "max_rel": 0.008585933348761262
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2053
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2053
+          },
+          "parity": {
+            "max_abs": 0.0007916837930679321,
+            "max_rel": 0.008585933348761262
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2053
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2053
+          },
+          "parity": {
+            "max_abs": 0.0007916837930679321,
+            "max_rel": 0.008585933348761262
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2051,
+              "unassigned": 5
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2056
+          },
+          "parity": {
+            "max_abs": 5.4039061069488525e-05,
+            "max_rel": 0.0006764818174337052
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "babc1c20c80f04c6cb149f84946b0c5bcc14df5c91c3c2559c564829197d3215",
+      "Data/com.apple.CoreML/weights/weight.bin": "e14942280e559748cce176c7f8519e445e7ee730806eb2188fbfa1361decc748",
+      "Manifest.json": "43540c6d4848dbd93eadb3153e8c884ac126612f55b2339d436402cb7c3358a7",
+      "executorch_debug_handle_mapping.json": "f37221a2f0eec1dc29b3397cc2c1478b0c5992359b45ddaefd4806f1ffad3b77"
+    },
+    "parity": {
+      "max_abs": 5.4039061069488525e-05,
+      "max_rel": 0.0006764818174337052
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "2debe4c55632a4d3bfc3c4d6216d38fcbf82ff61e31591f1981bf2f792793ce6"
+  },
+  "cross_platform": {
+    "max_abs": 3.725290298461914e-08,
+    "max_rel": 4.289161546122641e-07
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "time_series",
+      "shape": [
+        1,
+        40,
+        3
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "scalars",
+      "shape": [
+        1,
+        40,
+        4
+      ]
+    }
+  ],
+  "model": "popsicle_ovulation_detection",
+  "notes": "84,385 parameters: a three-layer recurrent encoder over the daily series, a four-feature scalar branch, and the layer that joins them. Rebuilt whole rather than converted in place because the scripted recurrent layer has no callable forward; see rebuilt_cores.",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "ovulation_probability",
+      "shape": [
+        1,
+        40,
+        1
+      ]
+    }
+  ],
+  "parameters": 84385,
+  "role": "Ovulation detection over up to forty cycle days of temperature, heart rate and breath rate",
+  "source_asset": "popsicle_1_8_1.pt",
+  "source_asset_sha256": "69710d7cd0c8cc58c90bef05db0b00567d8f6b5f75b79de3444bb6109d3d0ad3",
+  "tflite": {
+    "artifact": "popsicle_ovulation_detection.tflite",
+    "bytes": 450252,
+    "parity": {
+      "max_abs": 5.405396223068237e-05,
+      "max_rel": 0.0006763815830556591
+    },
+    "passes": {
+      "bytes_full_width": 605652,
+      "bytes_halved": 450252,
+      "constants_rounded": 5,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 5
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "7ff9f985b7542f0865d1ae32cc8a0ff4bb17bd82441471dd13efa380c50a35a0"
+  },
+  "trace_max_abs_error": 5.105137825012207e-05,
+  "version": "1.8.1",
+  "weights_kept_full": 11,
+  "weights_rounded": 5
+}

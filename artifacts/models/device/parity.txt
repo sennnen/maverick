@@ -1,0 +1,84 @@
+LATENCY activity_context_embedding path=CPU preferred=CPU median_ms=2.101
+LATENCY activity_detection path=CPU preferred=CPU median_ms=11.294
+LATENCY activity_ensemble path=CPU preferred=CPU median_ms=1.949
+LATENCY activity_history_transformer path=CPU preferred=CPU median_ms=3.141
+LATENCY activity_primary_segments path=CPU preferred=CPU median_ms=2.229
+LATENCY activity_secondary_segments path=CPU preferred=CPU median_ms=1.764
+LATENCY activity_transition path=CPU preferred=CPU median_ms=0.799
+LATENCY awhr_imputation path=CPU preferred=CPU median_ms=3.249
+LATENCY awhr_profile_core path=CPU preferred=CPU median_ms=0.352
+LATENCY awhr_profile_head path=CPU preferred=CPU median_ms=0.219
+LATENCY awhr_profile_recurrent path=CPU preferred=CPU median_ms=0.535
+LATENCY behavior_embedding path=CPU preferred=CPU median_ms=0.572
+LATENCY cva_encoder path=CPU preferred=CPU median_ms=16.652
+LATENCY cva_predictor_v1_base path=CPU preferred=CPU median_ms=0.518
+LATENCY cva_probes_female path=CPU preferred=CPU median_ms=0.520
+LATENCY cva_probes_male path=CPU preferred=CPU median_ms=0.494
+LATENCY dhrv_imputation path=CPU preferred=CPU median_ms=0.064
+LATENCY energy_expenditure_hr path=CPU preferred=CPU median_ms=0.107
+LATENCY energy_expenditure_no_hr path=CPU preferred=CPU median_ms=0.098
+LATENCY halite_ppg_score path=CPU preferred=CPU median_ms=0.083
+LATENCY halite_risk_tree path=CPU preferred=CPU median_ms=0.205
+LATENCY illness_detection path=CPU preferred=CPU median_ms=0.168
+LATENCY popsicle_min_follicular path=CPU preferred=CPU median_ms=0.064
+LATENCY popsicle_min_follicular_v16 path=CPU preferred=CPU median_ms=0.060
+LATENCY popsicle_ovulation_detection path=CPU preferred=CPU median_ms=1.186
+LATENCY popsicle_ovulation_detection_v16 path=CPU preferred=CPU median_ms=1.163
+LATENCY popsicle_ovulation_prediction path=CPU preferred=CPU median_ms=1.147
+LATENCY popsicle_ovulation_prediction_v16 path=CPU preferred=CPU median_ms=1.160
+LATENCY popsicle_period_prediction path=CPU preferred=CPU median_ms=1.128
+LATENCY popsicle_period_prediction_v16 path=CPU preferred=CPU median_ms=1.184
+LATENCY pulse_ppg path=CPU preferred=CPU median_ms=2546.752
+LATENCY pulsenet_foundation path=CPU preferred=CPU median_ms=8.952
+LATENCY sleepnet_bdi path=CPU preferred=CPU median_ms=418.732
+LATENCY sleepnet_bdi_v3 path=CPU preferred=CPU median_ms=294.682
+LATENCY sleepnet_moonstone path=CPU preferred=CPU median_ms=636.784
+LATENCY source_embedding path=CPU preferred=CPU median_ms=0.077
+LATENCY step_eligibility path=CPU preferred=CPU median_ms=0.097
+LATENCY step_head path=CPU preferred=CPU median_ms=0.055
+LATENCY step_multiplier path=CPU preferred=CPU median_ms=0.057
+LATENCY whr_unet_encoder path=GPU_FULL preferred=GPU_FULL median_ms=33.218
+LATENCY whr_unet_head path=CPU preferred=CPU median_ms=16.563
+PARITY activity_context_embedding path=CPU expected_rel=3.669756e-04 expected_abs=4.208088e-04 host_rel=1.102196e-06 host_abs=4.768372e-07
+PARITY activity_detection path=CPU expected_rel=1.362257e-03 expected_abs=7.697296e-02 host_rel=1.007933e-06 host_abs=9.155273e-05
+PARITY activity_ensemble path=CPU expected_rel=2.339597e-04 expected_abs=2.074480e-03 host_rel=3.695172e-07 host_abs=3.337860e-06
+PARITY activity_history_transformer path=CPU expected_rel=4.639593e-04 expected_abs=3.046930e-03 host_rel=7.237053e-07 host_abs=4.768372e-06
+PARITY activity_primary_segments path=CPU expected_rel=1.470026e-03 expected_abs=1.245439e-03 host_rel=1.151320e-06 host_abs=8.996576e-07
+PARITY activity_secondary_segments path=CPU expected_rel=3.693547e-04 expected_abs=2.132878e-04 host_rel=6.844333e-07 host_abs=3.948808e-07
+PARITY activity_transition path=CPU expected_rel=5.274782e-04 expected_abs=5.156398e-04 host_rel=1.208042e-07 host_abs=1.192093e-07
+PARITY awhr_imputation path=CPU expected_rel=1.287264e-04 expected_abs=2.618408e-02 host_rel=1.331836e-07 host_abs=3.051758e-05
+PARITY awhr_profile_core path=CPU expected_rel=3.874045e-04 expected_abs=2.269745e-02 host_rel=1.655276e-07 host_abs=7.629395e-06
+PARITY awhr_profile_head path=CPU expected_rel=2.204900e-07 expected_abs=2.861023e-06 host_rel=0.000000e+00 host_abs=0.000000e+00
+PARITY awhr_profile_recurrent path=CPU expected_rel=2.964066e-03 expected_abs=2.960056e-03 host_rel=5.431375e-06 host_abs=5.424023e-06
+PARITY behavior_embedding path=CPU expected_rel=3.227356e-04 expected_abs=1.220703e-04 host_rel=0.000000e+00 host_abs=0.000000e+00
+PARITY cva_encoder path=CPU expected_rel=1.538173e-03 expected_abs=6.871104e-02 host_rel=2.045334e-06 host_abs=6.484985e-05
+PARITY cva_predictor_v1_base path=CPU expected_rel=5.333195e-04 expected_abs=2.116394e-02 host_rel=8.974608e-07 host_abs=2.670288e-05
+PARITY cva_probes_female path=CPU expected_rel=1.426480e-06 expected_abs=9.155273e-05 host_rel=0.000000e+00 host_abs=0.000000e+00
+PARITY cva_probes_male path=CPU expected_rel=1.246527e-04 expected_abs=6.251335e-04 host_rel=0.000000e+00 host_abs=0.000000e+00
+PARITY dhrv_imputation path=CPU expected_rel=6.421136e-05 expected_abs=1.436234e-03 host_rel=6.364373e-08 host_abs=1.907349e-06
+PARITY energy_expenditure_hr path=CPU expected_rel=9.216776e-04 expected_abs=3.125668e-03 host_rel=2.842799e-07 host_abs=9.536743e-07
+PARITY energy_expenditure_no_hr path=CPU expected_rel=6.010621e-04 expected_abs=1.128674e-03 host_rel=2.960110e-07 host_abs=9.536743e-07
+PARITY halite_ppg_score path=CPU expected_rel=1.262495e-06 expected_abs=3.576279e-07 host_rel=0.000000e+00 host_abs=0.000000e+00
+PARITY halite_risk_tree path=CPU expected_rel=3.414602e-05 expected_abs=3.094226e-05 host_rel=2.466520e-08 host_abs=2.235174e-08
+PARITY illness_detection path=CPU expected_rel=5.381538e-03 expected_abs=3.376007e-04 host_rel=3.789640e-06 host_abs=2.384186e-07
+PARITY popsicle_min_follicular path=CPU expected_rel=1.138618e-07 expected_abs=4.768372e-07 host_rel=2.277237e-07 host_abs=9.536743e-07
+PARITY popsicle_min_follicular_v16 path=CPU expected_rel=1.138618e-07 expected_abs=4.768372e-07 host_rel=2.277237e-07 host_abs=9.536743e-07
+PARITY popsicle_ovulation_detection path=CPU expected_rel=6.572761e-04 expected_abs=4.564971e-05 host_rel=8.579079e-07 host_abs=5.960464e-08
+PARITY popsicle_ovulation_detection_v16 path=CPU expected_rel=5.793738e-05 expected_abs=5.793571e-05 host_rel=1.192127e-07 host_abs=1.192093e-07
+PARITY popsicle_ovulation_prediction path=CPU expected_rel=5.038759e-05 expected_abs=8.459091e-04 host_rel=2.272273e-07 host_abs=3.814697e-06
+PARITY popsicle_ovulation_prediction_v16 path=CPU expected_rel=2.129241e-04 expected_abs=4.226685e-03 host_rel=5.748902e-07 host_abs=1.144409e-05
+PARITY popsicle_period_prediction path=CPU expected_rel=7.531448e-05 expected_abs=1.025200e-03 host_rel=1.454430e-07 host_abs=1.907349e-06
+PARITY popsicle_period_prediction_v16 path=CPU expected_rel=1.832146e-04 expected_abs=1.507759e-03 host_rel=5.871867e-07 host_abs=4.291534e-06
+PARITY pulse_ppg path=CPU expected_rel=1.461271e-03 expected_abs=5.177093e-02 host_rel=1.052526e-06 host_abs=3.528595e-05
+PARITY pulsenet_foundation path=CPU expected_rel=3.107207e-03 expected_abs=5.707860e-03 host_rel=6.101071e-07 host_abs=1.013279e-06
+PARITY sleepnet_bdi path=CPU expected_rel=8.357510e-04 expected_abs=2.584934e-03 host_rel=1.015805e-06 host_abs=3.457069e-06
+PARITY sleepnet_bdi_v3 path=CPU expected_rel=6.527501e-04 expected_abs=2.848506e-03 host_rel=8.944032e-07 host_abs=3.069639e-06
+PARITY sleepnet_moonstone path=CPU expected_rel=5.830395e-04 expected_abs=3.888130e-03 host_rel=8.986967e-07 host_abs=5.722046e-06
+PARITY source_embedding path=CPU expected_rel=0.000000e+00 expected_abs=0.000000e+00 host_rel=0.000000e+00 host_abs=0.000000e+00
+PARITY step_eligibility path=CPU expected_rel=2.318889e-04 expected_abs=6.585121e-04 host_rel=2.623044e-09 host_abs=7.450581e-09
+PARITY step_head path=CPU expected_rel=1.908298e-06 expected_abs=5.960464e-08 host_rel=0.000000e+00 host_abs=0.000000e+00
+PARITY step_multiplier path=CPU expected_rel=0.000000e+00 expected_abs=0.000000e+00 host_rel=0.000000e+00 host_abs=0.000000e+00
+PARITY whr_unet_encoder path=GPU_FULL expected_rel=3.443595e-04 expected_abs=2.451897e-03 host_rel=6.780103e-07 host_abs=3.814697e-06
+PARITY whr_unet_head path=CPU expected_rel=1.839632e-04 expected_abs=2.042007e-02 host_rel=3.064422e-07 host_abs=3.814697e-05
+device=Pixel 7 soc=GS201 api=37 abi=arm64-v8a
+models that fell back to the CPU: []

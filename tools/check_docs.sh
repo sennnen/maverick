@@ -68,4 +68,13 @@ if [ "$failures" -gt 0 ]; then
 fi
 tools/check_no_bundled_connectors.py || exit 1
 python3 tools/check_model_assets.py || exit 1
+# The prose in docs/ml.md against the artefacts it describes. The generated tables have their
+# own generator and their own --check; this is for the sentences around them, which is where
+# "all but two" survived a change that made it one.
+python3 tools/ml/check_claims.py || exit 1
+# The capability matrix against the pipeline table and the manifest it describes. Generated, so
+# a re-conversion or a newly ported front-end has to regenerate it rather than leave it lying.
+# Stock python3: the generator reads committed JSON and Rust, and the conversion virtualenv it
+# was reaching for is local-only and gitignored, so a gate that needed it would never run in CI.
+python3 tools/ml/model_matrix.py --check || exit 1
 echo "check_docs: ok"

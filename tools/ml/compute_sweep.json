@@ -1,0 +1,248 @@
+{
+ "activity_context_embedding": {
+  "ALL": 0.007874015748031496,
+  "CPU_AND_GPU": 0.009186351706036745,
+  "CPU_AND_NE": 0.007874015748031496,
+  "CPU_ONLY": 0.0
+ },
+ "activity_detection": {
+  "ALL": 2.194847717745262e-06,
+  "CPU_AND_GPU": 2.194847717745262e-06,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "activity_ensemble": {
+  "ALL": 0.005135387488328665,
+  "CPU_AND_GPU": 0.005135387488328665,
+  "CPU_AND_NE": 0.005135387488328665,
+  "CPU_ONLY": 0.0
+ },
+ "activity_history_transformer": {
+  "ALL": 0.0068533969010727055,
+  "CPU_AND_GPU": 0.0068533969010727055,
+  "CPU_AND_NE": 0.0068533969010727055,
+  "CPU_ONLY": 0.0
+ },
+ "activity_primary_segments": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "activity_secondary_segments": {
+  "ALL": 0.00618921308576481,
+  "CPU_AND_GPU": 0.005747126436781609,
+  "CPU_AND_NE": 0.00618921308576481,
+  "CPU_ONLY": 0.0
+ },
+ "activity_transition": {
+  "ALL": 0.004407443682664055,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.004407443682664055,
+  "CPU_ONLY": 0.0
+ },
+ "awhr_imputation": {
+  "ALL": 3.477713628645009e-07,
+  "CPU_AND_GPU": 3.477713628645009e-07,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "awhr_profile_core": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "awhr_profile_head": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "awhr_profile_recurrent": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "behavior_embedding": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "cva_encoder": {
+  "ALL": 9.43697809087574e-07,
+  "CPU_AND_GPU": 9.43697809087574e-07,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "cva_predictor_v1_base": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "cva_probes_female": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "cva_probes_male": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "dhrv_imputation": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "energy_expenditure_hr": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "energy_expenditure_no_hr": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "halite_ppg_score": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "halite_risk_tree": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "illness_detection": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "popsicle_min_follicular": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "popsicle_min_follicular_v16": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "popsicle_ovulation_detection": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "popsicle_ovulation_detection_v16": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "popsicle_ovulation_prediction": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "popsicle_ovulation_prediction_v16": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "popsicle_period_prediction": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "popsicle_period_prediction_v16": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "pulse_ppg": {
+  "ALL": 0.0082703213610586,
+  "CPU_AND_GPU": 0.0082703213610586,
+  "CPU_AND_NE": 0.0082703213610586,
+  "CPU_ONLY": 0.0
+ },
+ "pulsenet_foundation": {
+  "ALL": 5.241596595256182e-07,
+  "CPU_AND_GPU": 5.241596595256182e-07,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "sleepnet_bdi": {
+  "ALL": 0.00873015873015873,
+  "CPU_AND_GPU": 0.009362200117027502,
+  "CPU_AND_NE": 0.00944206008583691,
+  "CPU_ONLY": 0.0
+ },
+ "sleepnet_bdi_v3": {
+  "ALL": 0.008291614518147685,
+  "CPU_AND_GPU": 0.008760951188986232,
+  "CPU_AND_NE": 0.011264080100125156,
+  "CPU_ONLY": 0.0
+ },
+ "sleepnet_moonstone": {
+  "ALL": 0.01288855193328279,
+  "CPU_AND_GPU": 0.009172661870503597,
+  "CPU_AND_NE": 0.01288855193328279,
+  "CPU_ONLY": 0.0
+ },
+ "source_embedding": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "step_eligibility": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "step_head": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "step_multiplier": {
+  "ALL": 0.0,
+  "CPU_AND_GPU": 0.0,
+  "CPU_AND_NE": 0.0,
+  "CPU_ONLY": 0.0
+ },
+ "whr_unet_encoder": {
+  "ALL": 0.005252100840336135,
+  "CPU_AND_GPU": 0.005252100840336135,
+  "CPU_AND_NE": 0.005252100840336135,
+  "CPU_ONLY": 0.0
+ },
+ "whr_unet_head": {
+  "ALL": 0.006559766763848397,
+  "CPU_AND_GPU": 0.003401360544217687,
+  "CPU_AND_NE": 0.006559766763848397,
+  "CPU_ONLY": 0.0
+ }
+}

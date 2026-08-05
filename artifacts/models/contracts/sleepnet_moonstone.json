@@ -1,0 +1,229 @@
+{
+  "algorithm": "sleepnet_moonstone",
+  "core_path": "_model_runner.trained_model",
+  "coreml": {
+    "artifact": "sleepnet_moonstone.mlpackage",
+    "bytes": 3663701,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.02550649642944336,
+            "max_rel": 0.004699915686020222
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.02941274642944336,
+            "max_rel": 0.005419694888126701
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.010365009307861328,
+            "max_rel": 0.001949343261349833
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.05246812105178833,
+            "max_rel": 0.009147958084855147
+          }
+        }
+      ],
+      "constants_rounded": 55,
+      "nearest_downsamples_rewritten": 5,
+      "neural_engine": {
+        "devices": {
+          "CPU": 51,
+          "GPU": 26,
+          "NeuralEngine": 108
+        },
+        "fraction": 0.5837837837837838,
+        "on_neural_engine": 108,
+        "operations": 185
+      },
+      "norms_folded": 28,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 14,
+              "NeuralEngine": 155
+            },
+            "fraction": 0.9171597633136095,
+            "on_neural_engine": 155,
+            "operations": 169
+          },
+          "parity": {
+            "max_abs": 0.04504132270812988,
+            "max_rel": 0.007105258486277592
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 51,
+              "GPU": 26,
+              "NeuralEngine": 108
+            },
+            "fraction": 0.5837837837837838,
+            "on_neural_engine": 108,
+            "operations": 185
+          },
+          "parity": {
+            "max_abs": 0.02550649642944336,
+            "max_rel": 0.004699915686020222
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 51,
+              "GPU": 26,
+              "NeuralEngine": 108
+            },
+            "fraction": 0.5837837837837838,
+            "on_neural_engine": 108,
+            "operations": 185
+          },
+          "parity": {
+            "max_abs": 0.02550649642944336,
+            "max_rel": 0.004699915686020222
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 51,
+              "GPU": 26,
+              "NeuralEngine": 108
+            },
+            "fraction": 0.5837837837837838,
+            "on_neural_engine": 108,
+            "operations": 185
+          },
+          "parity": {
+            "max_abs": 0.02550649642944336,
+            "max_rel": 0.004699915686020222
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 167,
+              "unassigned": 32
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 199
+          },
+          "parity": {
+            "max_abs": 0.004262268543243408,
+            "max_rel": 0.0006723719002197054
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "half_pooled",
+      "policy_reason": "half-width arithmetic on the Neural Engine",
+      "unit_spread": 0.007198614823505313
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "74450f57791b41af9b30ab97f883af11996ab0b3a95501630ed93f51dee146ca",
+      "Data/com.apple.CoreML/weights/weight.bin": "7f5506b15d689d1140346992c560241af3eb925b2d03ee96cef7129a26619dfb",
+      "Manifest.json": "1008433a3d31dfe30d3331595358aa8e7ed948403c1531d82604f2755f9760e8",
+      "executorch_debug_handle_mapping.json": "eaac7574c7811aee8c8fef8ff6ef45b3f7a3b9a015d3729caf4fd450678a3d67"
+    },
+    "parity": {
+      "max_abs": 0.02550649642944336,
+      "max_rel": 0.004699915686020222
+    },
+    "precision": "float16, pooling reductions at float32",
+    "sha256": "2620c758b731a2d9e7f6f4e6f8311aa9c2a37bcc64a1f1286ad3a874093a9641"
+  },
+  "cross_platform": {
+    "max_abs": 0.024335384368896484,
+    "max_rel": 0.0037643756775378335
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "high_res",
+      "shape": [
+        1,
+        115200,
+        3
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "low_res",
+      "shape": [
+        1,
+        1800,
+        1
+      ]
+    }
+  ],
+  "model": "sleepnet_moonstone",
+  "notes": "1,800 thirty-second epochs. high_res carries 64 samples per epoch across three channels; low_res carries one value per epoch.",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "staging_logits",
+      "shape": [
+        1,
+        4,
+        1800
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "apnea_logits",
+      "shape": [
+        1,
+        1,
+        1800
+      ]
+    }
+  ],
+  "parameters": 1075955,
+  "role": "Sleep stages, apnea and SpO2 events over a 15-hour night",
+  "source_asset": "sleepnet_moonstone_1_2_0.pt",
+  "source_asset_sha256": "22f16f662efcd35f45de872f931ead508fb2c94d904653657647bcbe93280668",
+  "tflite": {
+    "artifact": "sleepnet_moonstone.tflite",
+    "bytes": 2295128,
+    "parity": {
+      "max_abs": 0.004317879676818848,
+      "max_rel": 0.0006811445439834971
+    },
+    "passes": {
+      "bytes_full_width": 4421192,
+      "bytes_halved": 2295128,
+      "constants_rounded": 55,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 5,
+      "norms_folded": 28,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 32
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "ae635931514d09f53607b80acc72acae36038b3f16c12e7d0ad2abac8b277d2d"
+  },
+  "trace_max_abs_error": 0.0029599666595458984,
+  "version": "1.2.0",
+  "weights_kept_full": 146,
+  "weights_rounded": 32
+}

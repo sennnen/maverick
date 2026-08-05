@@ -1,0 +1,170 @@
+{
+ "first_seed": 100,
+ "models": {
+  "activity_context_embedding": {
+   "bytes": 136176,
+   "probes": 3
+  },
+  "activity_detection": {
+   "bytes": 461616,
+   "probes": 3
+  },
+  "activity_ensemble": {
+   "bytes": 199740,
+   "probes": 3
+  },
+  "activity_history_transformer": {
+   "bytes": 280584,
+   "probes": 3
+  },
+  "activity_primary_segments": {
+   "bytes": 121008,
+   "probes": 3
+  },
+  "activity_secondary_segments": {
+   "bytes": 164400,
+   "probes": 3
+  },
+  "activity_transition": {
+   "bytes": 23856,
+   "probes": 3
+  },
+  "awhr_imputation": {
+   "bytes": 10848,
+   "probes": 3
+  },
+  "awhr_profile_core": {
+   "bytes": 22368,
+   "probes": 3
+  },
+  "awhr_profile_head": {
+   "bytes": 27408,
+   "probes": 3
+  },
+  "awhr_profile_recurrent": {
+   "bytes": 50448,
+   "probes": 3
+  },
+  "behavior_embedding": {
+   "bytes": 98544,
+   "probes": 3
+  },
+  "cva_encoder": {
+   "bytes": 15408,
+   "probes": 3
+  },
+  "cva_predictor_v1_base": {
+   "bytes": 15996,
+   "probes": 3
+  },
+  "cva_probes_female": {
+   "bytes": 1824,
+   "probes": 3
+  },
+  "cva_probes_male": {
+   "bytes": 1824,
+   "probes": 3
+  },
+  "dhrv_imputation": {
+   "bytes": 192,
+   "probes": 3
+  },
+  "energy_expenditure_hr": {
+   "bytes": 672,
+   "probes": 3
+  },
+  "energy_expenditure_no_hr": {
+   "bytes": 576,
+   "probes": 3
+  },
+  "halite_ppg_score": {
+   "bytes": 3144,
+   "probes": 3
+  },
+  "halite_risk_tree": {
+   "bytes": 300,
+   "probes": 3
+  },
+  "illness_detection": {
+   "bytes": 3012,
+   "probes": 3
+  },
+  "popsicle_min_follicular": {
+   "bytes": 180,
+   "probes": 3
+  },
+  "popsicle_min_follicular_v16": {
+   "bytes": 180,
+   "probes": 3
+  },
+  "popsicle_ovulation_detection": {
+   "bytes": 4380,
+   "probes": 3
+  },
+  "popsicle_ovulation_detection_v16": {
+   "bytes": 4380,
+   "probes": 3
+  },
+  "popsicle_ovulation_prediction": {
+   "bytes": 4380,
+   "probes": 3
+  },
+  "popsicle_ovulation_prediction_v16": {
+   "bytes": 4380,
+   "probes": 3
+  },
+  "popsicle_period_prediction": {
+   "bytes": 4380,
+   "probes": 3
+  },
+  "popsicle_period_prediction_v16": {
+   "bytes": 4380,
+   "probes": 3
+  },
+  "pulse_ppg": {
+   "bytes": 156336,
+   "probes": 3
+  },
+  "pulsenet_foundation": {
+   "bytes": 24192,
+   "probes": 3
+  },
+  "sleepnet_bdi": {
+   "bytes": 2980872,
+   "probes": 3
+  },
+  "sleepnet_bdi_v3": {
+   "bytes": 2980872,
+   "probes": 3
+  },
+  "sleepnet_moonstone": {
+   "bytes": 4384884,
+   "probes": 3
+  },
+  "source_embedding": {
+   "bytes": 3312,
+   "probes": 3
+  },
+  "step_eligibility": {
+   "bytes": 372,
+   "probes": 3
+  },
+  "step_head": {
+   "bytes": 120,
+   "probes": 3
+  },
+  "step_multiplier": {
+   "bytes": 84,
+   "probes": 3
+  },
+  "whr_unet_encoder": {
+   "bytes": 1572912,
+   "probes": 3
+  },
+  "whr_unet_head": {
+   "bytes": 401052,
+   "probes": 3
+  }
+ },
+ "probes": 3
+}

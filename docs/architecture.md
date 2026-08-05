@@ -63,6 +63,10 @@ without changing `.mavconn` bytes or ABI.
 
 ML inference remains native only when a real admitted model requires CoreML or TFLite. Rust owns
 deterministic preprocessing. This reserved boundary is independent from WebAssembly connectors.
+It now carries the whole model zoo rather than one classifier: `mav-analytic` holds the generated
+registry and the ported preprocessing, `mav-engine` holds the bounded request queue and the pass
+scheduler, and each platform has one runner that binds named tensors to whichever model a request
+names (ADR-035). The admitted count lives in `artifacts/models/manifest.json`, never in prose.
 
 ## Synchronous pipeline and async seam
 

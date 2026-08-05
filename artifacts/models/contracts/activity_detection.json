@@ -1,0 +1,203 @@
+{
+  "algorithm": "automatic_activity_detection",
+  "core_path": "predictor",
+  "coreml": {
+    "artifact": "activity_detection.mlpackage",
+    "bytes": 2832526,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.13291549682617188,
+            "max_rel": 0.0008429732421456529
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.13288116455078125,
+            "max_rel": 0.0008432648274940257
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.13291549682617188,
+            "max_rel": 0.0008429732421456529
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.13288116455078125,
+            "max_rel": 0.0008432648274940257
+          }
+        }
+      ],
+      "constants_rounded": 26,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "GPU": 187,
+          "unassigned": 26
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 213
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 190
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 190
+          },
+          "parity": {
+            "max_abs": 0.36181640625,
+            "max_rel": 0.002492588192029713
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 190
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 190
+          },
+          "parity": {
+            "max_abs": 0.36181640625,
+            "max_rel": 0.002492588192029713
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 202
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 202
+          },
+          "parity": {
+            "max_abs": 0.36181640625,
+            "max_rel": 0.002415433498686549
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 202
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 202
+          },
+          "parity": {
+            "max_abs": 0.36181640625,
+            "max_rel": 0.002415433498686549
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 187,
+              "unassigned": 26
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 213
+          },
+          "parity": {
+            "max_abs": 0.13291549682617188,
+            "max_rel": 0.0008429732421456529
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 2.915853483727738e-07
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "aad91b264a84e05e46e7c998da6be9eefaf8d7869959da8154b0a0449f7d99fd",
+      "Data/com.apple.CoreML/weights/weight.bin": "bfa579cb363b01ebf33e5012390f620fb711de9e1d75864a6cf4d7328b2740e5",
+      "Manifest.json": "0e9268102291d6baad6b9b7b66ac08b9dd58cd4bda4f321fd0708b57dff56903",
+      "executorch_debug_handle_mapping.json": "668e5113a88aa5866462deecba4ee246eabb8da2dd7d6eceec063b18a6349f8e"
+    },
+    "parity": {
+      "max_abs": 0.13291549682617188,
+      "max_rel": 0.0008429732421456529
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "16296932383c59de45c32f57781e9632c3622d3b41019ed4edc396f329aee714"
+  },
+  "cross_platform": {
+    "max_abs": 0.0195770263671875,
+    "max_rel": 0.00012671105602850811
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "features",
+      "shape": [
+        1,
+        64,
+        77
+      ]
+    }
+  ],
+  "model": "activity_detection",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "activity_output",
+      "shape": [
+        1,
+        64,
+        262
+      ]
+    }
+  ],
+  "parameters": 1338910,
+  "role": "Activity classification over 64 candidate segments of 77 features",
+  "source_asset": "automatic_activity_detection_3_0_8.pt",
+  "source_asset_sha256": "b10d1ad2f1d40300afe8e37461158baa870a07800233aafedf07ae0a321b87f8",
+  "tflite": {
+    "artifact": "activity_detection.tflite",
+    "bytes": 2720808,
+    "parity": {
+      "max_abs": 0.13401412963867188,
+      "max_rel": 0.000872292148924534
+    },
+    "passes": {
+      "bytes_full_width": 5379796,
+      "bytes_halved": 2720808,
+      "constants_rounded": 26,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 26
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "5bb6e57ca16bf5f328f0e1b5c5e74f6a03b2d0b5f7b653941f97a4b94d16a197"
+  },
+  "trace_max_abs_error": 0.0963592529296875,
+  "version": "3.0.8",
+  "weights_kept_full": 38,
+  "weights_rounded": 26
+}

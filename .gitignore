@@ -19,3 +19,18 @@ xcuserdata/
 *.sqlite-wal
 *.sqlite-shm
 /scratch
+
+# Local-only conversion inputs: the archives and the two interpreter environments the
+# model pipeline runs in. Neither is redistributable and neither is small.
+/tools/decrypted_models
+/tools/ml/.venv
+/tools/ml/.venv-tf
+/tools/ml/out
+/tools/ml/pulseppg_repo
+/tools/ml/pulseppg_weights
+# Transcripts of a conversion run. Useful while a run is being debugged, meaningless once the
+# contracts and the manifest it produced are committed.
+/tools/ml/out_*.log
+
+__pycache__/
+*.pyc

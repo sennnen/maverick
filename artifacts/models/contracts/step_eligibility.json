@@ -1,0 +1,201 @@
+{
+  "algorithm": "step_eligibility",
+  "core_path": "model.step_eligibility_model.features_extractor",
+  "coreml": {
+    "artifact": "step_eligibility.mlpackage",
+    "bytes": 274948,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.00022868812084197998,
+            "max_rel": 0.00041816025834549457
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.00022868812084197998,
+            "max_rel": 0.00041816025834549457
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.00022868812084197998,
+            "max_rel": 0.00041816025834549457
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.00022868812084197998,
+            "max_rel": 0.00041816025834549457
+          }
+        }
+      ],
+      "constants_rounded": 6,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 338,
+          "unassigned": 6
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 344
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 341
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 341
+          },
+          "parity": {
+            "max_abs": 0.0014809370040893555,
+            "max_rel": 0.0027079194054478815
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 341
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 341
+          },
+          "parity": {
+            "max_abs": 0.0014809370040893555,
+            "max_rel": 0.0027079194054478815
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 367
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 367
+          },
+          "parity": {
+            "max_abs": 0.0017369240522384644,
+            "max_rel": 0.003175996233369772
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 367
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 367
+          },
+          "parity": {
+            "max_abs": 0.0017369240522384644,
+            "max_rel": 0.003175996233369772
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 338,
+              "unassigned": 6
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 344
+          },
+          "parity": {
+            "max_abs": 0.00022868812084197998,
+            "max_rel": 0.00041816025834549457
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "7a687c7e85736fa3e8668f90f13650e6248f649f1691c79f9c9690e5f77b6095",
+      "Data/com.apple.CoreML/weights/weight.bin": "6cae426a07322d2e3a5c189ec49fac6b6562fc44787f1696b4f437ee5101bc9e",
+      "Manifest.json": "7e6dacbd379253ebdb460a2561034b3c80456d914545f17e7b5a67912c42640c",
+      "executorch_debug_handle_mapping.json": "c1c16cd476855a28dd17fd1fbe5c3ba07ba69f56699b5f0531026876d7293d2c"
+    },
+    "parity": {
+      "max_abs": 0.00022868812084197998,
+      "max_rel": 0.00041816025834549457
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "877b722e7c0090e617b34128cb2403914c96367e06dc3101485944bfd39596ed"
+  },
+  "cross_platform": {
+    "max_abs": 2.5033950805664062e-06,
+    "max_rel": 4.058614118565647e-06
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "motion",
+      "shape": [
+        1,
+        19
+      ]
+    }
+  ],
+  "model": "step_eligibility",
+  "notes": "7,804 of the step counter's 7,811 parameters. The boolean-mask gating that LiteRT rejects sits in the parent module and belongs in Rust.",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "eligibility_features",
+      "shape": [
+        1,
+        4
+      ]
+    }
+  ],
+  "parameters": 7804,
+  "role": "Step-eligibility features from one step-motion vector",
+  "source_asset": "step_counter_1_3_0.pt",
+  "source_asset_sha256": "e062373c0b74a281c6aeca098af3fc9a43dbd829147acd13910281f54c29857d",
+  "tflite": {
+    "artifact": "step_eligibility.tflite",
+    "bytes": 56016,
+    "parity": {
+      "max_abs": 0.000805288553237915,
+      "max_rel": 0.0014724843084320857
+    },
+    "passes": {
+      "bytes_full_width": 66316,
+      "bytes_halved": 56016,
+      "constants_rounded": 6,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 6
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "b33af52edeaa6671af7cd9075308c8d986e3ea5b4cf964244b4f8a562eefff68"
+  },
+  "trace_max_abs_error": 1.3113021850585938e-06,
+  "version": "1.3.0",
+  "weights_kept_full": 74,
+  "weights_rounded": 6
+}

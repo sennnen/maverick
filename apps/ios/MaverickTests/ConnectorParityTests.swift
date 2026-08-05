@@ -3,10 +3,14 @@ import XCTest
 final class ConnectorParityTests: XCTestCase {
   func testFrozenConnectorParityReportsMeetMobileBudgets() throws {
     let expected = [
-      ("whoop4", "dev.maverick.whoop4", 16,
-       "e5f625b8cd4645cb0b09e69ae9ef5ce496293bab5e944d102284ab4af2a45989"),
+      // Frozen against the signed registry at maverick-connectors@6f21fcb — whoop4 1.0.3 and
+      // whoop5 1.0.7, the release that added ECG capture. The Kotlin twin in
+      // ConnectorParityTest.kt carries the same two constants; both move together with
+      // CONNECTORS_REF, never on their own.
+      ("whoop4", "dev.maverick.whoop4", 18,
+       "d3dae33eb0849f6eec489473d5ddd38ff39506e74ec40c6ca57a2b513491a145"),
       ("whoop5", "dev.maverick.whoop5", 16,
-       "3062689f5278ae2c2d0c6a744a854badae7f91d172da518670394aa8fee83632"),
+       "a37e0acdaf161ad1a94fd81d65be9c0572285124a3ee17e262b1bf492b86a7b5"),
     ]
     for (family, connectorID, fixtureCount, artifactHash) in expected {
       let url = try XCTUnwrap(

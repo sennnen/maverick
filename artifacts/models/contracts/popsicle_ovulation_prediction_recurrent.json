@@ -1,0 +1,76 @@
+{
+  "algorithm": "popsicle_ovulation_prediction_recurrent",
+  "core_path": "_model_runner.ovulation_prediction_runner.trained_prediction_model.lstm",
+  "coreml": {
+    "artifact": "popsicle_ovulation_prediction_recurrent.mlpackage",
+    "bytes": 1096571,
+    "compute_units": "ALL",
+    "configuration_attempts": [],
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "335ef51d89b15f424d2570c73bf214c1922011f8921e389f8f2bf37b50807ed9",
+      "Data/com.apple.CoreML/weights/weight.bin": "ac6b089e5f521a88419a1d7e3aa3c92f6bde9a2c1447a808dc1772728df47df4",
+      "Manifest.json": "41e086705a0d5e43f5d2ee20ba34279eccd1f33bb7feb9dd588b9474d2a0930b",
+      "executorch_debug_handle_mapping.json": "360dfcffdf828467930e6005e6e8154716efb451f4fd86ad561479060c5e020e"
+    },
+    "parity": {
+      "max_abs": 0.0009908974170684814,
+      "max_rel": 0.0009908974170684814
+    },
+    "precision": "float16",
+    "sha256": "2be9825ddccaab0256783f6145f9cb850c98fbf1ee30418b07f7c736b69a4138",
+    "torchscript_error": "TypeError: iteration over a 0-d tensor"
+  },
+  "cross_platform": {
+    "max_abs": 8.046627044677734e-07,
+    "max_rel": 8.046627044677734e-07
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "time_series",
+      "shape": [
+        1,
+        40,
+        3
+      ]
+    }
+  ],
+  "model": "popsicle_ovulation_prediction_recurrent",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "encoded",
+      "shape": [
+        1,
+        40,
+        64
+      ]
+    }
+  ],
+  "parameters": 84224,
+  "role": "Recurrent encoder behind the ovulation prediction head",
+  "source_asset": "popsicle_1_8_1.pt",
+  "source_asset_sha256": "69710d7cd0c8cc58c90bef05db0b00567d8f6b5f75b79de3444bb6109d3d0ad3",
+  "tflite": {
+    "artifact": "popsicle_ovulation_prediction_recurrent.tflite",
+    "bytes": 436392,
+    "parity": {
+      "max_abs": 0.0009909272193908691,
+      "max_rel": 0.0009909272193908691
+    },
+    "passes": {
+      "bytes_full_width": 591836,
+      "bytes_halved": 436392,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 5
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "4f508dd8caa0e7730a110e4fc73f737d4c10cc8d726a549c950923d72e604040"
+  },
+  "trace_max_abs_error": 0.0,
+  "version": "1.8.1"
+}

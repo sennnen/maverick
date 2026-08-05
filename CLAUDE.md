@@ -27,7 +27,7 @@ maverick/
     testing.md            fixture rules, property tests, parity, what counts as a real test
     errors.md             the error taxonomy, numeric codes, logging, the report bundle
     storage.md            append-only schema, forward-only migrations, provenance tables
-    ml.md                 the native-inference boundary and Rust-side preprocessing
+    ml.md                 the native-inference boundary, the model zoo, every model contract
     adr/                  architecture decision records, ADR-001 onward
     plans/active/         the milestone a packet is drawn from; move to completed/ when done
   skills/                 the four workflows below, each a SKILL.md that loads on demand
@@ -47,8 +47,10 @@ maverick/
                           separate sennnen/maverick-connectors repo (ADR-017)
   fixtures/               golden fixtures, versioned; see fixtures/README for the naming rules
                           (also the Generic HR Monitor artifact the apps ship — see docs/connectors.md)
+  artifacts/models/       the admitted model set: manifest, per-model conversion contracts (ADR-035)
   apps/ios, apps/android  thin native apps; migration/release work lives in platform plan
   tools/                  check_docs.sh and check_deps.py, the mechanical gates
+    ml/                   model conversion to Core ML and TFLite, and the generated registries
 ```
 
 ## How to work

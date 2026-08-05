@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct MaverickApp: App {
   @StateObject private var store = MavStore()
+  @StateObject private var analytics = MavAnalyticsModel()
   @StateObject private var model = AppModel()
   @StateObject private var repo = Repository()
   @StateObject private var live = LiveState()
@@ -10,6 +11,12 @@ struct MaverickApp: App {
   @StateObject private var health = HealthKitBridge()
   @StateObject private var connectors = ConnectorManager()
   @AppStorage(AppearanceMode.storageKey) private var appearanceRaw = AppearanceMode.system.rawValue
+
+  init() {
+    // BGTaskScheduler refuses a registration made after launch finishes, so this cannot move
+    // into a `.task` or an `onAppear`.
+    MavBackgroundAnalytics.register()
+  }
 
   var body: some Scene {
     WindowGroup {
@@ -23,6 +30,7 @@ struct MaverickApp: App {
         .environmentObject(profile)
         .environmentObject(health)
         .environmentObject(connectors)
+        .environmentObject(analytics)
         .preferredColorScheme(AppearanceMode.resolve(appearanceRaw).colorScheme)
         // Chrome is monochrome on purpose. Tinting the whole app ochre made every selected
         // tab, switch and segment shout in the interaction voice; accent is applied per-element,
@@ -36,6 +44,19 @@ struct MaverickApp: App {
         }
       }
         .onAppear {
+        if let runtime = AuraZoneMath.runtime {
+          analytics.attach(
+            MavAnalyticsEngine(
+              runtime: MavCoreAnalyticsRuntime(runtime: runtime),
+              runner: MavModelRunner()
+            )
+          )
+          // The wearer just opened the app, so this pass is allowed to be expensive.
+          analytics.refresh()
+        }
+        // Ask for the background windows on every launch: iOS drops pending requests when the
+        // app is force-quit, and re-submitting is the only way back.
+        MavBackgroundAnalytics.schedule()
         repo.reload = { store.retry() }
         repo.lowPowerSink = { connectors.setLowPower($0) }
         // The battery saver is core state, not app state (ADR-030), so the switch is seeded from

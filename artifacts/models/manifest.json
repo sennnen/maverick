@@ -1,0 +1,2925 @@
+{
+  "bundle_bytes": {
+    "android": 86843528,
+    "ios": 105332686
+  },
+  "models": [
+    {
+      "algorithm_id": "activity_context_embedding",
+      "algorithm_version": "3.1.11",
+      "coreml": {
+        "artifact": "activity_context_embedding.mlpackage",
+        "bytes": 1643711,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "619e26b88a6ec91e39df18fb4e426b6566c9c66c494731c961efc553e951fcff",
+          "Data/com.apple.CoreML/weights/weight.bin": "e794486789b39b24155e2e22571504817a1a9d2a1c8408a89fb4a26293c8dcd1",
+          "Manifest.json": "bdab2d4a24b0dccb63e87ddb0eb1747d5a050e883d74be1b58ca23d8f7436cb2",
+          "executorch_debug_handle_mapping.json": "6412b29a2e515de360a5da6612939423e3852f9533eb73cb08b6972b5ab7fa62"
+        },
+        "package_sha256": "06a90c30581ca8973e673d4b2fb1b2e39995f729dd43dc81a273b045b416d5ad",
+        "parity": {
+          "max_abs": 0.0005782544612884521,
+          "max_rel": 0.0031145259657931854
+        },
+        "precision": "float16",
+        "sha256": "619e26b88a6ec91e39df18fb4e426b6566c9c66c494731c961efc553e951fcff"
+      },
+      "cross_platform": {
+        "max_abs": 0.0004687011241912842,
+        "max_rel": 0.002115849165933389
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "context",
+          "shape": [
+            1,
+            16,
+            85
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "activity_context_embedding",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "embeddings",
+          "shape": [
+            1,
+            16,
+            312
+          ]
+        }
+      ],
+      "parameters": 808080,
+      "role": "Embeds 85 context features per segment into a 312-d space",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "activity_context_embedding.tflite",
+        "bytes": 1627680,
+        "parity": {
+          "max_abs": 9.988993406295776e-05,
+          "max_rel": 0.00046204468506624846
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "842ad2d5f75280f219eaac1a39205dc7ba63151e2fcbddf485ffa82de8fd9f69"
+      }
+    },
+    {
+      "algorithm_id": "automatic_activity_detection",
+      "algorithm_version": "3.0.8",
+      "coreml": {
+        "artifact": "activity_detection.mlpackage",
+        "bytes": 2832526,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "aad91b264a84e05e46e7c998da6be9eefaf8d7869959da8154b0a0449f7d99fd",
+          "Data/com.apple.CoreML/weights/weight.bin": "bfa579cb363b01ebf33e5012390f620fb711de9e1d75864a6cf4d7328b2740e5",
+          "Manifest.json": "0e9268102291d6baad6b9b7b66ac08b9dd58cd4bda4f321fd0708b57dff56903",
+          "executorch_debug_handle_mapping.json": "668e5113a88aa5866462deecba4ee246eabb8da2dd7d6eceec063b18a6349f8e"
+        },
+        "package_sha256": "16296932383c59de45c32f57781e9632c3622d3b41019ed4edc396f329aee714",
+        "parity": {
+          "max_abs": 0.13291549682617188,
+          "max_rel": 0.0008429732421456529
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "aad91b264a84e05e46e7c998da6be9eefaf8d7869959da8154b0a0449f7d99fd"
+      },
+      "cross_platform": {
+        "max_abs": 0.0195770263671875,
+        "max_rel": 0.00012671105602850811
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            1,
+            64,
+            77
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "activity_detection",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "activity_output",
+          "shape": [
+            1,
+            64,
+            262
+          ]
+        }
+      ],
+      "parameters": 1338910,
+      "role": "Activity classification over 64 candidate segments of 77 features",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "activity_detection.tflite",
+        "bytes": 2720808,
+        "parity": {
+          "max_abs": 0.13401412963867188,
+          "max_rel": 0.000872292148924534
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "5bb6e57ca16bf5f328f0e1b5c5e74f6a03b2d0b5f7b653941f97a4b94d16a197"
+      }
+    },
+    {
+      "algorithm_id": "activity_ensemble",
+      "algorithm_version": "3.1.11",
+      "coreml": {
+        "artifact": "activity_ensemble.mlpackage",
+        "bytes": 1094679,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "d12cc6e51b32a2a17395f2edb049281f2ea0a1709f10e314bf881ddd9c7e08b7",
+          "Data/com.apple.CoreML/weights/weight.bin": "ac00f3e15ba3e68815dd23428d0be531fa225efa0d34ea2fbe137a4ae9ab72c2",
+          "Manifest.json": "6cc94695bb21e49fd1efc5299a1d6b74bcf5b54ef66ac98c93d1feeb03a26413",
+          "executorch_debug_handle_mapping.json": "2f523445b2acae6e586ca48d02862137ff26451f1955683955c0f51adad286c6"
+        },
+        "package_sha256": "736df87c44653eee57d6d058699db45551b91bb6afc476796117af15557239aa",
+        "parity": {
+          "max_abs": 0.005913734436035156,
+          "max_rel": 0.0007224557203149166
+        },
+        "precision": "float16",
+        "sha256": "d12cc6e51b32a2a17395f2edb049281f2ea0a1709f10e314bf881ddd9c7e08b7"
+      },
+      "cross_platform": {
+        "max_abs": 0.0034787580370903015,
+        "max_rel": 0.0005054834120296926
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "primary",
+          "shape": [
+            1,
+            16,
+            260
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "secondary",
+          "shape": [
+            1,
+            16,
+            260
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "activity_ensemble",
+      "notes": "536,900 parameters, and the last piece of the 3.1.11 predictor: with this, all 3,451,144 of its parameters ship as five cores.",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "segment_output",
+          "shape": [
+            1,
+            16,
+            260
+          ]
+        }
+      ],
+      "parameters": 536900,
+      "role": "Combines the primary and secondary segment heads into the final per-segment output",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "activity_ensemble.tflite",
+        "bytes": 1081584,
+        "parity": {
+          "max_abs": 0.002416849136352539,
+          "max_rel": 0.0003578556995168562
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "d3a0e319b063850f6cb06ce09de4a23bb988cc520e8f61376ec1000cb4ca5ba1"
+      }
+    },
+    {
+      "algorithm_id": "activity_history_transformer",
+      "algorithm_version": "3.1.11",
+      "coreml": {
+        "artifact": "activity_history_transformer.mlpackage",
+        "bytes": 1920449,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "8a3f8e1aba3967b2bd0f28eee8b99d83a9cd45cae2eddcd9bbad634617b57081",
+          "Data/com.apple.CoreML/weights/weight.bin": "add335cd38275dbe088cc8d6f273f8e64020f95c6ba2b94e216205431c93d49b",
+          "Manifest.json": "2d104abda12c99da63b372730a434a6ab9d3fff3cfc956587c3a1e56397ad829",
+          "executorch_debug_handle_mapping.json": "1f48ca1dc01ca59d1115d952cf20160481b9c7c658ac93b4f3c0255577f86696"
+        },
+        "package_sha256": "f4a0e31675ce9dfd3842c0225ad497a6aa2fbcaa70b1ed1f116f308202b57458",
+        "parity": {
+          "max_abs": 0.014379024505615234,
+          "max_rel": 0.0022464929650244073
+        },
+        "precision": "float16",
+        "sha256": "8a3f8e1aba3967b2bd0f28eee8b99d83a9cd45cae2eddcd9bbad634617b57081"
+      },
+      "cross_platform": {
+        "max_abs": 0.013324737548828125,
+        "max_rel": 0.0018590109233402826
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "segments",
+          "shape": [
+            1,
+            16,
+            573
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "activity_history_transformer",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "encoded",
+          "shape": [
+            1,
+            16,
+            336
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "attention",
+          "shape": [
+            1,
+            1,
+            6,
+            16,
+            18
+          ]
+        }
+      ],
+      "parameters": 939184,
+      "role": "Self-attention over sixteen history segments; also returns its attention map",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "activity_history_transformer.tflite",
+        "bytes": 1898440,
+        "parity": {
+          "max_abs": 0.0031976699829101562,
+          "max_rel": 0.0005191413674003675
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "5ae0d644ed116890d069136bfff653feaf48522141c492aa43f886c0fab4ea63"
+      }
+    },
+    {
+      "algorithm_id": "activity_primary_segments",
+      "algorithm_version": "3.1.11",
+      "coreml": {
+        "artifact": "activity_primary_segments.mlpackage",
+        "bytes": 5514206,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "79109f2c130e970867dd4f1dad768ddaadfec7dc7d996137a15b289be447438c",
+          "Data/com.apple.CoreML/weights/weight.bin": "0a3b242fcd98d21877b0cc35a59e5c63e77f3e6c218bab2b55717aebb9bd07d5",
+          "Manifest.json": "05112384b8641d5a0702db80747dc5be270c2261548a4988a1d79e9a0e699a4c",
+          "executorch_debug_handle_mapping.json": "9795a923ae10062aa2d8a4aeb2c134225eec2a09a81114f01587c1e937f92c22"
+        },
+        "package_sha256": "db9e0a27f0d169d0eca6bc711c53376469d256b2b19e2a6c3c6e6eb1a53317ae",
+        "parity": {
+          "max_abs": 0.001372307538986206,
+          "max_rel": 0.0017590971686966812
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "79109f2c130e970867dd4f1dad768ddaadfec7dc7d996137a15b289be447438c"
+      },
+      "cross_platform": {
+        "max_abs": 1.3262033462524414e-06,
+        "max_rel": 1.373835697400987e-06
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            1,
+            16,
+            110
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "activity_primary_segments",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "segment_output",
+          "shape": [
+            1,
+            16,
+            260
+          ]
+        }
+      ],
+      "parameters": 625760,
+      "role": "Primary per-segment activity head",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "activity_primary_segments.tflite",
+        "bytes": 1356696,
+        "parity": {
+          "max_abs": 0.0013711750507354736,
+          "max_rel": 0.0017576454847126979
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "94267d6c57de8253298322b28548fe53a9c1d546a2d87b1d695c6482f27f8fc1"
+      }
+    },
+    {
+      "algorithm_id": "activity_secondary_segments",
+      "algorithm_version": "3.1.11",
+      "coreml": {
+        "artifact": "activity_secondary_segments.mlpackage",
+        "bytes": 1106889,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "05e52d272bad4edd0a6d977fdee596078e3d8a7f4469d99597c23d2cbeb6cfc6",
+          "Data/com.apple.CoreML/weights/weight.bin": "142e33676a3475f87c00d16d6dba1aac5385606569805e8a845bcf75cea147eb",
+          "Manifest.json": "a8b8957e8e7cbc0e032a22fba686c050bd83a1392b74f54dc7cf17ad2b8b3803",
+          "executorch_debug_handle_mapping.json": "100e20d66267470bf70b1b54bc3ac006eae1e7e1ec895bfb39e22bae14f07231"
+        },
+        "package_sha256": "7e77516d83cc2a3b896fbc7c2cf9b5f56082c9e3a77a09966f997fac033670ab",
+        "parity": {
+          "max_abs": 0.0014934614300727844,
+          "max_rel": 0.0026259842020421495
+        },
+        "precision": "float16",
+        "sha256": "05e52d272bad4edd0a6d977fdee596078e3d8a7f4469d99597c23d2cbeb6cfc6"
+      },
+      "cross_platform": {
+        "max_abs": 0.0014450550079345703,
+        "max_rel": 0.00247315629788782
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            1,
+            16,
+            336
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "activity_secondary_segments",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "segment_output",
+          "shape": [
+            1,
+            16,
+            260
+          ]
+        }
+      ],
+      "parameters": 541220,
+      "role": "Secondary per-segment activity head, over the history encoder's output",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "activity_secondary_segments.tflite",
+        "bytes": 1091972,
+        "parity": {
+          "max_abs": 0.0002547428011894226,
+          "max_rel": 0.00038987547520313984
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "32b2ed7dbd81a4433763be53bc627da9fa89d300a7fa7dd7f107f969176a75bb"
+      }
+    },
+    {
+      "algorithm_id": "activity_transition_segmentation",
+      "algorithm_version": "3.1.11",
+      "coreml": {
+        "artifact": "activity_transition.mlpackage",
+        "bytes": 223838,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "c00a67a9ee40a3dd4516a9291316b2eeb0b256527eb7fb48ea85b9d244457bdd",
+          "Data/com.apple.CoreML/weights/weight.bin": "de6dac4e9fd9f93fadbbcee4a6f1ecf1bb5073ad04451eb658a42c71dd151be0",
+          "Manifest.json": "b45189173b8dc6138aff52617355eaf28658977ad3af3efcfc920d4fd61a8117",
+          "executorch_debug_handle_mapping.json": "10cbdf611dd465a4c8d7f0777a27a1b72a9b231672f18400b3eb68699b843aa4"
+        },
+        "package_sha256": "b2c720fd7cabd8e8fe911a4af10cf5f9ea935950a8c8e8dfc71a744aca81b9e0",
+        "parity": {
+          "max_abs": 0.000637054443359375,
+          "max_rel": 0.0006516184347293604
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "c00a67a9ee40a3dd4516a9291316b2eeb0b256527eb7fb48ea85b9d244457bdd"
+      },
+      "cross_platform": {
+        "max_abs": 5.960464477539062e-07,
+        "max_rel": 5.961479305320739e-07
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            1,
+            64,
+            29
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "activity_transition",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "transition_logits",
+          "shape": [
+            1,
+            64
+          ]
+        }
+      ],
+      "parameters": 86971,
+      "role": "Activity-transition segmentation over a 64-minute window",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "activity_transition.tflite",
+        "bytes": 196272,
+        "parity": {
+          "max_abs": 0.0006366968154907227,
+          "max_rel": 0.0006512526309673492
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "4eb572738b956f0f79c28a59dbd1b7dd8b96c01767171c23856deca123ef9252"
+      }
+    },
+    {
+      "algorithm_id": "awake_heart_rate_imputation",
+      "algorithm_version": "1.2.0",
+      "coreml": {
+        "artifact": "awhr_imputation.mlpackage",
+        "bytes": 2283024,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "240f31e5d2bc43118ee07485ca7956d75780f302b45649b9f7733204f15d3adc",
+          "Data/com.apple.CoreML/weights/weight.bin": "8390b30cc7df6f3816f6944c73e53c6b0c4fbb9e2f30664fab6eb91b3bbf996c",
+          "Manifest.json": "d7316dafb993161d4feb827f7cb043e225dcec4fa4d7044c335745be468da365",
+          "executorch_debug_handle_mapping.json": "a907cddc81cfbf98412ab348eddd1d0540aaf4a85f85b0368c5f027b931e24ac"
+        },
+        "package_sha256": "28246aec80ee39a3c1ab4cacfa6e9142bae43a20f9e4cef35699972ad9b1b959",
+        "parity": {
+          "max_abs": 0.02056121826171875,
+          "max_rel": 9.165778770818391e-05
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "240f31e5d2bc43118ee07485ca7956d75780f302b45649b9f7733204f15d3adc"
+      },
+      "cross_platform": {
+        "max_abs": 3.814697265625e-05,
+        "max_rel": 1.703336085924448e-07
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "window",
+          "shape": [
+            1,
+            60,
+            13
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "awhr_imputation",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "imputed_hr",
+          "shape": [
+            1,
+            60,
+            1
+          ]
+        }
+      ],
+      "parameters": 209665,
+      "role": "Bidirectional LSTM imputing awake heart rate over a 60-step context window",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "awhr_imputation.tflite",
+        "bytes": 972736,
+        "parity": {
+          "max_abs": 0.02062225341796875,
+          "max_rel": 9.192987019488724e-05
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "9a621a3f9741a06466943b1800e38a0319d85a765bfe12e04a7cfc967458ea32"
+      }
+    },
+    {
+      "algorithm_id": "awake_heart_rate_profile",
+      "algorithm_version": "1.0.1",
+      "coreml": {
+        "artifact": "awhr_profile_core.mlpackage",
+        "bytes": 295365,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "4550a243ccad9f26eaba9544f6f1bc1bfeec22e46c10b8ec2926ad05fff7297a",
+          "Data/com.apple.CoreML/weights/weight.bin": "6ad00036fd74c134a46614b97f3f81e84e2de52616ffee39f51bffb672a1107e",
+          "Manifest.json": "8490e6c6b0361b83fc5dbdbbdcd51e76383b5a18255253a2e6b527a871cfa2b6",
+          "executorch_debug_handle_mapping.json": "f02839ee24d2aa388f28403e9e40d0d1d822ff0e916e302adb5bc799ff98fa87"
+        },
+        "package_sha256": "91ff7178277adf53e4cf26e44b5554b1f19c38d3ad6db9a08d1794034b429af3",
+        "parity": {
+          "max_abs": 0.017406463623046875,
+          "max_rel": 0.0003905068578755297
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "4550a243ccad9f26eaba9544f6f1bc1bfeec22e46c10b8ec2926ad05fff7297a"
+      },
+      "cross_platform": {
+        "max_abs": 0.010265350341796875,
+        "max_rel": 0.00017221458743950892
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            60,
+            19
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "awhr_profile_core",
+      "notes": "Same split as step_eligibility: the mask lives in the parent, so it moves to Rust.",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "profile_features",
+          "shape": [
+            60,
+            6
+          ]
+        }
+      ],
+      "parameters": 7672,
+      "role": "Per-step activity features behind the awake-HR profile choice",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "awhr_profile_core.tflite",
+        "bytes": 52064,
+        "parity": {
+          "max_abs": 0.025287628173828125,
+          "max_rel": 0.0004974833146680811
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "17efde1ac12f65c4b59033efd4714beb28b943d741dbe4ae95e46458a933483e"
+      }
+    },
+    {
+      "algorithm_id": "awake_heart_rate_profile_head",
+      "algorithm_version": "1.0.1",
+      "coreml": {
+        "artifact": "awhr_profile_head.mlpackage",
+        "bytes": 2702,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "0ecc9552f92c45671f90d8ee1fd9920642bda57fb6af0ae1a0fe9b9ea4a85ca4",
+          "Data/com.apple.CoreML/weights/weight.bin": "e2190697bc45575c56dde0d1e974f87fdc3968a9f6a2ad21ef27632251bb0685",
+          "Manifest.json": "5d5ecfc670d5d13a0a5813e4e7f1d8ec120660eb8eaace9b5343f5b58ae85ae2",
+          "executorch_debug_handle_mapping.json": "f9707ac38e2a39ab72ef9010c736ffc63f9d5da76a350dc02b33d350f8276507"
+        },
+        "package_sha256": "59e25d2a9fde8c1756bc5c8f295eeebe48867729d6ad86e987f06cb1655decff",
+        "parity": {
+          "max_abs": 0.0,
+          "max_rel": 0.0
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "0ecc9552f92c45671f90d8ee1fd9920642bda57fb6af0ae1a0fe9b9ea4a85ca4"
+      },
+      "cross_platform": {
+        "max_abs": 2.1457672119140625e-06,
+        "max_rel": 1.5240412425880795e-07
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            60,
+            32
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "awhr_profile_head",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "profile_logits",
+          "shape": [
+            60,
+            3
+          ]
+        }
+      ],
+      "parameters": 99,
+      "role": "Three-way profile head over the recurrent layer's output",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "awhr_profile_head.tflite",
+        "bytes": 1364,
+        "parity": {
+          "max_abs": 3.814697265625e-06,
+          "max_rel": 2.459382680190976e-07
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "f69957dd7f3b6c1d48c68d166c5b7ca04f0ee3437469b2880b0a876420a16fd3"
+      }
+    },
+    {
+      "algorithm_id": "awake_heart_rate_profile_recurrent",
+      "algorithm_version": "1.0.1",
+      "coreml": {
+        "artifact": "awhr_profile_recurrent.mlpackage",
+        "bytes": 924534,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "64fbac5a09003c9ab4e1aa2f629beae1dc05486a8f104276574f27b2bda25469",
+          "Data/com.apple.CoreML/weights/weight.bin": "f9d606ea86dbffdee5f37bac6a1ed0fa5b1d6ea92e64161afecc18bd3062f327",
+          "Manifest.json": "2325f43075873ac33035d1ba13d22b482369a6ee5c919d3f2f0278e8aa456286",
+          "executorch_debug_handle_mapping.json": "c69a0f2c485d07f359317d7a7a70e3758669266f6fd9b187833a79b4694ca472"
+        },
+        "package_sha256": "f2910ae54aa3c0e445f0bcfba4b948e6caab14307d974b833aff3b2140bbf3fc",
+        "parity": {
+          "max_abs": 0.005739860236644745,
+          "max_rel": 0.005741471400699287
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "64fbac5a09003c9ab4e1aa2f629beae1dc05486a8f104276574f27b2bda25469"
+      },
+      "cross_platform": {
+        "max_abs": 1.6093254089355469e-06,
+        "max_rel": 1.6101564374322728e-06
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            1,
+            60,
+            6
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "awhr_profile_recurrent",
+      "notes": "The last 3,072 parameters of the archive; with this it ships whole.",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "encoded",
+          "shape": [
+            1,
+            60,
+            32
+          ]
+        }
+      ],
+      "parameters": 3072,
+      "role": "Bidirectional recurrent layer between the profile features and the profile head",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "awhr_profile_recurrent.tflite",
+        "bytes": 282960,
+        "parity": {
+          "max_abs": 0.00574059784412384,
+          "max_rel": 0.005742209215222911
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "bdb3e5b14e4bcb89e9e07b854876d931b6a90114ca2cb2726d8fa1b7d8ab5dcb"
+      }
+    },
+    {
+      "algorithm_id": "behavior_embedding",
+      "algorithm_version": "3.1.11",
+      "coreml": {
+        "artifact": "behavior_embedding.mlpackage",
+        "bytes": 51718,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "9449b3d48267d8cfb35ebf71fac016d1f25e71e253ce3b2a46280c60b985255a",
+          "Data/com.apple.CoreML/weights/weight.bin": "71fde48f149b1548e3a4c3b6401f8e73b055269d090cf7de232461f8cbc06dc3",
+          "Manifest.json": "deeccb31ea267c038334c118a244a9fa41ca53a3a506c2db4a8987592f3f7b05",
+          "executorch_debug_handle_mapping.json": "c77888c8830887eadd6e2c89d94bf127fb74951435a44cf412efab300db21622"
+        },
+        "package_sha256": "481f2367ed36dca9f5f0a8b14baf2bffe9f91a25a77e486b356350531e19aeb1",
+        "parity": {
+          "max_abs": 0.0001220703125,
+          "max_rel": 0.00033849270257333786
+        },
+        "precision": "float16",
+        "sha256": "9449b3d48267d8cfb35ebf71fac016d1f25e71e253ce3b2a46280c60b985255a"
+      },
+      "cross_platform": {
+        "max_abs": 0.0,
+        "max_rel": 0.0
+      },
+      "inputs": [
+        {
+          "dtype": "int64",
+          "name": "behavior_ids",
+          "shape": [
+            1,
+            16
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "behavior_embedding",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "embeddings",
+          "shape": [
+            1,
+            16,
+            256
+          ]
+        }
+      ],
+      "parameters": 22784,
+      "role": "Embeds sixteen behaviour ids into the activity model's 256-d space",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "behavior_embedding.tflite",
+        "bytes": 47132,
+        "parity": {
+          "max_abs": 0.0001220703125,
+          "max_rel": 0.00033849270257333786
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "c4071ac408da7dc1cdbd4b9fc6ca001c6be13e422d94114bb546020dbf3e0667"
+      }
+    },
+    {
+      "algorithm_id": "cva_encoder",
+      "algorithm_version": "2.1.0",
+      "coreml": {
+        "artifact": "cva_encoder.mlpackage",
+        "bytes": 3719258,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "b8003fad19a25db301b51a8c3083b8bf693d5740bd7dc610159ab501cca0874d",
+          "Data/com.apple.CoreML/weights/weight.bin": "1c9721c8e6e28b7f1f8410e1a9870efecdc5963883991f036fff949d2100d75a",
+          "Manifest.json": "592d72e45ebe90b45ffb2bdb238caf6371fcfa2640280af2da9945692bab58af",
+          "executorch_debug_handle_mapping.json": "9aa5b4ad5a18527db75c53ec7fadda27dbbbc39a15d91d125cff893f91e6b863"
+        },
+        "package_sha256": "808841e5914bc386bcbedd394bd09930e15ef6737cdb1704adbf89f018c4b8c5",
+        "parity": {
+          "max_abs": 0.21935272216796875,
+          "max_rel": 0.00465878239057711
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "b8003fad19a25db301b51a8c3083b8bf693d5740bd7dc610159ab501cca0874d"
+      },
+      "cross_platform": {
+        "max_abs": 0.016923904418945312,
+        "max_rel": 0.0005426754320807723
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "pulses",
+          "shape": [
+            1,
+            1024
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "cva_encoder",
+      "notes": "`forward` on this module computes a contrastive training loss, not an inference result; `get_embeddings_1` is the entry its predictor calls. 1,024 is the model's own block_size, which is why the 1,499-sample pulse train is truncated to it.",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "embeddings",
+          "shape": [
+            1,
+            128
+          ]
+        }
+      ],
+      "parameters": 1805312,
+      "role": "PPG transformer encoder: 1,024 normalised pulse samples to a 128-d embedding",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "cva_encoder.tflite",
+        "bytes": 3502984,
+        "parity": {
+          "max_abs": 0.1323261260986328,
+          "max_rel": 0.0028104443837698528
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "4fbe89e6db08c5da8a0e98f3ff330cf81f9c4cab58c835d734f3e5559e462826"
+      }
+    },
+    {
+      "algorithm_id": "cva_predictor_v1_base",
+      "algorithm_version": "1.3.0",
+      "coreml": {
+        "artifact": "cva_predictor_v1_base.mlpackage",
+        "bytes": 690450,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "2568173dc133f50b2b8ec3e28a3e64ddf51c580422a1fddeb78f1525c6cfeac9",
+          "Data/com.apple.CoreML/weights/weight.bin": "8d8b356fc3f8db5846347f84774574035fb7126638e59074eee6089bc9644507",
+          "Manifest.json": "8921363ba9ef872d2afe7a8485d7374e0909bef4bd2aa6ea8f859b09ecfffc32",
+          "executorch_debug_handle_mapping.json": "f791b2494f15f1c046fee3943fbdb82875db92db815b16dc548158a565276ca6"
+        },
+        "package_sha256": "754cf8cde1a757aa112dc0ce73196df526b528ea8a24d893f6843fa7940725fd",
+        "parity": {
+          "max_abs": 0.0758056640625,
+          "max_rel": 0.0008376106712961491
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "2568173dc133f50b2b8ec3e28a3e64ddf51c580422a1fddeb78f1525c6cfeac9"
+      },
+      "cross_platform": {
+        "max_abs": 0.00554656982421875,
+        "max_rel": 0.0001127161975511968
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "pulse_triple",
+          "shape": [
+            1,
+            3,
+            256
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "exogenous",
+          "shape": [
+            1,
+            8
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "cva_predictor_v1_base",
+      "notes": "All 317,522 parameters of the archive. The wrapper around it windows a longer pulse train into 272-column blocks and could not be traced; the network takes one block's worth \u2014 256 samples across the pulse/VPG/APG triple \u2014 plus eight exogenous values, and the windowing is Rust's.",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "cva",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "pwv",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            1,
+            272
+          ]
+        }
+      ],
+      "parameters": 317522,
+      "role": "Previous-generation CNN cardiovascular-age network over pulse, VPG and APG",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "cva_predictor_v1_base.tflite",
+        "bytes": 644124,
+        "parity": {
+          "max_abs": 0.04694366455078125,
+          "max_rel": 0.0005876457303980689
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "9bc367f802d4bb684fd08a882de8c9af12b234ff1ed85e9d779b7164c98a05f4"
+      }
+    },
+    {
+      "algorithm_id": "cva_probes",
+      "algorithm_version": "2.1.0",
+      "coreml": {
+        "artifact": "cva_probes_female.mlpackage",
+        "bytes": 37748,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "7f2ed399a675c0febf287779419932f40b425f423d062a58c1a1fff1a8ad8df2",
+          "Data/com.apple.CoreML/weights/weight.bin": "af5f24201d09a84f4311f7fbe106a625f0bde2a1f0b168a5a4cca0a52076b43d",
+          "Manifest.json": "760f24ec946555b8a9d26fe3e5b0689f86cf98ba07a1354dd37864daa585a854",
+          "executorch_debug_handle_mapping.json": "047f913d3ec09225c644167720cd21b0b59f47fc7f5fd2f4c6410c8d843d9726"
+        },
+        "package_sha256": "93ac5ae37351eab8e73258627159c1514bf4f3189f48735144034e1e909699b9",
+        "parity": {
+          "max_abs": 1.1444091796875e-05,
+          "max_rel": 1.8069536273660477e-07
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "7f2ed399a675c0febf287779419932f40b425f423d062a58c1a1fff1a8ad8df2"
+      },
+      "cross_platform": {
+        "max_abs": 1.1920928955078125e-07,
+        "max_rel": 9.86211092369813e-08
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "embeddings",
+          "shape": [
+            1,
+            128
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "age",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "weight",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "bmi",
+          "shape": [
+            1
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "cva_probes_female",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "cva",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "pwv",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "systolic",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "diastolic",
+          "shape": [
+            1
+          ]
+        }
+      ],
+      "parameters": 2471,
+      "role": "The female branch of the CVA probe head",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "cva_probes_female.tflite",
+        "bytes": 16780,
+        "parity": {
+          "max_abs": 8.392333984375e-05,
+          "max_rel": 1.3653073418533477e-06
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "b328ed6e5b8de4777448c1405ad6364f469c839a2c6497fed88670d78dc64f74"
+      }
+    },
+    {
+      "algorithm_id": "cva_probes",
+      "algorithm_version": "2.1.0",
+      "coreml": {
+        "artifact": "cva_probes_male.mlpackage",
+        "bytes": 36259,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "b7cca22b76e02ea1cd24787caa584ecee8d48b5d7a14d02d55b332c61a5ed669",
+          "Data/com.apple.CoreML/weights/weight.bin": "d0f5b63a6b7c4e43c042cc3601d140f9c1ea761621456b5f10341e932d6660fe",
+          "Manifest.json": "ed6c0cb0e9b82c58dd7041bce8cef42974c78ba59275a408a547031196b48798",
+          "executorch_debug_handle_mapping.json": "8758e94a1aa14eaf583e1ff3dac126edbccdbfee3c582b1b00fdb2358663fe9f"
+        },
+        "package_sha256": "a11c10310a58ec9e8a1eaa1f04f670601e2a066e14e4449c3318b605328336f0",
+        "parity": {
+          "max_abs": 0.0006251335144042969,
+          "max_rel": 0.0001246527479655502
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "b7cca22b76e02ea1cd24787caa584ecee8d48b5d7a14d02d55b332c61a5ed669"
+      },
+      "cross_platform": {
+        "max_abs": 3.814697265625e-06,
+        "max_rel": 7.023713390913268e-08
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "embeddings",
+          "shape": [
+            1,
+            128
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "age",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "weight",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "bmi",
+          "shape": [
+            1
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "cva_probes_male",
+      "notes": "The head selects its weights by a `str` gender argument sitting between tensor arguments, so the two branches ship as two artefacts and Rust picks one. This and cva_encoder together are the whole of cva_2_1_0.",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "cva",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "pwv",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "systolic",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "diastolic",
+          "shape": [
+            1
+          ]
+        }
+      ],
+      "parameters": 2471,
+      "role": "Cardiovascular age, pulse-wave velocity and blood pressure from a CVA embedding",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "cva_probes_male.tflite",
+        "bytes": 14984,
+        "parity": {
+          "max_abs": 0.0006251335144042969,
+          "max_rel": 0.0001246527479655502
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "fd4b9a282f00d8457aa981a6d0ae5e7cb3c806a859bf325cbb6c473c93f5503c"
+      }
+    },
+    {
+      "algorithm_id": "daytime_hrv_imputation",
+      "algorithm_version": "1.1.0",
+      "coreml": {
+        "artifact": "dhrv_imputation.mlpackage",
+        "bytes": 16918,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "5dfadac3b7aa3a24d0aa1575d9c3924b8b9a0cdffc7b570169e3462f42fb6132",
+          "Data/com.apple.CoreML/weights/weight.bin": "099ebcceb2ea2b3be931278e2aac1435cddb7becbf1fc5c7975c69d0f3009154",
+          "Manifest.json": "ff38fe407e9a737c1f5f83efa57c98818086a95dd6a355a245d5f381ca0069b0",
+          "executorch_debug_handle_mapping.json": "24f377c0d1e33557007c4d4a454879166bf54142ebe720dfadecc710b85c960a"
+        },
+        "package_sha256": "488db1a8051d43344166afd954eb06aa59a6a7bbf043b4cc191b87b88e3ea581",
+        "parity": {
+          "max_abs": 0.011054039001464844,
+          "max_rel": 0.0011046039235882064
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "5dfadac3b7aa3a24d0aa1575d9c3924b8b9a0cdffc7b570169e3462f42fb6132"
+      },
+      "cross_platform": {
+        "max_abs": 2.86102294921875e-06,
+        "max_rel": 2.855797096758594e-07
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            1,
+            10
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "dhrv_imputation",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "imputed_dhrv",
+          "shape": [
+            1,
+            1
+          ]
+        }
+      ],
+      "parameters": 4577,
+      "role": "Daytime HRV imputation from temperature, MET, HR and their baselines",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "dhrv_imputation.tflite",
+        "bytes": 12400,
+        "parity": {
+          "max_abs": 0.011056900024414062,
+          "max_rel": 0.0011048898188319959
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "acb2e38d48aa8789f39692b933d08f668f2402545d92a97cecb8c7b8b2127f45"
+      }
+    },
+    {
+      "algorithm_id": "energy_expenditure_hr",
+      "algorithm_version": "1.0.0",
+      "coreml": {
+        "artifact": "energy_expenditure_hr.mlpackage",
+        "bytes": 433985,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "82c4e4991c29d3c4603ecfd515e11d7a8a98af5b2361a7c30b64733645c1a5c8",
+          "Data/com.apple.CoreML/weights/weight.bin": "451c04907b638a76ea2c8e94a7bdc2200b748897857476f5e4de9f815e02023e",
+          "Manifest.json": "62ad7aa6ff162eb9ab1543e1eea1ccbbc67da1e5795c75db99e5019b9474074f",
+          "executorch_debug_handle_mapping.json": "df48f7ffa3751d63386149aa34c7406249d8fab7f43a74d06d080b26dc859497"
+        },
+        "package_sha256": "79429d867861737edfa913d776d1a20632aacf0604e550af71f45d93caf4f760",
+        "parity": {
+          "max_abs": 0.0015947818756103516,
+          "max_rel": 0.001426633194851258
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "82c4e4991c29d3c4603ecfd515e11d7a8a98af5b2361a7c30b64733645c1a5c8"
+      },
+      "cross_platform": {
+        "max_abs": 0.00013566017150878906,
+        "max_rel": 0.00018784624867079796
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            1,
+            50
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "energy_expenditure_hr",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "energy",
+          "shape": [
+            1,
+            1
+          ]
+        }
+      ],
+      "parameters": 199653,
+      "role": "Active energy expenditure for a window where heart rate is available",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "energy_expenditure_hr.tflite",
+        "bytes": 403616,
+        "parity": {
+          "max_abs": 0.0016816258430480957,
+          "max_rel": 0.0025700531464362773
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "55874df93c68b2c393262d13d5da3bb2bc13ee3a074ae9629188ab39b813cf01"
+      }
+    },
+    {
+      "algorithm_id": "energy_expenditure_no_hr",
+      "algorithm_version": "1.0.0",
+      "coreml": {
+        "artifact": "energy_expenditure_no_hr.mlpackage",
+        "bytes": 271937,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "22a8747d23e31d32a3c64ba6e69c12aa5dfe876fa0be8f16e3377d86c1dabc42",
+          "Data/com.apple.CoreML/weights/weight.bin": "2c4c0b1e48a0c80ed54299f13edec8b141e5217cd4eddf7fa6de3069c52529ee",
+          "Manifest.json": "1d3ee991710c89e4607e32c2a1760207fc98cb9738d315afcb91712bfc9bf957",
+          "executorch_debug_handle_mapping.json": "df48f7ffa3751d63386149aa34c7406249d8fab7f43a74d06d080b26dc859497"
+        },
+        "package_sha256": "35a38364a550884cfeb3c08abe9781ce38266708d6fc8f897314e0c8e86f3816",
+        "parity": {
+          "max_abs": 0.0021181106567382812,
+          "max_rel": 0.0005277002225559651
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "22a8747d23e31d32a3c64ba6e69c12aa5dfe876fa0be8f16e3377d86c1dabc42"
+      },
+      "cross_platform": {
+        "max_abs": 0.0003751516342163086,
+        "max_rel": 0.0003199500605434576
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            1,
+            42
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "energy_expenditure_no_hr",
+      "notes": "The sibling branch of energy_expenditure_hr; Rust picks between them.",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "energy",
+          "shape": [
+            1,
+            1
+          ]
+        }
+      ],
+      "parameters": 118997,
+      "role": "Active energy expenditure for a window with no usable heart rate",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "energy_expenditure_no_hr.tflite",
+        "bytes": 241784,
+        "parity": {
+          "max_abs": 0.0018162727355957031,
+          "max_rel": 0.0004967828776457943
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "6bf1ae7f18ca18ec7c3ae216f754beff38374cfa4ff7f4ab9ebe5af1d9fc9003"
+      }
+    },
+    {
+      "algorithm_id": "halite_ppg_score",
+      "algorithm_version": "1.2.0",
+      "coreml": {
+        "artifact": "halite_ppg_score.mlpackage",
+        "bytes": 3510,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "f2e8992d404f89c368a48484fa46678b80749ad74b24c8d21728ab92a8e70eff",
+          "Data/com.apple.CoreML/weights/weight.bin": "1f31547bd71780b18153fd1ab97db05f25cadf7dabff74a464852c4ccd43bbb4",
+          "Manifest.json": "3472bf360093a7ba00c7366d1ad9e841ffec1660de325f7d576d6a2847cd912a",
+          "executorch_debug_handle_mapping.json": "9da295ca9fdee285371c33f2cd3c7837434f033654cc4ea1b9276efb1a15d66a"
+        },
+        "package_sha256": "5713b90aa8e48529d8d9a7beb4fccab68701dbd88c184b5934babe400124436a",
+        "parity": {
+          "max_abs": 1.0132789611816406e-06,
+          "max_rel": 7.176753297477682e-06
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "f2e8992d404f89c368a48484fa46678b80749ad74b24c8d21728ab92a8e70eff"
+      },
+      "cross_platform": {
+        "max_abs": 1.1641532182693481e-10,
+        "max_rel": 8.251131436398216e-08
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "embeddings",
+          "shape": [
+            1,
+            256
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "halite_ppg_score",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "ppg_score",
+          "shape": [
+            1,
+            1
+          ]
+        }
+      ],
+      "parameters": 257,
+      "role": "Scores one PulseNet embedding into the hypertension-risk PPG score",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "halite_ppg_score.tflite",
+        "bytes": 2128,
+        "parity": {
+          "max_abs": 2.384185791015625e-07,
+          "max_rel": 9.901367527376043e-07
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "59fa620a549d1cce51d23876c7b7f990a51bae17411d7b22cd13a728a16688bc"
+      }
+    },
+    {
+      "algorithm_id": "halite_hypertension_risk",
+      "algorithm_version": "1.2.0",
+      "coreml": {
+        "artifact": "halite_risk_tree.mlpackage",
+        "bytes": 88035,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "d31b0f24d2778cb7a4ac68dd3fc70c94f93222df788689d537f124d0a9c1790d",
+          "Data/com.apple.CoreML/weights/weight.bin": "44e29887db65935a8150a58487f7d3b7ceacc4986be620e8a39e76136541fb7f",
+          "Manifest.json": "74771c7d6bde8489a84336d3f47fb2819f1ed9d10cc838f5eec7de5279bc0c66",
+          "executorch_debug_handle_mapping.json": "33c5764249c706345da71b6e32f46bae8b3272d41dd9c22aafca4391173d408a"
+        },
+        "package_sha256": "cea5e1ae3ed9660f462394fd097951701f099ad035ef3a83d92d2203c91d0b11",
+        "parity": {
+          "max_abs": 9.40561294555664e-05,
+          "max_rel": 0.00013552310501468984
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "d31b0f24d2778cb7a4ac68dd3fc70c94f93222df788689d537f124d0a9c1790d"
+      },
+      "cross_platform": {
+        "max_abs": 1.4901161193847656e-08,
+        "max_rel": 1.7218762169360162e-08
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            1,
+            13
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "halite_risk_tree",
+      "notes": "Feature vector is user_info(4) || baselines(8) || aggregated ppg score(1).",
+      "outputs": [
+        {
+          "dtype": "int64",
+          "name": "label",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "probabilities",
+          "shape": [
+            1,
+            2
+          ]
+        }
+      ],
+      "parameters": 19100,
+      "role": "Gradient-boosted head over user info, baselines and the aggregated PPG score",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "halite_risk_tree.tflite",
+        "bytes": 107076,
+        "parity": {
+          "max_abs": 9.399652481079102e-05,
+          "max_rel": 0.00013543722218514945
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "b7d4e75090e2dd98067277a2ad7572bd6f0ede686addc80416461f002d08d4a5"
+      }
+    },
+    {
+      "algorithm_id": "illness_detection",
+      "algorithm_version": "0.5.1",
+      "coreml": {
+        "artifact": "illness_detection.mlpackage",
+        "bytes": 357134,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "ddb8019a41dff458cbb59be1c05a40918d31708f205f2eb4e302addf6cb18ba5",
+          "Data/com.apple.CoreML/weights/weight.bin": "1978c02bb9ba0dad759dfe19b9aa4977f6eeec18f33fd64eeb99917e1db33a47",
+          "Manifest.json": "9cbc5d55983302128c38cb7cbc1ec6a332e1a3317d42d3620b887a2e1c5dec1f",
+          "executorch_debug_handle_mapping.json": "4fefa7cc31e23267cae7076576a2414dc4558062bf776e4535125f2745183524"
+        },
+        "package_sha256": "624adc42095fff5d19843d65df2469c7002cc51f2575a8c83b14f466d67c7164",
+        "parity": {
+          "max_abs": 0.00029613077640533447,
+          "max_rel": 0.016619870971628876
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "ddb8019a41dff458cbb59be1c05a40918d31708f205f2eb4e302addf6cb18ba5"
+      },
+      "cross_platform": {
+        "max_abs": 2.357177436351776e-05,
+        "max_rel": 0.0036550702546815695
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "scalars",
+          "shape": [
+            1,
+            4
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "time_series",
+          "shape": [
+            1,
+            8,
+            30
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "illness_detection",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "illness_probability",
+          "shape": [
+            1,
+            1
+          ]
+        }
+      ],
+      "parameters": 155911,
+      "role": "Illness likelihood from thirty days of eight daily biometric deviations",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "illness_detection.tflite",
+        "bytes": 320728,
+        "parity": {
+          "max_abs": 0.00018317997455596924,
+          "max_rel": 0.01832195803886322
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "6f8e91b7bd653c1fc6a1b210e46819eb62dc5f55ed973ff8a3c3cad96d5246d0"
+      }
+    },
+    {
+      "algorithm_id": "popsicle_min_follicular",
+      "algorithm_version": "1.8.1",
+      "coreml": {
+        "artifact": "popsicle_min_follicular.mlpackage",
+        "bytes": 8257,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "c4a4b3560d19f71618a1f54b2276c7f6b7e3ab0d6e4b877f07ed383ef208655b",
+          "Data/com.apple.CoreML/weights/weight.bin": "2e812a9cb690f3c988129132763568b94d73a518b6a4288b89e8762912e7a1a8",
+          "Manifest.json": "102781a92fbf5969aa48bb7bc6bc80987ae4f78f03499831731fb8826e267277",
+          "executorch_debug_handle_mapping.json": "7871394d4f0688e8d7f7fed7a54f396872db4c4b415567550d895a2a44168465"
+        },
+        "package_sha256": "5d2ab60dcc88287cbb726bd830e38f92e1ee63d7b14b80ea93a4434f8943d0d8",
+        "parity": {
+          "max_abs": 4.76837158203125e-07,
+          "max_rel": 1.282493413434452e-07
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "c4a4b3560d19f71618a1f54b2276c7f6b7e3ab0d6e4b877f07ed383ef208655b"
+      },
+      "cross_platform": {
+        "max_abs": 4.76837158203125e-07,
+        "max_rel": 1.3830233332632601e-07
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            1,
+            9
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "popsicle_min_follicular",
+      "notes": "A three-layer perceptron; the archive's only head with no recurrent layer in it.",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "min_follicular_days",
+          "shape": [
+            1,
+            1
+          ]
+        }
+      ],
+      "parameters": 865,
+      "role": "Predicts the shortest plausible follicular phase for this wearer",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "popsicle_min_follicular.tflite",
+        "bytes": 5116,
+        "parity": {
+          "max_abs": 7.152557373046875e-07,
+          "max_rel": 1.9237401201516778e-07
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "54c55f54ab37cfb603a38da64528f817e227122e55fbadfe35cf9b2a168bb69f"
+      }
+    },
+    {
+      "algorithm_id": "popsicle_min_follicular",
+      "algorithm_version": "1.6.0",
+      "coreml": {
+        "artifact": "popsicle_min_follicular_v16.mlpackage",
+        "bytes": 8257,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "6b50ae16ea245a418e021f4b7bc3680fb6776e882993925cf351972bd9442e95",
+          "Data/com.apple.CoreML/weights/weight.bin": "2e812a9cb690f3c988129132763568b94d73a518b6a4288b89e8762912e7a1a8",
+          "Manifest.json": "77cd9fca3e38b266d31f95caf0e8e3e4c1e99611dfef9af895158cc92fab5576",
+          "executorch_debug_handle_mapping.json": "7871394d4f0688e8d7f7fed7a54f396872db4c4b415567550d895a2a44168465"
+        },
+        "package_sha256": "79a9e1044e25dbac5315ad301608ecdc559948180613591832a2b46c28e6040d",
+        "parity": {
+          "max_abs": 4.76837158203125e-07,
+          "max_rel": 1.282493413434452e-07
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "6b50ae16ea245a418e021f4b7bc3680fb6776e882993925cf351972bd9442e95"
+      },
+      "cross_platform": {
+        "max_abs": 4.76837158203125e-07,
+        "max_rel": 1.3830233332632601e-07
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            1,
+            9
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "popsicle_min_follicular_v16",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "min_follicular_days",
+          "shape": [
+            1,
+            1
+          ]
+        }
+      ],
+      "parameters": 865,
+      "role": "The previous generation of the follicular-length head",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "popsicle_min_follicular_v16.tflite",
+        "bytes": 5116,
+        "parity": {
+          "max_abs": 7.152557373046875e-07,
+          "max_rel": 1.9237401201516778e-07
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "54c55f54ab37cfb603a38da64528f817e227122e55fbadfe35cf9b2a168bb69f"
+      }
+    },
+    {
+      "algorithm_id": "popsicle_ovulation_detection",
+      "algorithm_version": "1.8.1",
+      "coreml": {
+        "artifact": "popsicle_ovulation_detection.mlpackage",
+        "bytes": 1102638,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "babc1c20c80f04c6cb149f84946b0c5bcc14df5c91c3c2559c564829197d3215",
+          "Data/com.apple.CoreML/weights/weight.bin": "e14942280e559748cce176c7f8519e445e7ee730806eb2188fbfa1361decc748",
+          "Manifest.json": "43540c6d4848dbd93eadb3153e8c884ac126612f55b2339d436402cb7c3358a7",
+          "executorch_debug_handle_mapping.json": "f37221a2f0eec1dc29b3397cc2c1478b0c5992359b45ddaefd4806f1ffad3b77"
+        },
+        "package_sha256": "2debe4c55632a4d3bfc3c4d6216d38fcbf82ff61e31591f1981bf2f792793ce6",
+        "parity": {
+          "max_abs": 5.4039061069488525e-05,
+          "max_rel": 0.0006764818174337052
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "babc1c20c80f04c6cb149f84946b0c5bcc14df5c91c3c2559c564829197d3215"
+      },
+      "cross_platform": {
+        "max_abs": 3.725290298461914e-08,
+        "max_rel": 4.289161546122641e-07
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "time_series",
+          "shape": [
+            1,
+            40,
+            3
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "scalars",
+          "shape": [
+            1,
+            40,
+            4
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "popsicle_ovulation_detection",
+      "notes": "84,385 parameters: a three-layer recurrent encoder over the daily series, a four-feature scalar branch, and the layer that joins them. Rebuilt whole rather than converted in place because the scripted recurrent layer has no callable forward; see rebuilt_cores.",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "ovulation_probability",
+          "shape": [
+            1,
+            40,
+            1
+          ]
+        }
+      ],
+      "parameters": 84385,
+      "role": "Ovulation detection over up to forty cycle days of temperature, heart rate and breath rate",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "popsicle_ovulation_detection.tflite",
+        "bytes": 450252,
+        "parity": {
+          "max_abs": 5.405396223068237e-05,
+          "max_rel": 0.0006763815830556591
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "7ff9f985b7542f0865d1ae32cc8a0ff4bb17bd82441471dd13efa380c50a35a0"
+      }
+    },
+    {
+      "algorithm_id": "popsicle_ovulation_detection",
+      "algorithm_version": "1.6.0",
+      "coreml": {
+        "artifact": "popsicle_ovulation_detection_v16.mlpackage",
+        "bytes": 1102638,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "e0ea4e355db7910a0b26835b5790920e6d715e7fa666c5e84fc2c74c3be5a8c2",
+          "Data/com.apple.CoreML/weights/weight.bin": "2f61d80a196899e84918a540c49f780770f87ad2a40b4eb43f8f82e18257c250",
+          "Manifest.json": "102ded45130af6eba0fc3be4a83ab8eab91b8c84759ff3dedece10fe17ae4b10",
+          "executorch_debug_handle_mapping.json": "f37221a2f0eec1dc29b3397cc2c1478b0c5992359b45ddaefd4806f1ffad3b77"
+        },
+        "package_sha256": "96c038939721c920eeabd9e5c18c449770f1d10048fe6c36c47b6865586887ad",
+        "parity": {
+          "max_abs": 0.0001646578311920166,
+          "max_rel": 0.00016466152147841907
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "e0ea4e355db7910a0b26835b5790920e6d715e7fa666c5e84fc2c74c3be5a8c2"
+      },
+      "cross_platform": {
+        "max_abs": 2.980232238769531e-07,
+        "max_rel": 2.9803075582030224e-07
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "time_series",
+          "shape": [
+            1,
+            40,
+            3
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "scalars",
+          "shape": [
+            1,
+            40,
+            4
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "popsicle_ovulation_detection_v16",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "ovulation_probability",
+          "shape": [
+            1,
+            40,
+            1
+          ]
+        }
+      ],
+      "parameters": 84385,
+      "role": "The previous generation of the ovulation detector",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "popsicle_ovulation_detection_v16.tflite",
+        "bytes": 450252,
+        "parity": {
+          "max_abs": 0.00016483664512634277,
+          "max_rel": 0.00016484033942029607
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "2e244193a3069b632c00934a15f506f6e8de7efd7adae9b50dd1ea1e04077054"
+      }
+    },
+    {
+      "algorithm_id": "popsicle_ovulation_prediction",
+      "algorithm_version": "1.8.1",
+      "coreml": {
+        "artifact": "popsicle_ovulation_prediction.mlpackage",
+        "bytes": 1102319,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "e16b16ab850c8121e0d2e93140f6a8e3e7dfeaa40f0123b069366ef3d7c87949",
+          "Data/com.apple.CoreML/weights/weight.bin": "71a1fd8ed89145b48604707a1d6dda83015f923d2b0558ea39550a075fe8c8f9",
+          "Manifest.json": "99f7300c56c7ebd81d098e599780a341e977b2262035c4647b1a19a78400a6e2",
+          "executorch_debug_handle_mapping.json": "842ba4e522a77a4bdf93650c9c1c9e45c10fe30b443fe3537ea15396fecbe5e0"
+        },
+        "package_sha256": "0a3b7e7dd0505adaa5216a019ad17969af451cd07ec58975842ad5904c94a913",
+        "parity": {
+          "max_abs": 0.0009441375732421875,
+          "max_rel": 5.6141958628480304e-05
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "e16b16ab850c8121e0d2e93140f6a8e3e7dfeaa40f0123b069366ef3d7c87949"
+      },
+      "cross_platform": {
+        "max_abs": 3.814697265625e-06,
+        "max_rel": 2.2683658238931508e-07
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "time_series",
+          "shape": [
+            1,
+            40,
+            3
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "scalars",
+          "shape": [
+            1,
+            40,
+            4
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "popsicle_ovulation_prediction",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "days",
+          "shape": [
+            1,
+            40,
+            1
+          ]
+        }
+      ],
+      "parameters": 84385,
+      "role": "Days until the next ovulation, per cycle day",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "popsicle_ovulation_prediction.tflite",
+        "bytes": 449868,
+        "parity": {
+          "max_abs": 0.0009450912475585938,
+          "max_rel": 5.619866767759998e-05
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "3ff28f25ad2559d068126d41a469f22a0d18be735f32a86437e9aee96cbbaf3f"
+      }
+    },
+    {
+      "algorithm_id": "popsicle_ovulation_prediction",
+      "algorithm_version": "1.6.0",
+      "coreml": {
+        "artifact": "popsicle_ovulation_prediction_v16.mlpackage",
+        "bytes": 1102319,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "a64e1c8565ef2f9fe5662b5211393bc1a528c715bf50019951c67a074dd0610a",
+          "Data/com.apple.CoreML/weights/weight.bin": "6dde370d48701037d3fd44ddc2848fa6bb6150a4708e6360d1c6ea42e7a959e6",
+          "Manifest.json": "5bb8c7f8a9654ee288294b7782817d480881a25f2672dcec916b37c35ba8db16",
+          "executorch_debug_handle_mapping.json": "842ba4e522a77a4bdf93650c9c1c9e45c10fe30b443fe3537ea15396fecbe5e0"
+        },
+        "package_sha256": "88d31302b995e1315cb9c0d950b3bcee537e14c50ee33789f22511c97ffee561",
+        "parity": {
+          "max_abs": 0.008112907409667969,
+          "max_rel": 0.00040966617624227044
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "a64e1c8565ef2f9fe5662b5211393bc1a528c715bf50019951c67a074dd0610a"
+      },
+      "cross_platform": {
+        "max_abs": 7.62939453125e-06,
+        "max_rel": 3.5171752018396934e-07
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "time_series",
+          "shape": [
+            1,
+            40,
+            3
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "scalars",
+          "shape": [
+            1,
+            40,
+            4
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "popsicle_ovulation_prediction_v16",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "days",
+          "shape": [
+            1,
+            40,
+            1
+          ]
+        }
+      ],
+      "parameters": 84385,
+      "role": "The previous generation of the ovulation predictor",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "popsicle_ovulation_prediction_v16.tflite",
+        "bytes": 449868,
+        "parity": {
+          "max_abs": 0.008112907409667969,
+          "max_rel": 0.00040966617624227044
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "d8139c89cf715f16b6a9c41e54b3e5f849c75f908bc8462ff7a019cf670cc9bc"
+      }
+    },
+    {
+      "algorithm_id": "popsicle_period_prediction",
+      "algorithm_version": "1.8.1",
+      "coreml": {
+        "artifact": "popsicle_period_prediction.mlpackage",
+        "bytes": 1102319,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "a57c8ef558767ad1c45bada412b6a7eecc0e692a8d39ceca4130bac87c758811",
+          "Data/com.apple.CoreML/weights/weight.bin": "cd5e4b293dae5ef9c4e33efb1cfeeb6422c26b2e71397927ac0533a06d71bba8",
+          "Manifest.json": "d69f6d90d743dd994e62bbe54a84374cd3161e664779b30071ea6fe082271607",
+          "executorch_debug_handle_mapping.json": "842ba4e522a77a4bdf93650c9c1c9e45c10fe30b443fe3537ea15396fecbe5e0"
+        },
+        "package_sha256": "dfff195d93ee644c05e0998a7325ecfaa5318670965118653f01d1b850ae13da",
+        "parity": {
+          "max_abs": 0.0011773109436035156,
+          "max_rel": 9.235525884833703e-05
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "a57c8ef558767ad1c45bada412b6a7eecc0e692a8d39ceca4130bac87c758811"
+      },
+      "cross_platform": {
+        "max_abs": 3.814697265625e-06,
+        "max_rel": 2.8642908996752035e-07
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "time_series",
+          "shape": [
+            1,
+            40,
+            3
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "scalars",
+          "shape": [
+            1,
+            40,
+            4
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "popsicle_period_prediction",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "days",
+          "shape": [
+            1,
+            40,
+            1
+          ]
+        }
+      ],
+      "parameters": 84385,
+      "role": "Days until the next period, per cycle day",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "popsicle_period_prediction.tflite",
+        "bytes": 449868,
+        "parity": {
+          "max_abs": 0.0011749267578125,
+          "max_rel": 9.216822916253643e-05
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "aa3265e7c82faa1a19f46fc1594ae49cd6a5faad439b992150d31ca9e1e2c1e5"
+      }
+    },
+    {
+      "algorithm_id": "popsicle_period_prediction",
+      "algorithm_version": "1.6.0",
+      "coreml": {
+        "artifact": "popsicle_period_prediction_v16.mlpackage",
+        "bytes": 1102319,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "2814ec41deb31e7e5ed5e16d8b15156e840dff8a94192f8ea12466a2a59d4834",
+          "Data/com.apple.CoreML/weights/weight.bin": "6d22b8b485324fa126e47299651e54e57f26b9d7c48cc4151c64a2345c29a78a",
+          "Manifest.json": "8a506ccec90ec2858e6392513f548f1e011b3992eb111c9710250a0c794956c6",
+          "executorch_debug_handle_mapping.json": "842ba4e522a77a4bdf93650c9c1c9e45c10fe30b443fe3537ea15396fecbe5e0"
+        },
+        "package_sha256": "1ee86b583253987880fbf6323f7f40fa38aee62e47319ecb687168dcdec2312d",
+        "parity": {
+          "max_abs": 0.003722667694091797,
+          "max_rel": 0.00048799166707504533
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "2814ec41deb31e7e5ed5e16d8b15156e840dff8a94192f8ea12466a2a59d4834"
+      },
+      "cross_platform": {
+        "max_abs": 2.86102294921875e-06,
+        "max_rel": 3.27351386835062e-07
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "time_series",
+          "shape": [
+            1,
+            40,
+            3
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "scalars",
+          "shape": [
+            1,
+            40,
+            4
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "popsicle_period_prediction_v16",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "days",
+          "shape": [
+            1,
+            40,
+            1
+          ]
+        }
+      ],
+      "parameters": 84385,
+      "role": "The previous generation of the period predictor",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "popsicle_period_prediction_v16.tflite",
+        "bytes": 449868,
+        "parity": {
+          "max_abs": 0.0037169456481933594,
+          "max_rel": 0.00048724158381580355
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "f6853eadbab0f79d77d65f5bdf3928ddbacf42f89b021217a481bf1e746ebc00"
+      }
+    },
+    {
+      "algorithm_id": "pulse_ppg_embeddings",
+      "algorithm_version": "1.0.0",
+      "coreml": {
+        "artifact": "pulse_ppg.mlpackage",
+        "bytes": 57174572,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "568ac0eeb548663db4a0f25375d45aefb4a4289fa3e8c607713bd10e30c1a354",
+          "Data/com.apple.CoreML/weights/weight.bin": "60c6a97e04c5e1cb14a98dc7c156ce6e4c1ea6bb826307eeb1bb09aaab9f050f",
+          "Manifest.json": "f364ff1e2f69ccfa95506d0cea56ddf669b9e41064bbb66351423d19bcd114cd",
+          "executorch_debug_handle_mapping.json": "31bcd22e9e59362025e1c831604c5c9bb10bdc4f632b7096506c1f9d973682e4"
+        },
+        "package_sha256": "c444483ac6ce3670f4d78d16f40a1bbf8e36218011a8f8d5e9891d6e148f65df",
+        "parity": {
+          "max_abs": 0.14286375045776367,
+          "max_rel": 0.004108275486070584
+        },
+        "precision": "float16",
+        "sha256": "568ac0eeb548663db4a0f25375d45aefb4a4289fa3e8c607713bd10e30c1a354"
+      },
+      "cross_platform": {
+        "max_abs": 0.4317169189453125,
+        "max_rel": 0.011888374578971784
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "ppg",
+          "shape": [
+            1,
+            1,
+            12000
+          ]
+        }
+      ],
+      "licence": "MIT (Pulse-PPG, Xu et al., UbiComp 2025)",
+      "model": "pulse_ppg",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "embeddings",
+          "shape": [
+            1,
+            512
+          ]
+        }
+      ],
+      "parameters": 28497920,
+      "role": "Open-weight PPG foundation encoder: 240 s at 50 Hz to a 512-d embedding, pre-trained on uncurated field PPG",
+      "standing": "open_licensed",
+      "tflite": {
+        "artifact": "pulse_ppg.tflite",
+        "bytes": 57155796,
+        "parity": {
+          "max_abs": 0.05428028106689453,
+          "max_rel": 0.0015044633001565656
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "4d6359ab1e37d7a47bb4ff94ca74fe2b19604283dcdece0a256a48ea440c78fb"
+      }
+    },
+    {
+      "algorithm_id": "pulsenet_foundation_embeddings",
+      "algorithm_version": "0.4.0",
+      "coreml": {
+        "artifact": "pulsenet_foundation.mlpackage",
+        "bytes": 1914925,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "92e7093ff85882a7d9d5621eef9e3121b42dd1d11ee9e15319ca3623dd0454ff",
+          "Data/com.apple.CoreML/weights/weight.bin": "63cfe53016cd1c211a5f5e6a113d5ff56f8984fd9a343b3c54b6eb0452aa3ed1",
+          "Manifest.json": "c09e0132bcd4b12c543315d6adf74dbbb96b8d18079a7884742253478bfc57c2",
+          "executorch_debug_handle_mapping.json": "c05346ea304d8d27463424e3b14dbeaab3b65964df923f313c05792c182c6a3e"
+        },
+        "package_sha256": "7f33ed37a0a932fe56ce3d1b58974df63c0c5ccd43fa4e882046f6a8a71bcdbe",
+        "parity": {
+          "max_abs": 0.006983697414398193,
+          "max_rel": 0.003756507690217306
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "92e7093ff85882a7d9d5621eef9e3121b42dd1d11ee9e15319ca3623dd0454ff"
+      },
+      "cross_platform": {
+        "max_abs": 0.0007708072662353516,
+        "max_rel": 0.00039621428464632266
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "ppg",
+          "shape": [
+            1,
+            1,
+            1500
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "pulsenet_foundation",
+      "notes": "EfficientNet1D encoder, PulseNet-Foundation v0.4.0, from the halite 1.2.0 archive. The wrapper's own moving-average detrend chain is ported to Rust; this core takes the already-filtered segment.",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "embeddings",
+          "shape": [
+            1,
+            256
+          ]
+        }
+      ],
+      "parameters": 890608,
+      "role": "PPG foundation encoder: 30 s of detrended PPG at 50 Hz to a 256-d embedding",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "pulsenet_foundation.tflite",
+        "bytes": 1843400,
+        "parity": {
+          "max_abs": 0.0064514875411987305,
+          "max_rel": 0.003470233763548958
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "7f7860c0ad92c14772af463a678a9df35f0034bff566e792e8cc491c9d1f6ad8"
+      }
+    },
+    {
+      "algorithm_id": "sleepnet_bdi",
+      "algorithm_version": "0.4.0",
+      "coreml": {
+        "artifact": "sleepnet_bdi.mlpackage",
+        "bytes": 3526442,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "46480a9b1907c7193e5c7bc1258e6098ef4cb9994580600acecf397c1ae7d7a2",
+          "Data/com.apple.CoreML/weights/weight.bin": "3e591b64664c5cbfd25e29eb55acd0247d84b8f62f343609c0443af02e7f75e0",
+          "Manifest.json": "dfb236c6ddbbf13243194e88348f8cb71fb4b98e622be9a8d1c39aeb08ab5b74",
+          "executorch_debug_handle_mapping.json": "1ced576c83a1d791fd16be10e5aceb742f66ec6febb852888ea8a4ac45f56f99"
+        },
+        "package_sha256": "9b2ef2e8f2bb8958ff3551e27d5bbd9960a948a3f03befe4139b2a73beec5c5e",
+        "parity": {
+          "max_abs": 0.0174100399017334,
+          "max_rel": 0.0048585965056282335
+        },
+        "precision": "float16, pooling reductions at float32",
+        "sha256": "46480a9b1907c7193e5c7bc1258e6098ef4cb9994580600acecf397c1ae7d7a2"
+      },
+      "cross_platform": {
+        "max_abs": 0.016010403633117676,
+        "max_rel": 0.00491033075385432
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "high_res",
+          "shape": [
+            1,
+            115200,
+            2
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "sleepnet_bdi",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "staging_logits",
+          "shape": [
+            1,
+            4,
+            1800
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "apnea_logits",
+          "shape": [
+            1,
+            1,
+            1800
+          ]
+        }
+      ],
+      "parameters": 1008640,
+      "role": "Sleep stages and apnea events from interbeat intervals alone",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "sleepnet_bdi.tflite",
+        "bytes": 2142936,
+        "parity": {
+          "max_abs": 0.0027321279048919678,
+          "max_rel": 0.0008404052361565156
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "590469f28981207650001b833089219386284383ede29fda9d64f56465659769"
+      }
+    },
+    {
+      "algorithm_id": "sleepnet_bdi",
+      "algorithm_version": "0.3.0",
+      "coreml": {
+        "artifact": "sleepnet_bdi_v3.mlpackage",
+        "bytes": 2093281,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "911c44310cd6a04deba5d9eb716bc92b387cc539b81211ff7dde690b9747d0c4",
+          "Data/com.apple.CoreML/weights/weight.bin": "9d981d6da77eb6c0ffe4f86af33c3fed09d1ba355b1713bca1806d27cfae2e55",
+          "Manifest.json": "fcc5b884a0ef2ce607d174ee291407181bcd8bccb98d425828b304665c960ee2",
+          "executorch_debug_handle_mapping.json": "1ced576c83a1d791fd16be10e5aceb742f66ec6febb852888ea8a4ac45f56f99"
+        },
+        "package_sha256": "b7bb56f135e6dc97e4b041e2c7275274778d90b60ca314fe8d388c5938ac0a0a",
+        "parity": {
+          "max_abs": 0.008562296628952026,
+          "max_rel": 0.002649823535458522
+        },
+        "precision": "float16, pooling reductions at float32",
+        "sha256": "911c44310cd6a04deba5d9eb716bc92b387cc539b81211ff7dde690b9747d0c4"
+      },
+      "cross_platform": {
+        "max_abs": 0.006586313247680664,
+        "max_rel": 0.0016188135177428588
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "high_res",
+          "shape": [
+            1,
+            115200,
+            2
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "sleepnet_bdi_v3",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "staging_logits",
+          "shape": [
+            1,
+            4,
+            1800
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "apnea_logits",
+          "shape": [
+            1,
+            1,
+            1800
+          ]
+        }
+      ],
+      "parameters": 290960,
+      "role": "Previous-generation interbeat-interval sleep-staging network",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "sleepnet_bdi_v3.tflite",
+        "bytes": 705736,
+        "parity": {
+          "max_abs": 0.00256270170211792,
+          "max_rel": 0.0006248559925369936
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "dd144e71757fe443b587f95b947a89c54790654d8c5eef9392adae97f5e7b4a4"
+      }
+    },
+    {
+      "algorithm_id": "sleepnet_moonstone",
+      "algorithm_version": "1.2.0",
+      "coreml": {
+        "artifact": "sleepnet_moonstone.mlpackage",
+        "bytes": 3663701,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "74450f57791b41af9b30ab97f883af11996ab0b3a95501630ed93f51dee146ca",
+          "Data/com.apple.CoreML/weights/weight.bin": "7f5506b15d689d1140346992c560241af3eb925b2d03ee96cef7129a26619dfb",
+          "Manifest.json": "1008433a3d31dfe30d3331595358aa8e7ed948403c1531d82604f2755f9760e8",
+          "executorch_debug_handle_mapping.json": "eaac7574c7811aee8c8fef8ff6ef45b3f7a3b9a015d3729caf4fd450678a3d67"
+        },
+        "package_sha256": "2620c758b731a2d9e7f6f4e6f8311aa9c2a37bcc64a1f1286ad3a874093a9641",
+        "parity": {
+          "max_abs": 0.02550649642944336,
+          "max_rel": 0.004699915686020222
+        },
+        "precision": "float16, pooling reductions at float32",
+        "sha256": "74450f57791b41af9b30ab97f883af11996ab0b3a95501630ed93f51dee146ca"
+      },
+      "cross_platform": {
+        "max_abs": 0.024335384368896484,
+        "max_rel": 0.0037643756775378335
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "high_res",
+          "shape": [
+            1,
+            115200,
+            3
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "low_res",
+          "shape": [
+            1,
+            1800,
+            1
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "sleepnet_moonstone",
+      "notes": "1,800 thirty-second epochs. high_res carries 64 samples per epoch across three channels; low_res carries one value per epoch.",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "staging_logits",
+          "shape": [
+            1,
+            4,
+            1800
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "apnea_logits",
+          "shape": [
+            1,
+            1,
+            1800
+          ]
+        }
+      ],
+      "parameters": 1075955,
+      "role": "Sleep stages, apnea and SpO2 events over a 15-hour night",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "sleepnet_moonstone.tflite",
+        "bytes": 2295128,
+        "parity": {
+          "max_abs": 0.004317879676818848,
+          "max_rel": 0.0006811445439834971
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "ae635931514d09f53607b80acc72acae36038b3f16c12e7d0ad2abac8b277d2d"
+      }
+    },
+    {
+      "algorithm_id": "activity_source_embedding",
+      "algorithm_version": "3.1.11",
+      "coreml": {
+        "artifact": "source_embedding.mlpackage",
+        "bytes": 6336,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "0c63d3c6e643cdae7b004a4dd171705e096b737bd916bd7b1f7c657cda55e478",
+          "Data/com.apple.CoreML/weights/weight.bin": "703cb048aa1704eb6931bf599cca0e56b5a7cec8360ed2d2d877eda64e20ce33",
+          "Manifest.json": "48f6ca600661d8440dc9bfd1017b884013e7128ace12ec25b320cc4822c1096d",
+          "executorch_debug_handle_mapping.json": "61797664f2a36118d75c6ce4e243edd793b9760af604ab5f0fa7a185c1d4f431"
+        },
+        "package_sha256": "054325c329dae958661c0c32990111210e7924c7e152f78a365e9586aaff4b27",
+        "parity": {
+          "max_abs": 0.0,
+          "max_rel": 0.0
+        },
+        "precision": "float16",
+        "sha256": "0c63d3c6e643cdae7b004a4dd171705e096b737bd916bd7b1f7c657cda55e478"
+      },
+      "cross_platform": {
+        "max_abs": 0.0,
+        "max_rel": 0.0
+      },
+      "inputs": [
+        {
+          "dtype": "int64",
+          "name": "source_ids",
+          "shape": [
+            1,
+            16
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "source_embedding",
+      "notes": "An eleven-row table, the archive's last 88 parameters. Its wrapper clamps an out-of-range id to row zero and then writes three of the eight values back over the is_labeling, is_workout and is_sleep feature slots; both are Rust's.",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "source_features",
+          "shape": [
+            1,
+            16,
+            8
+          ]
+        }
+      ],
+      "parameters": 88,
+      "role": "Embeds each segment's provenance \u2014 how the activity was recorded \u2014 into eight values",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "source_embedding.tflite",
+        "bytes": 1792,
+        "parity": {
+          "max_abs": 0.0,
+          "max_rel": 0.0
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "84a1d9a9b6fa7c6523912801190faece00c579afa6c59e66fb145de4c35d14b8"
+      }
+    },
+    {
+      "algorithm_id": "step_eligibility",
+      "algorithm_version": "1.3.0",
+      "coreml": {
+        "artifact": "step_eligibility.mlpackage",
+        "bytes": 274948,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "7a687c7e85736fa3e8668f90f13650e6248f649f1691c79f9c9690e5f77b6095",
+          "Data/com.apple.CoreML/weights/weight.bin": "6cae426a07322d2e3a5c189ec49fac6b6562fc44787f1696b4f437ee5101bc9e",
+          "Manifest.json": "7e6dacbd379253ebdb460a2561034b3c80456d914545f17e7b5a67912c42640c",
+          "executorch_debug_handle_mapping.json": "c1c16cd476855a28dd17fd1fbe5c3ba07ba69f56699b5f0531026876d7293d2c"
+        },
+        "package_sha256": "877b722e7c0090e617b34128cb2403914c96367e06dc3101485944bfd39596ed",
+        "parity": {
+          "max_abs": 0.00022868812084197998,
+          "max_rel": 0.00041816025834549457
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "7a687c7e85736fa3e8668f90f13650e6248f649f1691c79f9c9690e5f77b6095"
+      },
+      "cross_platform": {
+        "max_abs": 2.5033950805664062e-06,
+        "max_rel": 4.058614118565647e-06
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "motion",
+          "shape": [
+            1,
+            19
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "step_eligibility",
+      "notes": "7,804 of the step counter's 7,811 parameters. The boolean-mask gating that LiteRT rejects sits in the parent module and belongs in Rust.",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "eligibility_features",
+          "shape": [
+            1,
+            4
+          ]
+        }
+      ],
+      "parameters": 7804,
+      "role": "Step-eligibility features from one step-motion vector",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "step_eligibility.tflite",
+        "bytes": 56016,
+        "parity": {
+          "max_abs": 0.000805288553237915,
+          "max_rel": 0.0014724843084320857
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "b33af52edeaa6671af7cd9075308c8d986e3ea5b4cf964244b4f8a562eefff68"
+      }
+    },
+    {
+      "algorithm_id": "step_eligibility_head",
+      "algorithm_version": "1.3.0",
+      "coreml": {
+        "artifact": "step_head.mlpackage",
+        "bytes": 2380,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "e84b32bb41998dbe48102063e3acd660a4ba394b6d037b86e7c25bd503b806c9",
+          "Manifest.json": "2382a99dca474708b199e439d978318532627852e0db91634643b581eb42fc9c",
+          "executorch_debug_handle_mapping.json": "f4b8ace0a29a2886176b024f3844d9c58f7a782cdbade2446a20786e1ae8997d"
+        },
+        "package_sha256": "9256901ca8df65496ed1c5e0713314f81b302b58e3e66b71cb381e090df13f46",
+        "parity": {
+          "max_abs": 1.6763806343078613e-08,
+          "max_rel": 5.580098343653208e-07
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "e84b32bb41998dbe48102063e3acd660a4ba394b6d037b86e7c25bd503b806c9"
+      },
+      "cross_platform": {
+        "max_abs": 0.0,
+        "max_rel": 0.0
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "eligibility_features",
+          "shape": [
+            1,
+            4
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "step_head",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "eligibility",
+          "shape": [
+            1,
+            1
+          ]
+        }
+      ],
+      "parameters": 5,
+      "role": "Turns the eligibility features into one eligibility score",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "step_head.tflite",
+        "bytes": 1120,
+        "parity": {
+          "max_abs": 5.960464477539063e-08,
+          "max_rel": 4.340076489508051e-07
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "09f1045c6644d8b6296b5a80132f9be20267ffda0187791bf824ad92a7d75008"
+      }
+    },
+    {
+      "algorithm_id": "step_count_multiplier",
+      "algorithm_version": "1.3.0",
+      "coreml": {
+        "artifact": "step_multiplier.mlpackage",
+        "bytes": 4238,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "7861cf28e0c8d045319a58a4f4055e3ee70cbe92d763e62b4f23f834cd8bda89",
+          "Manifest.json": "3a7367bfc43618452ce57ee8af828c836812a963c4117be6cc51a5824d303c50",
+          "executorch_debug_handle_mapping.json": "b1159c082e41a3f442b6954c07c67d9f6c3bd093998e43b25971a6a04194b0e4"
+        },
+        "package_sha256": "46b73d0d7229e9e8fd4f7fc14a2f4cacba060ca934c86646e7256397ab5411be",
+        "parity": {
+          "max_abs": 0.0,
+          "max_rel": 0.0
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "7861cf28e0c8d045319a58a4f4055e3ee70cbe92d763e62b4f23f834cd8bda89"
+      },
+      "cross_platform": {
+        "max_abs": 0.0,
+        "max_rel": 0.0
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "eligibility",
+          "shape": [
+            1,
+            1
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "step_multiplier",
+      "notes": "Two parameters. Converted rather than ported so the whole archive is accounted for.",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "multiplier",
+          "shape": [
+            1,
+            1
+          ]
+        }
+      ],
+      "parameters": 2,
+      "role": "Parameterised sigmoid scaling the raw step count by eligibility",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "step_multiplier.tflite",
+        "bytes": 1816,
+        "parity": {
+          "max_abs": 1.1920928955078125e-07,
+          "max_rel": 1.6696982821810133e-07
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "fb966f78975654198304b8391c1827b423427962acf262f08ed6748c5b37abbb"
+      }
+    },
+    {
+      "algorithm_id": "workout_heart_rate_unet",
+      "algorithm_version": "2.7.1",
+      "coreml": {
+        "artifact": "whr_unet_encoder.mlpackage",
+        "bytes": 1030015,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "fb6779598f631eeca2ceaa1e4909d05508911532f317304c580634cbdee04172",
+          "Data/com.apple.CoreML/weights/weight.bin": "cf23e8f069f7b6db8bafec353c09fae38012cb90115c188fffb8dfc2080ed731",
+          "Manifest.json": "f75e228a01d9fcf2d2a6fc29026232956a49ac41655d698c6a2f99789ea7c2e6",
+          "executorch_debug_handle_mapping.json": "ea2c72a2d0ce5bf4af0bb591d7d34250ef224504aea9f854a41085ad61e12039"
+        },
+        "package_sha256": "55a41f4992350fb952a0b78c4fe7da243d6bd5c7f9924c7fd69b842d9102d01e",
+        "parity": {
+          "max_abs": 0.0064084529876708984,
+          "max_rel": 0.0009311412615881372
+        },
+        "precision": "float16",
+        "sha256": "fb6779598f631eeca2ceaa1e4909d05508911532f317304c580634cbdee04172"
+      },
+      "cross_platform": {
+        "max_abs": 0.004294872283935547,
+        "max_rel": 0.0007016065754565136
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "images",
+          "shape": [
+            1,
+            4,
+            128,
+            128
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "whr_unet_encoder",
+      "notes": "",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            1,
+            2,
+            128,
+            128
+          ]
+        }
+      ],
+      "parameters": 482898,
+      "role": "U-Net over the workout PPG spectrogram window",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "whr_unet_encoder.tflite",
+        "bytes": 978248,
+        "parity": {
+          "max_abs": 0.002910614013671875,
+          "max_rel": 0.0004754126973977152
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "77d297aa6b3eb1e012c3a6d36ac73004788b367e689b9bc7282326f1f506805f"
+      }
+    },
+    {
+      "algorithm_id": "workout_heart_rate_head",
+      "algorithm_version": "2.7.1",
+      "coreml": {
+        "artifact": "whr_unet_head.mlpackage",
+        "bytes": 5461907,
+        "compute_units": "ALL",
+        "frontend": "exir",
+        "members": {
+          "Data/com.apple.CoreML/model.mlmodel": "90a6898d07507935ee69b6bfb3e85280190303db830ebea99fe3123c245ae5d7",
+          "Data/com.apple.CoreML/weights/weight.bin": "26a8ef52e56cd75e226fcf1295ae28850430777953ab985e5648a16ffb51fe07",
+          "Manifest.json": "d5e03872c616dfe94bd8d888dde6cadd3a496d51a3a5a2315086c86ce0888382",
+          "executorch_debug_handle_mapping.json": "95fd2fb1d446816e1411fc87d723e0b192adb71051400fe74467025dd0364948"
+        },
+        "package_sha256": "31b9c5b9c22684ea5efa61a18983bba5b2bafe57afee7bccfa2a9ca6c1545111",
+        "parity": {
+          "max_abs": 0.19776153564453125,
+          "max_rel": 0.001638018147807867
+        },
+        "precision": "float16 weights, float32 arithmetic",
+        "sha256": "90a6898d07507935ee69b6bfb3e85280190303db830ebea99fe3123c245ae5d7"
+      },
+      "cross_platform": {
+        "max_abs": 7.62939453125e-06,
+        "max_rel": 1.1405181031587219e-07
+      },
+      "inputs": [
+        {
+          "dtype": "float32",
+          "name": "vectors",
+          "shape": [
+            1,
+            1,
+            128
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "scalars",
+          "shape": [
+            1,
+            7
+          ]
+        },
+        {
+          "dtype": "float32",
+          "name": "features",
+          "shape": [
+            1,
+            2,
+            128,
+            128
+          ]
+        }
+      ],
+      "licence": "Maverick first-party weights",
+      "model": "whr_unet_head",
+      "notes": "Together with whr_unet_encoder this is the whole of workout heart rate. The aten.equal.default guard that blocked the combined core is in the glue between them, which is now Rust.",
+      "outputs": [
+        {
+          "dtype": "float32",
+          "name": "heart_rate",
+          "shape": [
+            1,
+            2,
+            128
+          ]
+        }
+      ],
+      "parameters": 500993,
+      "role": "Recurrent head turning U-Net features into a per-column heart rate",
+      "standing": "first_party",
+      "tflite": {
+        "artifact": "whr_unet_head.tflite",
+        "bytes": 2355020,
+        "parity": {
+          "max_abs": 0.1977081298828125,
+          "max_rel": 0.0016375757988616592
+        },
+        "precision": "float16 weights, float32 activations",
+        "sha256": "e9285794934e2b53f5d6b2c2301e4e88cbc718f1ce34fbfce19b8155dc0942d7"
+      }
+    }
+  ],
+  "not_shipped": [
+    {
+      "coreml_error": "RuntimeError: no core ml precision policy converted: NotImplementedError: inplace_ops pass doesn't yet support append op inside conditional; NotImplementedError: inplace_ops pass doesn't yet support append op inside conditional; NotImplementedError: inp",
+      "model": "activity_segments",
+      "reason": "core ml: RuntimeError: no core ml precision policy converted: NotImplementedError: inplace_ops pass doesn't yet support append op inside conditional; NotImplementedError: inplace_ops pass doesn't yet support append op inside conditional; NotImplementedError: inp",
+      "tflite_error": "RuntimeError: torch.fx.experimental.proxy_tensor._ModuleNotInstalledAsSubmoduleError | RuntimeError: The following operation failed in the TorchScript interpreter. | RuntimeError: Cannot access data pointer of Tensor (e.g. FakeTensor, FunctionalTensor). If you're using torch.compile/export/fx, it is likely that we are erroneously tracing into a custom kernel. To fix this, please wrap the custom ke"
+    },
+    {
+      "coreml_error": null,
+      "model": "awhr_profile_selector",
+      "reason": "tflite: RuntimeError:     raise errors.NonConcreteBooleanIndexError(core.typeof(idx.index)) | jax.errors.NonConcreteBooleanIndexError: Array boolean indices must be concrete; got bool[1,60] | See https://docs.jax.dev/en/latest/errors.html#jax.errors.NonConcreteBooleanIndexError",
+      "tflite_error": "RuntimeError:     raise errors.NonConcreteBooleanIndexError(core.typeof(idx.index)) | jax.errors.NonConcreteBooleanIndexError: Array boolean indices must be concrete; got bool[1,60] | See https://docs.jax.dev/en/latest/errors.html#jax.errors.NonConcreteBooleanIndexError"
+    },
+    {
+      "coreml_error": "RuntimeError: no core ml precision policy converted: ValueError: Incompatible dim 1 in shapes (1, 64, 512) vs. (1, 512, 1); ValueError: Incompatible dim 1 in shapes (1, 64, 512) vs. (1, 512, 1); ValueError: Incompatible dim 1 in shapes (1, 64, 512) vs. ",
+      "model": "cva_predictor",
+      "reason": "core ml: RuntimeError: no core ml precision policy converted: ValueError: Incompatible dim 1 in shapes (1, 64, 512) vs. (1, 512, 1); ValueError: Incompatible dim 1 in shapes (1, 64, 512) vs. (1, 512, 1); ValueError: Incompatible dim 1 in shapes (1, 64, 512) vs. ",
+      "tflite_error": "RuntimeError: torch.fx.experimental.proxy_tensor._ModuleNotInstalledAsSubmoduleError | RuntimeError: The following operation failed in the TorchScript interpreter. | RuntimeError: GuardOnDataDependentSymNode: Could not guard on data-dependent expression Eq(u0, 1) (unhinted: Eq(u0, 1)).  (Size-like symbols: none)"
+    },
+    {
+      "coreml_error": "RuntimeError: no core ml precision policy converted: ValueError: Input 23 has rank 0 != other inputs rank 1; ValueError: Input 23 has rank 0 != other inputs rank 1; ValueError: Input 23 has rank 0 != other inputs rank 1; ValueError: Input 23 has rank 0 ",
+      "model": "cva_predictor_v1",
+      "reason": "core ml: RuntimeError: no core ml precision policy converted: ValueError: Input 23 has rank 0 != other inputs rank 1; ValueError: Input 23 has rank 0 != other inputs rank 1; ValueError: Input 23 has rank 0 != other inputs rank 1; ValueError: Input 23 has rank 0 ",
+      "tflite_error": "RuntimeError: torch.fx.experimental.proxy_tensor._ModuleNotInstalledAsSubmoduleError | RuntimeError: The following operation failed in the TorchScript interpreter. | RuntimeError: GuardOnDataDependentSymNode: Could not extract specialized integer from data-dependent expression u0 (unhinted: u0).  (Size-like symbols: u0)"
+    },
+    {
+      "coreml_error": null,
+      "model": "step_counter",
+      "reason": "tflite: RuntimeError:     raise errors.NonConcreteBooleanIndexError(core.typeof(idx.index)) | jax.errors.NonConcreteBooleanIndexError: Array boolean indices must be concrete; got bool[1] | See https://docs.jax.dev/en/latest/errors.html#jax.errors.NonConcreteBooleanIndexError",
+      "tflite_error": "RuntimeError:     raise errors.NonConcreteBooleanIndexError(core.typeof(idx.index)) | jax.errors.NonConcreteBooleanIndexError: Array boolean indices must be concrete; got bool[1] | See https://docs.jax.dev/en/latest/errors.html#jax.errors.NonConcreteBooleanIndexError"
+    },
+    {
+      "coreml_error": "RuntimeError: no core ml precision policy converted: TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d tensor",
+      "model": "whr_unet",
+      "reason": "core ml: RuntimeError: no core ml precision policy converted: TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d tensor",
+      "tflite_error": "RuntimeError: torch.fx.experimental.proxy_tensor._ModuleNotInstalledAsSubmoduleError |     raise RuntimeError( | RuntimeError: It appears that you're trying to get value out of a tracing tensor with aten.equal.default - erroring out! It's likely that this is caused by data-dependent control flow or similar.  It may be possible to trace this with dynamic shapes; try setting tracing_mode='symbolic' "
+    }
+  ],
+  "note": "Generated by tools/ml/build_manifest.py. Every model here converted on both platforms; models that converted on only one are listed under `not_shipped` with the converter error, and are not in any app bundle.",
+  "version": 1
+}

@@ -2,15 +2,22 @@
 //! protocol, framing, retry, and historical state machines execute inside signed artifacts.
 #![forbid(unsafe_code)]
 
+pub mod analytics;
 pub mod connector_host;
 pub mod ecg_capture;
+pub mod model_host;
 pub mod recompute;
 pub mod spine;
 
+pub use analytics::{
+    chain_after, coverage, AnalyticsScheduler, CacheEntry, Evidence, Plan, PlannedStage, RunMode,
+    SignalCoverage, StageState, Unmet, WearerProfile,
+};
 pub use connector_host::{
     ApplyOutcome, ConnectorHost, ConnectorHostConfig, ConnectorLifecycleSnapshot,
     ConnectorTransportAction, ConnectorTransportRequest,
 };
 pub use mav_store::Store;
+pub use model_host::{CompletedInference, ModelHost, PendingInference};
 pub use recompute::{LocalDay, OffsetSpan, Timezone};
 pub use spine::{AlgorithmStamp, DailySnapshot, Spine};

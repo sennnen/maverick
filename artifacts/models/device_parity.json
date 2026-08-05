@@ -1,0 +1,297 @@
+{
+ "rows": [
+  {
+   "android_vs_reference": 0.0003669756101179459,
+   "between_platforms": 0.0025345635619067873,
+   "between_platforms_abs": 0.000967860221862793,
+   "coreml_vs_reference": 0.0026076857177207372,
+   "model": "activity_context_embedding"
+  },
+  {
+   "android_vs_reference": 0.0013622570923470286,
+   "between_platforms": 0.00016116791009154882,
+   "between_platforms_abs": 0.02169036865234375,
+   "coreml_vs_reference": 0.0013037535630130903,
+   "model": "activity_detection"
+  },
+  {
+   "android_vs_reference": 0.00023395972079600258,
+   "between_platforms": 0.00048309550017191323,
+   "between_platforms_abs": 0.003927707672119141,
+   "coreml_vs_reference": 0.00061648321135191,
+   "model": "activity_ensemble"
+  },
+  {
+   "android_vs_reference": 0.00046395932647364766,
+   "between_platforms": 0.002509912326710868,
+   "between_platforms_abs": 0.013422966003417969,
+   "coreml_vs_reference": 0.0024582244345337377,
+   "model": "activity_history_transformer"
+  },
+  {
+   "android_vs_reference": 0.0014700264457018874,
+   "between_platforms": 1.2776549364467737e-06,
+   "between_platforms_abs": 1.2516975402832031e-06,
+   "coreml_vs_reference": 0.0014699209161652255,
+   "model": "activity_primary_segments"
+  },
+  {
+   "android_vs_reference": 0.0003693546807187025,
+   "between_platforms": 0.002500491232863774,
+   "between_platforms_abs": 0.0014138519763946533,
+   "coreml_vs_reference": 0.0026020231738224106,
+   "model": "activity_secondary_segments"
+  },
+  {
+   "android_vs_reference": 0.0005274781611175976,
+   "between_platforms": 7.757049218477291e-07,
+   "between_platforms_abs": 7.748603820800781e-07,
+   "coreml_vs_reference": 0.0005272952418616327,
+   "model": "activity_transition"
+  },
+  {
+   "android_vs_reference": 0.00012872639856618596,
+   "between_platforms": 3.000661045628352e-07,
+   "between_platforms_abs": 6.103515625e-05,
+   "coreml_vs_reference": 0.0001285763677986263,
+   "model": "awhr_imputation"
+  },
+  {
+   "android_vs_reference": 0.00038740451462054024,
+   "between_platforms": 0.00019440365798399309,
+   "between_platforms_abs": 0.01320648193359375,
+   "coreml_vs_reference": 0.00026818978485504673,
+   "model": "awhr_profile_core"
+  },
+  {
+   "android_vs_reference": 2.2049001996022654e-07,
+   "between_platforms": 2.2049001996022654e-07,
+   "between_platforms_abs": 2.86102294921875e-06,
+   "coreml_vs_reference": 0.0,
+   "model": "awhr_profile_head"
+  },
+  {
+   "android_vs_reference": 0.002964066170092151,
+   "between_platforms": 1.5816638721948744e-06,
+   "between_platforms_abs": 1.5795230865478516e-06,
+   "coreml_vs_reference": 0.002962484507163978,
+   "model": "awhr_profile_recurrent"
+  },
+  {
+   "android_vs_reference": 0.0003227355875237482,
+   "between_platforms": 0.0,
+   "between_platforms_abs": 0.0,
+   "coreml_vs_reference": 0.0003227355875237482,
+   "model": "behavior_embedding"
+  },
+  {
+   "android_vs_reference": 0.0015381726282140268,
+   "between_platforms": 0.0006020165855855129,
+   "between_platforms_abs": 0.027799606323242188,
+   "coreml_vs_reference": 0.001526943478025493,
+   "model": "cva_encoder"
+  },
+  {
+   "android_vs_reference": 0.0005333194600223759,
+   "between_platforms": 0.0008183834220000917,
+   "between_platforms_abs": 0.05078887939453125,
+   "coreml_vs_reference": 0.0013505975753570017,
+   "model": "cva_predictor_v1_base"
+  },
+  {
+   "android_vs_reference": 1.42648010684336e-06,
+   "between_platforms": 1.3076069200460183e-06,
+   "between_platforms_abs": 8.392333984375e-05,
+   "coreml_vs_reference": 1.3263303093002282e-07,
+   "model": "cva_probes_female"
+  },
+  {
+   "android_vs_reference": 0.0001246527479655502,
+   "between_platforms": 4.620680270411451e-07,
+   "between_platforms_abs": 3.0517578125e-05,
+   "coreml_vs_reference": 0.0001246527479655502,
+   "model": "cva_probes_male"
+  },
+  {
+   "android_vs_reference": 6.421135957790028e-05,
+   "between_platforms": 0.0,
+   "between_platforms_abs": 0.0,
+   "coreml_vs_reference": 6.421135957790028e-05,
+   "model": "dhrv_imputation"
+  },
+  {
+   "android_vs_reference": 0.0009216776473555866,
+   "between_platforms": 0.00047005004700148795,
+   "between_platforms_abs": 0.0015933513641357422,
+   "coreml_vs_reference": 0.0004634322377575228,
+   "model": "energy_expenditure_hr"
+  },
+  {
+   "android_vs_reference": 0.0006010621049260937,
+   "between_platforms": 0.0001403632855882219,
+   "between_platforms_abs": 0.0003757476806640625,
+   "coreml_vs_reference": 0.00046076349361571486,
+   "model": "energy_expenditure_no_hr"
+  },
+  {
+   "android_vs_reference": 1.2624951512295598e-06,
+   "between_platforms": 2.2093644226678265e-06,
+   "between_platforms_abs": 6.258487701416016e-07,
+   "coreml_vs_reference": 9.468713634221699e-07,
+   "model": "halite_ppg_score"
+  },
+  {
+   "android_vs_reference": 3.414602124607703e-05,
+   "between_platforms": 1.7637137207615066e-08,
+   "between_platforms_abs": 1.4901161193847656e-08,
+   "coreml_vs_reference": 3.413779923277434e-05,
+   "model": "halite_risk_tree"
+  },
+  {
+   "android_vs_reference": 0.005381537729315386,
+   "between_platforms": 0.0026455184693612854,
+   "between_platforms_abs": 0.000333249568939209,
+   "coreml_vs_reference": 0.0037149587711385462,
+   "model": "illness_detection"
+  },
+  {
+   "android_vs_reference": 1.1386184891375227e-07,
+   "between_platforms": 1.1386184891375227e-07,
+   "between_platforms_abs": 4.76837158203125e-07,
+   "coreml_vs_reference": 0.0,
+   "model": "popsicle_min_follicular"
+  },
+  {
+   "android_vs_reference": 1.1386184891375227e-07,
+   "between_platforms": 1.1386184891375227e-07,
+   "between_platforms_abs": 4.76837158203125e-07,
+   "coreml_vs_reference": 0.0,
+   "model": "popsicle_min_follicular_v16"
+  },
+  {
+   "android_vs_reference": 0.0006572761391168341,
+   "between_platforms": 5.85056989231207e-07,
+   "between_platforms_abs": 3.725290298461914e-08,
+   "coreml_vs_reference": 0.0006570615883940932,
+   "model": "popsicle_ovulation_detection"
+  },
+  {
+   "android_vs_reference": 5.793737923006945e-05,
+   "between_platforms": 3.8744132201178134e-07,
+   "between_platforms_abs": 3.8743019104003906e-07,
+   "coreml_vs_reference": 5.754993790805767e-05,
+   "model": "popsicle_ovulation_detection_v16"
+  },
+  {
+   "android_vs_reference": 5.038758677088963e-05,
+   "between_platforms": 2.8403416681076666e-07,
+   "between_platforms_abs": 4.76837158203125e-06,
+   "coreml_vs_reference": 5.038758677088963e-05,
+   "model": "popsicle_ovulation_prediction"
+  },
+  {
+   "android_vs_reference": 0.00021292406816414295,
+   "between_platforms": 4.790751473443523e-07,
+   "between_platforms_abs": 9.5367431640625e-06,
+   "coreml_vs_reference": 0.00021292406816414295,
+   "model": "popsicle_ovulation_prediction_v16"
+  },
+  {
+   "android_vs_reference": 7.531447823110321e-05,
+   "between_platforms": 3.5029489225209353e-07,
+   "between_platforms_abs": 4.76837158203125e-06,
+   "coreml_vs_reference": 7.524441825135335e-05,
+   "model": "popsicle_period_prediction"
+  },
+  {
+   "android_vs_reference": 0.00018321464168906054,
+   "between_platforms": 5.871866861551753e-07,
+   "between_platforms_abs": 4.291534423828125e-06,
+   "coreml_vs_reference": 0.00018335949830013663,
+   "model": "popsicle_period_prediction_v16"
+  },
+  {
+   "android_vs_reference": 0.0014612711561737444,
+   "between_platforms": 0.0023529025751547303,
+   "between_platforms_abs": 0.083160400390625,
+   "coreml_vs_reference": 0.0024762800084716756,
+   "model": "pulse_ppg"
+  },
+  {
+   "android_vs_reference": 0.003107207181366387,
+   "between_platforms": 0.0003852260410460365,
+   "between_platforms_abs": 0.0007054805755615234,
+   "coreml_vs_reference": 0.0031208349984146308,
+   "model": "pulsenet_foundation"
+  },
+  {
+   "android_vs_reference": 0.0008357510358097205,
+   "between_platforms": 0.006231582615753811,
+   "between_platforms_abs": 0.021554946899414062,
+   "coreml_vs_reference": 0.00617001749319253,
+   "model": "sleepnet_bdi"
+  },
+  {
+   "android_vs_reference": 0.0006527501446731436,
+   "between_platforms": 0.002359698461759632,
+   "between_platforms_abs": 0.008338689804077148,
+   "coreml_vs_reference": 0.0021378707326794926,
+   "model": "sleepnet_bdi_v3"
+  },
+  {
+   "android_vs_reference": 0.0005830394659878933,
+   "between_platforms": 0.004046711168791119,
+   "between_platforms_abs": 0.02506422996520996,
+   "coreml_vs_reference": 0.004113602580940268,
+   "model": "sleepnet_moonstone"
+  },
+  {
+   "android_vs_reference": 0.0,
+   "between_platforms": 0.0,
+   "between_platforms_abs": 0.0,
+   "coreml_vs_reference": 0.0,
+   "model": "source_embedding"
+  },
+  {
+   "android_vs_reference": 0.00023188890556832259,
+   "between_platforms": 0.0004065062155312581,
+   "between_platforms_abs": 0.001154184341430664,
+   "coreml_vs_reference": 0.0001745463557844108,
+   "model": "step_eligibility"
+  },
+  {
+   "android_vs_reference": 1.9082980979720243e-06,
+   "between_platforms": 6.815337808693059e-08,
+   "between_platforms_abs": 5.960464477539063e-08,
+   "coreml_vs_reference": 1.8401445944730234e-06,
+   "model": "step_head"
+  },
+  {
+   "android_vs_reference": 0.0,
+   "between_platforms": 0.0,
+   "between_platforms_abs": 0.0,
+   "coreml_vs_reference": 0.0,
+   "model": "step_multiplier"
+  },
+  {
+   "android_vs_reference": 0.0003443594502832556,
+   "between_platforms": 0.0007137845701834104,
+   "between_platforms_abs": 0.0057468414306640625,
+   "coreml_vs_reference": 0.0009395917994412505,
+   "model": "whr_unet_encoder"
+  },
+  {
+   "android_vs_reference": 0.00018396321862844612,
+   "between_platforms": 3.064421932656141e-07,
+   "between_platforms_abs": 3.814697265625e-05,
+   "coreml_vs_reference": 0.00018413505051582558,
+   "model": "whr_unet_head"
+  }
+ ],
+ "summary": {
+  "models": 41,
+  "worst_android_vs_reference": 0.005381537729315386,
+  "worst_between_platforms": 0.006231582615753811,
+  "worst_coreml_vs_reference": 0.00617001749319253
+ }
+}

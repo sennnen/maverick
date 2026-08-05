@@ -26,6 +26,7 @@ pub mod hr_zones;
 pub mod hrv;
 pub mod imu_features;
 pub mod intervals;
+pub mod model_zoo;
 pub mod ppg_hr;
 pub mod readiness;
 pub mod recovery;

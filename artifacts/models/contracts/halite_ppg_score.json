@@ -1,0 +1,199 @@
+{
+  "algorithm": "halite_ppg_score",
+  "core_path": "embedding_model",
+  "coreml": {
+    "artifact": "halite_ppg_score.mlpackage",
+    "bytes": 3510,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 1.0132789611816406e-06,
+            "max_rel": 7.176753297477682e-06
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 1.0132789611816406e-06,
+            "max_rel": 7.176753297477682e-06
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 1.0132789611816406e-06,
+            "max_rel": 7.176753297477682e-06
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 1.0132789611816406e-06,
+            "max_rel": 7.176753297477682e-06
+          }
+        }
+      ],
+      "constants_rounded": 0,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 2
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 2
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 3
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 3
+          },
+          "parity": {
+            "max_abs": 0.007279455661773682,
+            "max_rel": 1.0
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 3
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 3
+          },
+          "parity": {
+            "max_abs": 0.007279455661773682,
+            "max_rel": 1.0
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 3
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 3
+          },
+          "parity": {
+            "max_abs": 0.007279455661773682,
+            "max_rel": 1.0
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 3
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 3
+          },
+          "parity": {
+            "max_abs": 0.007279455661773682,
+            "max_rel": 1.0
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2
+          },
+          "parity": {
+            "max_abs": 1.0132789611816406e-06,
+            "max_rel": 7.176753297477682e-06
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "f2e8992d404f89c368a48484fa46678b80749ad74b24c8d21728ab92a8e70eff",
+      "Data/com.apple.CoreML/weights/weight.bin": "1f31547bd71780b18153fd1ab97db05f25cadf7dabff74a464852c4ccd43bbb4",
+      "Manifest.json": "3472bf360093a7ba00c7366d1ad9e841ffec1660de325f7d576d6a2847cd912a",
+      "executorch_debug_handle_mapping.json": "9da295ca9fdee285371c33f2cd3c7837434f033654cc4ea1b9276efb1a15d66a"
+    },
+    "parity": {
+      "max_abs": 1.0132789611816406e-06,
+      "max_rel": 7.176753297477682e-06
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "5713b90aa8e48529d8d9a7beb4fccab68701dbd88c184b5934babe400124436a"
+  },
+  "cross_platform": {
+    "max_abs": 1.1641532182693481e-10,
+    "max_rel": 8.251131436398216e-08
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "embeddings",
+      "shape": [
+        1,
+        256
+      ]
+    }
+  ],
+  "model": "halite_ppg_score",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "ppg_score",
+      "shape": [
+        1,
+        1
+      ]
+    }
+  ],
+  "parameters": 257,
+  "role": "Scores one PulseNet embedding into the hypertension-risk PPG score",
+  "source_asset": "halite_1_2_0.pt",
+  "source_asset_sha256": "1a61c6b23e6f1b0a4a92e2b33b2cc045e0eee13cf540c02b4cb199a6582b0ea5",
+  "tflite": {
+    "artifact": "halite_ppg_score.tflite",
+    "bytes": 2128,
+    "parity": {
+      "max_abs": 2.384185791015625e-07,
+      "max_rel": 9.901367527376043e-07
+    },
+    "passes": {
+      "bytes_full_width": 2116,
+      "bytes_halved": 2128,
+      "constants_rounded": 0,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 0
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "59fa620a549d1cce51d23876c7b7f990a51bae17411d7b22cd13a728a16688bc"
+  },
+  "trace_max_abs_error": 0.0,
+  "version": "1.2.0",
+  "weights_kept_full": 2,
+  "weights_rounded": 0
+}

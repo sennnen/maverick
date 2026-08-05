@@ -1,0 +1,207 @@
+{
+  "algorithm": "activity_context_embedding",
+  "core_path": "predictor.context_embedding",
+  "coreml": {
+    "artifact": "activity_context_embedding.mlpackage",
+    "bytes": 1643711,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.0005782544612884521,
+            "max_rel": 0.0031145259657931854
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.0005782544612884521,
+            "max_rel": 0.0031145259657931854
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.00029249489307403564,
+            "max_rel": 0.0014187492311404073
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.0018499791622161865,
+            "max_rel": 0.008557148899973856
+          }
+        }
+      ],
+      "constants_rounded": 9,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 1,
+          "NeuralEngine": 35
+        },
+        "fraction": 0.9722222222222222,
+        "on_neural_engine": 35,
+        "operations": 36
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 35
+            },
+            "fraction": 0.9722222222222222,
+            "on_neural_engine": 35,
+            "operations": 36
+          },
+          "parity": {
+            "max_abs": 0.0005782544612884521,
+            "max_rel": 0.0031145259657931854
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 35
+            },
+            "fraction": 0.9722222222222222,
+            "on_neural_engine": 35,
+            "operations": 36
+          },
+          "parity": {
+            "max_abs": 0.0005782544612884521,
+            "max_rel": 0.0031145259657931854
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 35
+            },
+            "fraction": 0.9722222222222222,
+            "on_neural_engine": 35,
+            "operations": 36
+          },
+          "parity": {
+            "max_abs": 0.0005782544612884521,
+            "max_rel": 0.0031145259657931854
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 35
+            },
+            "fraction": 0.9722222222222222,
+            "on_neural_engine": 35,
+            "operations": 36
+          },
+          "parity": {
+            "max_abs": 0.0005782544612884521,
+            "max_rel": 0.0031145259657931854
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 35,
+              "unassigned": 9
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 44
+          },
+          "parity": {
+            "max_abs": 9.987130761146545e-05,
+            "max_rel": 0.00046195852770720725
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "half",
+      "policy_reason": "half-width arithmetic on the Neural Engine",
+      "unit_spread": 0.007138399668833449
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "619e26b88a6ec91e39df18fb4e426b6566c9c66c494731c961efc553e951fcff",
+      "Data/com.apple.CoreML/weights/weight.bin": "e794486789b39b24155e2e22571504817a1a9d2a1c8408a89fb4a26293c8dcd1",
+      "Manifest.json": "bdab2d4a24b0dccb63e87ddb0eb1747d5a050e883d74be1b58ca23d8f7436cb2",
+      "executorch_debug_handle_mapping.json": "6412b29a2e515de360a5da6612939423e3852f9533eb73cb08b6972b5ab7fa62"
+    },
+    "parity": {
+      "max_abs": 0.0005782544612884521,
+      "max_rel": 0.0031145259657931854
+    },
+    "precision": "float16",
+    "sha256": "06a90c30581ca8973e673d4b2fb1b2e39995f729dd43dc81a273b045b416d5ad"
+  },
+  "cross_platform": {
+    "max_abs": 0.0004687011241912842,
+    "max_rel": 0.002115849165933389
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "context",
+      "shape": [
+        1,
+        16,
+        85
+      ]
+    }
+  ],
+  "model": "activity_context_embedding",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "embeddings",
+      "shape": [
+        1,
+        16,
+        312
+      ]
+    }
+  ],
+  "parameters": 808080,
+  "role": "Embeds 85 context features per segment into a 312-d space",
+  "source_asset": "automatic_activity_detection_3_1_11.pt",
+  "source_asset_sha256": "130d8a20ee0958b79cd19945a227665fcea709a81867e7d2c4a3aa83324e1159",
+  "tflite": {
+    "artifact": "activity_context_embedding.tflite",
+    "bytes": 1627680,
+    "parity": {
+      "max_abs": 9.988993406295776e-05,
+      "max_rel": 0.00046204468506624846
+    },
+    "passes": {
+      "bytes_full_width": 3237008,
+      "bytes_halved": 1627680,
+      "constants_rounded": 9,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 9
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "842ad2d5f75280f219eaac1a39205dc7ba63151e2fcbddf485ffa82de8fd9f69"
+  },
+  "trace_max_abs_error": 8.117035031318665e-05,
+  "version": "3.1.11",
+  "weights_kept_full": 9,
+  "weights_rounded": 9
+}

@@ -1,0 +1,198 @@
+{
+  "algorithm": "step_eligibility_head",
+  "core_path": "model.step_eligibility_model.head",
+  "coreml": {
+    "artifact": "step_head.mlpackage",
+    "bytes": 2380,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 1.6763806343078613e-08,
+            "max_rel": 5.580098343653208e-07
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 1.6763806343078613e-08,
+            "max_rel": 5.580098343653208e-07
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 1.6763806343078613e-08,
+            "max_rel": 5.580098343653208e-07
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 1.6763806343078613e-08,
+            "max_rel": 5.580098343653208e-07
+          }
+        }
+      ],
+      "constants_rounded": 0,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 2
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 2
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 3
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 3
+          },
+          "parity": {
+            "max_abs": 0.00044089555740356445,
+            "max_rel": 0.12905452680761298
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 3
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 3
+          },
+          "parity": {
+            "max_abs": 0.00044089555740356445,
+            "max_rel": 0.12905452680761298
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 3
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 3
+          },
+          "parity": {
+            "max_abs": 0.00044089555740356445,
+            "max_rel": 0.12905452680761298
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 3
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 3
+          },
+          "parity": {
+            "max_abs": 0.00044089555740356445,
+            "max_rel": 0.12905452680761298
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2
+          },
+          "parity": {
+            "max_abs": 1.6763806343078613e-08,
+            "max_rel": 5.580098343653208e-07
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "e84b32bb41998dbe48102063e3acd660a4ba394b6d037b86e7c25bd503b806c9",
+      "Manifest.json": "2382a99dca474708b199e439d978318532627852e0db91634643b581eb42fc9c",
+      "executorch_debug_handle_mapping.json": "f4b8ace0a29a2886176b024f3844d9c58f7a782cdbade2446a20786e1ae8997d"
+    },
+    "parity": {
+      "max_abs": 1.6763806343078613e-08,
+      "max_rel": 5.580098343653208e-07
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "9256901ca8df65496ed1c5e0713314f81b302b58e3e66b71cb381e090df13f46"
+  },
+  "cross_platform": {
+    "max_abs": 0.0,
+    "max_rel": 0.0
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "eligibility_features",
+      "shape": [
+        1,
+        4
+      ]
+    }
+  ],
+  "model": "step_head",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "eligibility",
+      "shape": [
+        1,
+        1
+      ]
+    }
+  ],
+  "parameters": 5,
+  "role": "Turns the eligibility features into one eligibility score",
+  "source_asset": "step_counter_1_3_0.pt",
+  "source_asset_sha256": "e062373c0b74a281c6aeca098af3fc9a43dbd829147acd13910281f54c29857d",
+  "tflite": {
+    "artifact": "step_head.tflite",
+    "bytes": 1120,
+    "parity": {
+      "max_abs": 5.960464477539063e-08,
+      "max_rel": 4.340076489508051e-07
+    },
+    "passes": {
+      "bytes_full_width": 1108,
+      "bytes_halved": 1120,
+      "constants_rounded": 0,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 0
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "09f1045c6644d8b6296b5a80132f9be20267ffda0187791bf824ad92a7d75008"
+  },
+  "trace_max_abs_error": 0.0,
+  "version": "1.3.0",
+  "weights_kept_full": 2,
+  "weights_rounded": 0
+}

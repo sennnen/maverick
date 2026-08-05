@@ -1,0 +1,220 @@
+{
+  "algorithm": "sleepnet_bdi",
+  "core_path": "_model_runner.trained_model",
+  "coreml": {
+    "artifact": "sleepnet_bdi.mlpackage",
+    "bytes": 3526442,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.0174100399017334,
+            "max_rel": 0.0048585965056282335
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.027655363082885742,
+            "max_rel": 0.00845678832329654
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.008289933204650879,
+            "max_rel": 0.002534995115265161
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.03431391716003418,
+            "max_rel": 0.009706666105537021
+          }
+        }
+      ],
+      "constants_rounded": 53,
+      "nearest_downsamples_rewritten": 5,
+      "neural_engine": {
+        "devices": {
+          "CPU": 57,
+          "GPU": 26,
+          "NeuralEngine": 99
+        },
+        "fraction": 0.5439560439560439,
+        "on_neural_engine": 99,
+        "operations": 182
+      },
+      "norms_folded": 28,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 13,
+              "NeuralEngine": 153
+            },
+            "fraction": 0.9216867469879518,
+            "on_neural_engine": 153,
+            "operations": 166
+          },
+          "parity": {
+            "max_abs": 0.057169437408447266,
+            "max_rel": 0.015293481970817008
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 57,
+              "GPU": 26,
+              "NeuralEngine": 99
+            },
+            "fraction": 0.5439560439560439,
+            "on_neural_engine": 99,
+            "operations": 182
+          },
+          "parity": {
+            "max_abs": 0.0174100399017334,
+            "max_rel": 0.0048585965056282335
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 57,
+              "GPU": 26,
+              "NeuralEngine": 99
+            },
+            "fraction": 0.5439560439560439,
+            "on_neural_engine": 99,
+            "operations": 182
+          },
+          "parity": {
+            "max_abs": 0.0174100399017334,
+            "max_rel": 0.0048585965056282335
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 57,
+              "GPU": 26,
+              "NeuralEngine": 99
+            },
+            "fraction": 0.5439560439560439,
+            "on_neural_engine": 99,
+            "operations": 182
+          },
+          "parity": {
+            "max_abs": 0.0174100399017334,
+            "max_rel": 0.0048585965056282335
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 165,
+              "unassigned": 31
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 196
+          },
+          "parity": {
+            "max_abs": 0.0027512013912200928,
+            "max_rel": 0.0008415977415813784
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "half_pooled",
+      "policy_reason": "half-width arithmetic on the Neural Engine",
+      "unit_spread": 0.00717167099027186
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "46480a9b1907c7193e5c7bc1258e6098ef4cb9994580600acecf397c1ae7d7a2",
+      "Data/com.apple.CoreML/weights/weight.bin": "3e591b64664c5cbfd25e29eb55acd0247d84b8f62f343609c0443af02e7f75e0",
+      "Manifest.json": "dfb236c6ddbbf13243194e88348f8cb71fb4b98e622be9a8d1c39aeb08ab5b74",
+      "executorch_debug_handle_mapping.json": "1ced576c83a1d791fd16be10e5aceb742f66ec6febb852888ea8a4ac45f56f99"
+    },
+    "parity": {
+      "max_abs": 0.0174100399017334,
+      "max_rel": 0.0048585965056282335
+    },
+    "precision": "float16, pooling reductions at float32",
+    "sha256": "9b2ef2e8f2bb8958ff3551e27d5bbd9960a948a3f03befe4139b2a73beec5c5e"
+  },
+  "cross_platform": {
+    "max_abs": 0.016010403633117676,
+    "max_rel": 0.00491033075385432
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "high_res",
+      "shape": [
+        1,
+        115200,
+        2
+      ]
+    }
+  ],
+  "model": "sleepnet_bdi",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "staging_logits",
+      "shape": [
+        1,
+        4,
+        1800
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "apnea_logits",
+      "shape": [
+        1,
+        1,
+        1800
+      ]
+    }
+  ],
+  "parameters": 1008640,
+  "role": "Sleep stages and apnea events from interbeat intervals alone",
+  "source_asset": "sleepnet_bdi_0_4_0.pt",
+  "source_asset_sha256": "02be4bc57ce428fef2c077e61fbc696441cbdeb493074fe1d4af99ca5c09788c",
+  "tflite": {
+    "artifact": "sleepnet_bdi.tflite",
+    "bytes": 2142936,
+    "parity": {
+      "max_abs": 0.0027321279048919678,
+      "max_rel": 0.0008404052361565156
+    },
+    "passes": {
+      "bytes_full_width": 4137168,
+      "bytes_halved": 2142936,
+      "constants_rounded": 53,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 5,
+      "norms_folded": 28,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 31
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "590469f28981207650001b833089219386284383ede29fda9d64f56465659769"
+  },
+  "trace_max_abs_error": 0.002143383026123047,
+  "version": "0.4.0",
+  "weights_kept_full": 147,
+  "weights_rounded": 31
+}

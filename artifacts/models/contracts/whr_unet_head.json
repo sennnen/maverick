@@ -1,0 +1,225 @@
+{
+  "algorithm": "workout_heart_rate_head",
+  "core_path": "predictor.unet_model.final",
+  "coreml": {
+    "artifact": "whr_unet_head.mlpackage",
+    "bytes": 5461907,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.19776153564453125,
+            "max_rel": 0.001638018147807867
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.19775390625,
+            "max_rel": 0.001637954955101266
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.19776153564453125,
+            "max_rel": 0.001638018147807867
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.19775390625,
+            "max_rel": 0.001637954955101266
+          }
+        }
+      ],
+      "constants_rounded": 8,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "GPU": 9233,
+          "unassigned": 8
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 9241
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7,
+              "NeuralEngine": 9229
+            },
+            "fraction": 0.9992420961455175,
+            "on_neural_engine": 9229,
+            "operations": 9236
+          },
+          "parity": {
+            "max_abs": 3.8558731079101562,
+            "max_rel": 0.03058804874144321
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7,
+              "NeuralEngine": 9229
+            },
+            "fraction": 0.9992420961455175,
+            "on_neural_engine": 9229,
+            "operations": 9236
+          },
+          "parity": {
+            "max_abs": 3.8558731079101562,
+            "max_rel": 0.03058804874144321
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7,
+              "NeuralEngine": 9229
+            },
+            "fraction": 0.9992420961455175,
+            "on_neural_engine": 9229,
+            "operations": 9236
+          },
+          "parity": {
+            "max_abs": 3.8558731079101562,
+            "max_rel": 0.03058804874144321
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7,
+              "NeuralEngine": 9229
+            },
+            "fraction": 0.9992420961455175,
+            "on_neural_engine": 9229,
+            "operations": 9236
+          },
+          "parity": {
+            "max_abs": 3.8558731079101562,
+            "max_rel": 0.03058804874144321
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 9233,
+              "unassigned": 8
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 9241
+          },
+          "parity": {
+            "max_abs": 0.19776153564453125,
+            "max_rel": 0.001638018147807867
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 6.319270660112668e-08
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "90a6898d07507935ee69b6bfb3e85280190303db830ebea99fe3123c245ae5d7",
+      "Data/com.apple.CoreML/weights/weight.bin": "26a8ef52e56cd75e226fcf1295ae28850430777953ab985e5648a16ffb51fe07",
+      "Manifest.json": "d5e03872c616dfe94bd8d888dde6cadd3a496d51a3a5a2315086c86ce0888382",
+      "executorch_debug_handle_mapping.json": "95fd2fb1d446816e1411fc87d723e0b192adb71051400fe74467025dd0364948"
+    },
+    "parity": {
+      "max_abs": 0.19776153564453125,
+      "max_rel": 0.001638018147807867
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "31b9c5b9c22684ea5efa61a18983bba5b2bafe57afee7bccfa2a9ca6c1545111"
+  },
+  "cross_platform": {
+    "max_abs": 7.62939453125e-06,
+    "max_rel": 1.1405181031587219e-07
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "vectors",
+      "shape": [
+        1,
+        1,
+        128
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "scalars",
+      "shape": [
+        1,
+        7
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "features",
+      "shape": [
+        1,
+        2,
+        128,
+        128
+      ]
+    }
+  ],
+  "model": "whr_unet_head",
+  "notes": "Together with whr_unet_encoder this is the whole of workout heart rate. The aten.equal.default guard that blocked the combined core is in the glue between them, which is now Rust.",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "heart_rate",
+      "shape": [
+        1,
+        2,
+        128
+      ]
+    }
+  ],
+  "parameters": 500993,
+  "role": "Recurrent head turning U-Net features into a per-column heart rate",
+  "source_asset": "whr_2_7_1.pt",
+  "source_asset_sha256": "a5ca4f5b903d7dae8509e84c29f357b1190134d61dd6da29fb253142883c06d6",
+  "tflite": {
+    "artifact": "whr_unet_head.tflite",
+    "bytes": 2355020,
+    "parity": {
+      "max_abs": 0.1977081298828125,
+      "max_rel": 0.0016375757988616592
+    },
+    "passes": {
+      "bytes_full_width": 3309872,
+      "bytes_halved": 2355020,
+      "constants_rounded": 8,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 8
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "e9285794934e2b53f5d6b2c2301e4e88cbc718f1ce34fbfce19b8155dc0942d7"
+  },
+  "trace_max_abs_error": 0.012226104736328125,
+  "version": "2.7.1",
+  "weights_kept_full": 10,
+  "weights_rounded": 8
+}

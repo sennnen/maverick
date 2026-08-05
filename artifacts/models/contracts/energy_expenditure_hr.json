@@ -1,0 +1,201 @@
+{
+  "algorithm": "energy_expenditure_hr",
+  "core_path": "energy_expenditure_model_hr",
+  "coreml": {
+    "artifact": "energy_expenditure_hr.mlpackage",
+    "bytes": 433985,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.0015947818756103516,
+            "max_rel": 0.001426633194851258
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.0015947818756103516,
+            "max_rel": 0.001426633194851258
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.0015947818756103516,
+            "max_rel": 0.001426633194851258
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.0015947818756103516,
+            "max_rel": 0.001426633194851258
+          }
+        }
+      ],
+      "constants_rounded": 4,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 22,
+          "unassigned": 4
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 26
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 25
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 25
+          },
+          "parity": {
+            "max_abs": 0.008873224258422852,
+            "max_rel": 0.010418858631499762
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 25
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 25
+          },
+          "parity": {
+            "max_abs": 0.008873224258422852,
+            "max_rel": 0.010418858631499762
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 31
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 31
+          },
+          "parity": {
+            "max_abs": 0.008873224258422852,
+            "max_rel": 0.010418858631499762
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 31
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 31
+          },
+          "parity": {
+            "max_abs": 0.008873224258422852,
+            "max_rel": 0.010418858631499762
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 22,
+              "unassigned": 4
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 26
+          },
+          "parity": {
+            "max_abs": 0.0015947818756103516,
+            "max_rel": 0.001426633194851258
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "82c4e4991c29d3c4603ecfd515e11d7a8a98af5b2361a7c30b64733645c1a5c8",
+      "Data/com.apple.CoreML/weights/weight.bin": "451c04907b638a76ea2c8e94a7bdc2200b748897857476f5e4de9f815e02023e",
+      "Manifest.json": "62ad7aa6ff162eb9ab1543e1eea1ccbbc67da1e5795c75db99e5019b9474074f",
+      "executorch_debug_handle_mapping.json": "df48f7ffa3751d63386149aa34c7406249d8fab7f43a74d06d080b26dc859497"
+    },
+    "parity": {
+      "max_abs": 0.0015947818756103516,
+      "max_rel": 0.001426633194851258
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "79429d867861737edfa913d776d1a20632aacf0604e550af71f45d93caf4f760"
+  },
+  "cross_platform": {
+    "max_abs": 0.00013566017150878906,
+    "max_rel": 0.00018784624867079796
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "features",
+      "shape": [
+        1,
+        50
+      ]
+    }
+  ],
+  "model": "energy_expenditure_hr",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "energy",
+      "shape": [
+        1,
+        1
+      ]
+    }
+  ],
+  "parameters": 199653,
+  "role": "Active energy expenditure for a window where heart rate is available",
+  "source_asset": "energy_expenditure_1_0_0.pt",
+  "source_asset_sha256": "77592d7c7bfecf640a4047895440b03901bd0561fdfdb7f789f719a8596a3cfc",
+  "tflite": {
+    "artifact": "energy_expenditure_hr.tflite",
+    "bytes": 403616,
+    "parity": {
+      "max_abs": 0.0016816258430480957,
+      "max_rel": 0.0025700531464362773
+    },
+    "passes": {
+      "bytes_full_width": 798324,
+      "bytes_halved": 403616,
+      "constants_rounded": 4,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 4
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "55874df93c68b2c393262d13d5da3bb2bc13ee3a074ae9629188ab39b813cf01"
+  },
+  "trace_max_abs_error": 0.0006995797157287598,
+  "version": "1.0.0",
+  "weights_kept_full": 22,
+  "weights_rounded": 4
+}

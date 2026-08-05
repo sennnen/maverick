@@ -1,0 +1,240 @@
+{
+  "algorithm": "cva_probes",
+  "core_path": "cva_pd.probes",
+  "coreml": {
+    "artifact": "cva_probes_female.mlpackage",
+    "bytes": 37748,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 1.1444091796875e-05,
+            "max_rel": 1.8069536273660477e-07
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 1.1444091796875e-05,
+            "max_rel": 1.8069536273660477e-07
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 1.1444091796875e-05,
+            "max_rel": 1.8069536273660477e-07
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 1.1444091796875e-05,
+            "max_rel": 1.8069536273660477e-07
+          }
+        }
+      ],
+      "constants_rounded": 0,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 47
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 47
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 50
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 50
+          },
+          "parity": {
+            "max_abs": 0.2521514892578125,
+            "max_rel": 0.0038903470660426732
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 50
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 50
+          },
+          "parity": {
+            "max_abs": 0.2521514892578125,
+            "max_rel": 0.0038903470660426732
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 50
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 50
+          },
+          "parity": {
+            "max_abs": 0.2521514892578125,
+            "max_rel": 0.0038903470660426732
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 50
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 50
+          },
+          "parity": {
+            "max_abs": 0.2521514892578125,
+            "max_rel": 0.0038903470660426732
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 47
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 47
+          },
+          "parity": {
+            "max_abs": 1.1444091796875e-05,
+            "max_rel": 1.8069536273660477e-07
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "7f2ed399a675c0febf287779419932f40b425f423d062a58c1a1fff1a8ad8df2",
+      "Data/com.apple.CoreML/weights/weight.bin": "af5f24201d09a84f4311f7fbe106a625f0bde2a1f0b168a5a4cca0a52076b43d",
+      "Manifest.json": "760f24ec946555b8a9d26fe3e5b0689f86cf98ba07a1354dd37864daa585a854",
+      "executorch_debug_handle_mapping.json": "047f913d3ec09225c644167720cd21b0b59f47fc7f5fd2f4c6410c8d843d9726"
+    },
+    "parity": {
+      "max_abs": 1.1444091796875e-05,
+      "max_rel": 1.8069536273660477e-07
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "93ac5ae37351eab8e73258627159c1514bf4f3189f48735144034e1e909699b9"
+  },
+  "cross_platform": {
+    "max_abs": 1.1920928955078125e-07,
+    "max_rel": 9.86211092369813e-08
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "embeddings",
+      "shape": [
+        1,
+        128
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "age",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "weight",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "bmi",
+      "shape": [
+        1
+      ]
+    }
+  ],
+  "model": "cva_probes_female",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "cva",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "pwv",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "systolic",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "diastolic",
+      "shape": [
+        1
+      ]
+    }
+  ],
+  "parameters": 2471,
+  "role": "The female branch of the CVA probe head",
+  "source_asset": "cva_2_1_0.pt",
+  "source_asset_sha256": "b41b69845270952a6dca948c0e6e388433effaee739bc01c44597272b2fba2f0",
+  "tflite": {
+    "artifact": "cva_probes_female.tflite",
+    "bytes": 16780,
+    "parity": {
+      "max_abs": 8.392333984375e-05,
+      "max_rel": 1.3653073418533477e-06
+    },
+    "passes": {
+      "bytes_full_width": 16564,
+      "bytes_halved": 16780,
+      "constants_rounded": 0,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 0
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "b328ed6e5b8de4777448c1405ad6364f469c839a2c6497fed88670d78dc64f74"
+  },
+  "trace_max_abs_error": 0.0,
+  "version": "2.1.0",
+  "weights_kept_full": 39,
+  "weights_rounded": 1
+}

@@ -1,0 +1,209 @@
+{
+  "algorithm": "workout_heart_rate_unet",
+  "core_path": "predictor.unet_model.unet",
+  "coreml": {
+    "artifact": "whr_unet_encoder.mlpackage",
+    "bytes": 1030015,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.0064084529876708984,
+            "max_rel": 0.0009311412615881372
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.0064084529876708984,
+            "max_rel": 0.0009311412615881372
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.005631923675537109,
+            "max_rel": 0.0008359172148604297
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.03997325897216797,
+            "max_rel": 0.006645509469008876
+          }
+        }
+      ],
+      "constants_rounded": 22,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 1,
+          "NeuralEngine": 31
+        },
+        "fraction": 0.96875,
+        "on_neural_engine": 31,
+        "operations": 32
+      },
+      "norms_folded": 7,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 31
+            },
+            "fraction": 0.96875,
+            "on_neural_engine": 31,
+            "operations": 32
+          },
+          "parity": {
+            "max_abs": 0.0064084529876708984,
+            "max_rel": 0.0009311412615881372
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 31
+            },
+            "fraction": 0.96875,
+            "on_neural_engine": 31,
+            "operations": 32
+          },
+          "parity": {
+            "max_abs": 0.0064084529876708984,
+            "max_rel": 0.0009311412615881372
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 31
+            },
+            "fraction": 0.96875,
+            "on_neural_engine": 31,
+            "operations": 32
+          },
+          "parity": {
+            "max_abs": 0.0064084529876708984,
+            "max_rel": 0.0009311412615881372
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 31
+            },
+            "fraction": 0.96875,
+            "on_neural_engine": 31,
+            "operations": 32
+          },
+          "parity": {
+            "max_abs": 0.0064084529876708984,
+            "max_rel": 0.0009311412615881372
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 31,
+              "unassigned": 16
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 47
+          },
+          "parity": {
+            "max_abs": 0.002910137176513672,
+            "max_rel": 0.0004753348119623617
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "half",
+      "policy_reason": "half-width arithmetic on the Neural Engine",
+      "unit_spread": 0.005809592254148446
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "fb6779598f631eeca2ceaa1e4909d05508911532f317304c580634cbdee04172",
+      "Data/com.apple.CoreML/weights/weight.bin": "cf23e8f069f7b6db8bafec353c09fae38012cb90115c188fffb8dfc2080ed731",
+      "Manifest.json": "f75e228a01d9fcf2d2a6fc29026232956a49ac41655d698c6a2f99789ea7c2e6",
+      "executorch_debug_handle_mapping.json": "ea2c72a2d0ce5bf4af0bb591d7d34250ef224504aea9f854a41085ad61e12039"
+    },
+    "parity": {
+      "max_abs": 0.0064084529876708984,
+      "max_rel": 0.0009311412615881372
+    },
+    "precision": "float16",
+    "sha256": "55a41f4992350fb952a0b78c4fe7da243d6bd5c7f9924c7fd69b842d9102d01e"
+  },
+  "cross_platform": {
+    "max_abs": 0.004294872283935547,
+    "max_rel": 0.0007016065754565136
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "images",
+      "shape": [
+        1,
+        4,
+        128,
+        128
+      ]
+    }
+  ],
+  "model": "whr_unet_encoder",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "features",
+      "shape": [
+        1,
+        2,
+        128,
+        128
+      ]
+    }
+  ],
+  "parameters": 482898,
+  "role": "U-Net over the workout PPG spectrogram window",
+  "source_asset": "whr_2_7_1.pt",
+  "source_asset_sha256": "a5ca4f5b903d7dae8509e84c29f357b1190134d61dd6da29fb253142883c06d6",
+  "tflite": {
+    "artifact": "whr_unet_encoder.tflite",
+    "bytes": 978248,
+    "parity": {
+      "max_abs": 0.002910614013671875,
+      "max_rel": 0.0004754126973977152
+    },
+    "passes": {
+      "bytes_full_width": 1937596,
+      "bytes_halved": 978248,
+      "constants_rounded": 22,
+      "legacy_convolutions_rewritten": 18,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 7,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 16
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "77d297aa6b3eb1e012c3a6d36ac73004788b367e689b9bc7282326f1f506805f"
+  },
+  "trace_max_abs_error": 0.0021522045135498047,
+  "version": "2.7.1",
+  "weights_kept_full": 48,
+  "weights_rounded": 16
+}

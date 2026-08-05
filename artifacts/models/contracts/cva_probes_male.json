@@ -1,0 +1,242 @@
+{
+  "algorithm": "cva_probes",
+  "core_path": "cva_pd.probes",
+  "coreml": {
+    "artifact": "cva_probes_male.mlpackage",
+    "bytes": 36259,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.0006251335144042969,
+            "max_rel": 0.0001246527479655502
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.0006251335144042969,
+            "max_rel": 0.0001246527479655502
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.0006251335144042969,
+            "max_rel": 0.0001246527479655502
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.0006251335144042969,
+            "max_rel": 0.0001246527479655502
+          }
+        }
+      ],
+      "constants_rounded": 1,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 47,
+          "unassigned": 1
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 48
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 50
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 50
+          },
+          "parity": {
+            "max_abs": 0.09451675415039062,
+            "max_rel": 0.001783919125431363
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 50
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 50
+          },
+          "parity": {
+            "max_abs": 0.09451675415039062,
+            "max_rel": 0.001783919125431363
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 50
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 50
+          },
+          "parity": {
+            "max_abs": 0.09451675415039062,
+            "max_rel": 0.001783919125431363
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 50
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 50
+          },
+          "parity": {
+            "max_abs": 0.09451675415039062,
+            "max_rel": 0.001783919125431363
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 47,
+              "unassigned": 1
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 48
+          },
+          "parity": {
+            "max_abs": 0.0006251335144042969,
+            "max_rel": 0.0001246527479655502
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "b7cca22b76e02ea1cd24787caa584ecee8d48b5d7a14d02d55b332c61a5ed669",
+      "Data/com.apple.CoreML/weights/weight.bin": "d0f5b63a6b7c4e43c042cc3601d140f9c1ea761621456b5f10341e932d6660fe",
+      "Manifest.json": "ed6c0cb0e9b82c58dd7041bce8cef42974c78ba59275a408a547031196b48798",
+      "executorch_debug_handle_mapping.json": "8758e94a1aa14eaf583e1ff3dac126edbccdbfee3c582b1b00fdb2358663fe9f"
+    },
+    "parity": {
+      "max_abs": 0.0006251335144042969,
+      "max_rel": 0.0001246527479655502
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "a11c10310a58ec9e8a1eaa1f04f670601e2a066e14e4449c3318b605328336f0"
+  },
+  "cross_platform": {
+    "max_abs": 3.814697265625e-06,
+    "max_rel": 7.023713390913268e-08
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "embeddings",
+      "shape": [
+        1,
+        128
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "age",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "weight",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "bmi",
+      "shape": [
+        1
+      ]
+    }
+  ],
+  "model": "cva_probes_male",
+  "notes": "The head selects its weights by a `str` gender argument sitting between tensor arguments, so the two branches ship as two artefacts and Rust picks one. This and cva_encoder together are the whole of cva_2_1_0.",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "cva",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "pwv",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "systolic",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "diastolic",
+      "shape": [
+        1
+      ]
+    }
+  ],
+  "parameters": 2471,
+  "role": "Cardiovascular age, pulse-wave velocity and blood pressure from a CVA embedding",
+  "source_asset": "cva_2_1_0.pt",
+  "source_asset_sha256": "b41b69845270952a6dca948c0e6e388433effaee739bc01c44597272b2fba2f0",
+  "tflite": {
+    "artifact": "cva_probes_male.tflite",
+    "bytes": 14984,
+    "parity": {
+      "max_abs": 0.0006251335144042969,
+      "max_rel": 0.0001246527479655502
+    },
+    "passes": {
+      "bytes_full_width": 16768,
+      "bytes_halved": 14984,
+      "constants_rounded": 1,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 1
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "fd4b9a282f00d8457aa981a6d0ae5e7cb3c806a859bf325cbb6c473c93f5503c"
+  },
+  "trace_max_abs_error": 0.0006251335144042969,
+  "version": "2.1.0",
+  "weights_kept_full": 39,
+  "weights_rounded": 1
+}

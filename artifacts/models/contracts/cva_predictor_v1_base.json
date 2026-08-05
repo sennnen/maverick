@@ -1,0 +1,226 @@
+{
+  "algorithm": "cva_predictor_v1_base",
+  "core_path": "cva_pd.base_model",
+  "coreml": {
+    "artifact": "cva_predictor_v1_base.mlpackage",
+    "bytes": 690450,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.0758056640625,
+            "max_rel": 0.0008376106712961491
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.0758056640625,
+            "max_rel": 0.0008376106712961491
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.0758056640625,
+            "max_rel": 0.0008376106712961491
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.0758056640625,
+            "max_rel": 0.0008376106712961491
+          }
+        }
+      ],
+      "constants_rounded": 9,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 35,
+          "unassigned": 6
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 41
+      },
+      "norms_folded": 3,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 37
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 37
+          },
+          "parity": {
+            "max_abs": 1.0440902709960938,
+            "max_rel": 0.009794369985118224
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 37
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 37
+          },
+          "parity": {
+            "max_abs": 1.0440902709960938,
+            "max_rel": 0.009794369985118224
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 43
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 43
+          },
+          "parity": {
+            "max_abs": 1.2940902709960938,
+            "max_rel": 0.01018319961476276
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 45
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 45
+          },
+          "parity": {
+            "max_abs": 1.2940902709960938,
+            "max_rel": 0.01018319961476276
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 35,
+              "unassigned": 6
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 41
+          },
+          "parity": {
+            "max_abs": 0.0758056640625,
+            "max_rel": 0.0008376106712961491
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "2568173dc133f50b2b8ec3e28a3e64ddf51c580422a1fddeb78f1525c6cfeac9",
+      "Data/com.apple.CoreML/weights/weight.bin": "8d8b356fc3f8db5846347f84774574035fb7126638e59074eee6089bc9644507",
+      "Manifest.json": "8921363ba9ef872d2afe7a8485d7374e0909bef4bd2aa6ea8f859b09ecfffc32",
+      "executorch_debug_handle_mapping.json": "f791b2494f15f1c046fee3943fbdb82875db92db815b16dc548158a565276ca6"
+    },
+    "parity": {
+      "max_abs": 0.0758056640625,
+      "max_rel": 0.0008376106712961491
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "754cf8cde1a757aa112dc0ce73196df526b528ea8a24d893f6843fa7940725fd"
+  },
+  "cross_platform": {
+    "max_abs": 0.00554656982421875,
+    "max_rel": 0.0001127161975511968
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "pulse_triple",
+      "shape": [
+        1,
+        3,
+        256
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "exogenous",
+      "shape": [
+        1,
+        8
+      ]
+    }
+  ],
+  "model": "cva_predictor_v1_base",
+  "notes": "All 317,522 parameters of the archive. The wrapper around it windows a longer pulse train into 272-column blocks and could not be traced; the network takes one block's worth \u2014 256 samples across the pulse/VPG/APG triple \u2014 plus eight exogenous values, and the windowing is Rust's.",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "cva",
+      "shape": [
+        1,
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "pwv",
+      "shape": [
+        1,
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "features",
+      "shape": [
+        1,
+        272
+      ]
+    }
+  ],
+  "parameters": 317522,
+  "role": "Previous-generation CNN cardiovascular-age network over pulse, VPG and APG",
+  "source_asset": "cva_1_3_0.pt",
+  "source_asset_sha256": "c67b03c772fb086e456604c2fa747bf448fbe93302e0e9436151eed33261fdb0",
+  "tflite": {
+    "artifact": "cva_predictor_v1_base.tflite",
+    "bytes": 644124,
+    "parity": {
+      "max_abs": 0.04694366455078125,
+      "max_rel": 0.0005876457303980689
+    },
+    "passes": {
+      "bytes_full_width": 1272048,
+      "bytes_halved": 644124,
+      "constants_rounded": 9,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 3,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 6
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "9bc367f802d4bb684fd08a882de8c9af12b234ff1ed85e9d779b7164c98a05f4"
+  },
+  "trace_max_abs_error": 0.00478363037109375,
+  "version": "1.3.0",
+  "weights_kept_full": 34,
+  "weights_rounded": 6
+}

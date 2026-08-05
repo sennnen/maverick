@@ -1,0 +1,112 @@
+¨
+"
+eligibility_features
+*
+ €R
+eligibility
+*
+ €¢å¢4
+#com.github.apple.coremltools.sourcetorch==2.12.1¢@
++com.github.apple.coremltools.source_dialectTorchExport::ATEN¢+
+$com.github.apple.coremltools.version9.0¢:
+,com.github.apple.coremltools.conversion_date
+2026-08-03²·Ã
+mainº
+*
+eligibility_features
+
+
+CoreML7‚
+CoreML7öeligibility‚
+const!
+transpose_0
+
+
+*3
+val,
+
+
+
+
+
+¨G-AˆpJ¿çWÃ@PA”?*!
+name
+
+"
+transpose_0l
+const
+addmm_bias_0
+
+
+*!
+val
+
+
+
+
+
+
+o¿*"
+name
+
+"
+addmm_bias_0–
+linear
+bias
+
+addmm_bias_0
+weight
+
+transpose_0
+x
+
+eligibility_features
+addmm
+
+
+*
+name
+
+	"
+addmm[
+sigmoid
+x	
+
+addmm!
+eligibility
+
+
+*
+name
+
+"	
+sigmoid"ì
+	buildInfoÞ"
+
+
+Ë"È
+6
+!
+
+"
+coremltools-version
+	
+"
+9.0
+A
+)
+!
+"
+coremltools-component-torch
+
+
+"
+2.12.1
+K
+(
+ 
+"
+coremltools-source-dialect
+
+"
+TorchExport::ATEN

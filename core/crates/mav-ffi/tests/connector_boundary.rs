@@ -466,41 +466,55 @@ fn drive_one_packaged_connector(bytes: Vec<u8>) {
     }
     // A connector that has to configure its device reports Configuring; one that speaks a standard
     // profile has nothing to write and is streaming already. Both are correct, and the host
-    // contract is the same either way: every callback is delivered and the connector ends up
-    // Streaming.
+    // contract is the same either way: every callback the connector asks for is delivered.
     let configures = runtime
         .connector_telemetry(1_700_000_000_123)
         .expect("telemetry")
         .lifecycle
         == ConnectorLifecycleState::Configuring;
+    // Acknowledge every write the connector issues, and collect the timers it arms without
+    // firing them yet. A timer here is a command *timeout*: the connector has asked the device
+    // something and is waiting. Firing it immediately would be a host lying about the clock.
     let mut configured_writes = 0;
+    let mut armed_timers: Vec<u64> = Vec::new();
     for sequence in 0..32 {
         let actions = runtime
             .drain_connector_actions(32)
             .expect("configuration actions");
-        let writes: Vec<_> = actions
-            .into_iter()
-            .filter_map(|action| match action.request {
-                ConnectorTransportRequest::Write {
-                    characteristic_id, ..
-                } => Some((action.operation_id, characteristic_id)),
-                _ => None,
-            })
-            .collect();
-        if writes.is_empty() {
+        if actions.is_empty() {
             break;
         }
-        for (operation_id, characteristic_id) in writes {
-            configured_writes += 1;
-            runtime
-                .apply_connector_event(
-                    ConnectorTransportEvent::WriteResult {
-                        operation_id,
-                        characteristic_id,
-                    },
-                    Some(10 + sequence),
-                )
-                .expect("configuration write callback is valid");
+        for action in actions {
+            match action.request {
+                ConnectorTransportRequest::Write {
+                    characteristic_id, ..
+                } => {
+                    configured_writes += 1;
+                    runtime
+                        .apply_connector_event(
+                            ConnectorTransportEvent::WriteResult {
+                                operation_id: action.operation_id,
+                                characteristic_id,
+                            },
+                            Some(10 + sequence),
+                        )
+                        .expect("configuration write callback is valid");
+                }
+                ConnectorTransportRequest::SetTimer { token, .. } => armed_timers.push(token),
+                ConnectorTransportRequest::CancelTimer { token } => {
+                    armed_timers.retain(|armed| *armed != token);
+                }
+                // A read would need bytes this test has no honest way to invent, and no
+                // packaged connector asks for one during configuration. If one starts to, this
+                // says so rather than quietly dropping the request and hanging.
+                ConnectorTransportRequest::Read {
+                    characteristic_id, ..
+                } => panic!(
+                    "a packaged connector read {characteristic_id} during configuration; \
+                     this host has no recorded bytes to answer with"
+                ),
+                _ => {}
+            }
         }
     }
     // How many writes a connector's configuration takes is its own business.
@@ -508,13 +522,86 @@ fn drive_one_packaged_connector(bytes: Vec<u8>) {
         configured_writes >= usize::from(configures),
         "a configuring connector issued no configuration write"
     );
-    assert_eq!(
-        runtime
-            .connector_telemetry(1_700_000_000_123)
-            .expect("telemetry")
-            .lifecycle,
-        ConnectorLifecycleState::Streaming
-    );
+
+    // Where the connector ends up with its writes acknowledged and no device replying is a fact
+    // about the connector, not a defect. One that had nothing to configure is Streaming. One
+    // that sent a command is still Configuring, and must be waiting on a timeout rather than
+    // forever — an armed timer is what makes the difference between patient and hung.
+    let lifecycle = runtime
+        .connector_telemetry(1_700_000_000_123)
+        .expect("telemetry")
+        .lifecycle;
+    if configures {
+        assert_eq!(
+            lifecycle,
+            ConnectorLifecycleState::Configuring,
+            "a connector waiting on a device command should still be configuring"
+        );
+        assert!(
+            !armed_timers.is_empty(),
+            "a connector waiting for a device reply armed no timeout, so a silent device would \
+             hang it forever"
+        );
+        // Now play out the silent device: fire each timeout the connector arms, and let it arm
+        // the next one. A connector may retry a command — that is its business — but the retry
+        // budget has to be finite, or a strap that never answers holds the session open for
+        // ever. Bounded here at sixteen rounds, which is well past any retry count a
+        // configuration sequence has cause to use.
+        let mut rounds = 0;
+        let mut lifecycle = lifecycle;
+        while lifecycle == ConnectorLifecycleState::Configuring && rounds < 16 {
+            rounds += 1;
+            if armed_timers.is_empty() {
+                panic!("round {rounds}: still configuring with no timeout armed");
+            }
+            for token in std::mem::take(&mut armed_timers) {
+                runtime
+                    .apply_connector_event(
+                        ConnectorTransportEvent::TimerFired { token },
+                        Some(40 + rounds),
+                    )
+                    .expect("timer callback is valid");
+            }
+            // The lifecycle moves as actions are handed out, so whatever the timeout asked for
+            // only lands once the host collects it. A real host is always draining.
+            for action in runtime
+                .drain_connector_actions(32)
+                .expect("timeout follow-up actions")
+            {
+                match action.request {
+                    ConnectorTransportRequest::Write {
+                        characteristic_id, ..
+                    } => runtime
+                        .apply_connector_event(
+                            ConnectorTransportEvent::WriteResult {
+                                operation_id: action.operation_id,
+                                characteristic_id,
+                            },
+                            Some(40 + rounds),
+                        )
+                        .map(|_| ())
+                        .expect("retry write callback is valid"),
+                    ConnectorTransportRequest::SetTimer { token, .. } => armed_timers.push(token),
+                    ConnectorTransportRequest::CancelTimer { token } => {
+                        armed_timers.retain(|armed| *armed != token);
+                    }
+                    _ => {}
+                }
+            }
+            lifecycle = runtime
+                .connector_telemetry(1_700_000_000_123)
+                .expect("telemetry")
+                .lifecycle;
+        }
+        assert_eq!(
+            lifecycle,
+            ConnectorLifecycleState::Suspending,
+            "a device that never answers left the connector in {lifecycle:?} after {rounds} \
+             timeouts; the retry budget should be finite and end in a teardown"
+        );
+    } else {
+        assert_eq!(lifecycle, ConnectorLifecycleState::Streaming);
+    }
     runtime
         .cancel_connector_session(ConnectorCancelReason::User, Some(6))
         .expect("user disconnect accepts connector cleanup actions");

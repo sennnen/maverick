@@ -1,0 +1,203 @@
+{
+  "algorithm": "pulsenet_foundation_embeddings",
+  "core_path": "pulsenet_model.trained_model",
+  "coreml": {
+    "artifact": "pulsenet_foundation.mlpackage",
+    "bytes": 1914925,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.006983697414398193,
+            "max_rel": 0.003756507690217306
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.00698322057723999,
+            "max_rel": 0.0037562512010904893
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.006983697414398193,
+            "max_rel": 0.003756507690217306
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.00698322057723999,
+            "max_rel": 0.0037562512010904893
+          }
+        }
+      ],
+      "constants_rounded": 62,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "GPU": 106,
+          "unassigned": 39
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 145
+      },
+      "norms_folded": 25,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 106
+            },
+            "fraction": 0.9906542056074766,
+            "on_neural_engine": 106,
+            "operations": 107
+          },
+          "parity": {
+            "max_abs": 0.42602938413619995,
+            "max_rel": 0.4199355760711159
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 125
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 125
+          },
+          "parity": {
+            "max_abs": 0.045509397983551025,
+            "max_rel": 0.042056088702828044
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 125
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 125
+          },
+          "parity": {
+            "max_abs": 0.045509397983551025,
+            "max_rel": 0.042056088702828044
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 125
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 125
+          },
+          "parity": {
+            "max_abs": 0.045509397983551025,
+            "max_rel": 0.042056088702828044
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 106,
+              "unassigned": 39
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 145
+          },
+          "parity": {
+            "max_abs": 0.006983697414398193,
+            "max_rel": 0.003756507690217306
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 2.5648912681686814e-07
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "92e7093ff85882a7d9d5621eef9e3121b42dd1d11ee9e15319ca3623dd0454ff",
+      "Data/com.apple.CoreML/weights/weight.bin": "63cfe53016cd1c211a5f5e6a113d5ff56f8984fd9a343b3c54b6eb0452aa3ed1",
+      "Manifest.json": "c09e0132bcd4b12c543315d6adf74dbbb96b8d18079a7884742253478bfc57c2",
+      "executorch_debug_handle_mapping.json": "c05346ea304d8d27463424e3b14dbeaab3b65964df923f313c05792c182c6a3e"
+    },
+    "parity": {
+      "max_abs": 0.006983697414398193,
+      "max_rel": 0.003756507690217306
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "7f33ed37a0a932fe56ce3d1b58974df63c0c5ccd43fa4e882046f6a8a71bcdbe"
+  },
+  "cross_platform": {
+    "max_abs": 0.0007708072662353516,
+    "max_rel": 0.00039621428464632266
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "ppg",
+      "shape": [
+        1,
+        1,
+        1500
+      ]
+    }
+  ],
+  "model": "pulsenet_foundation",
+  "notes": "EfficientNet1D encoder, PulseNet-Foundation v0.4.0, from the halite 1.2.0 archive. The wrapper's own moving-average detrend chain is ported to Rust; this core takes the already-filtered segment.",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "embeddings",
+      "shape": [
+        1,
+        256
+      ]
+    }
+  ],
+  "parameters": 890608,
+  "role": "PPG foundation encoder: 30 s of detrended PPG at 50 Hz to a 256-d embedding",
+  "source_asset": "halite_1_2_0.pt",
+  "source_asset_sha256": "1a61c6b23e6f1b0a4a92e2b33b2cc045e0eee13cf540c02b4cb199a6582b0ea5",
+  "tflite": {
+    "artifact": "pulsenet_foundation.tflite",
+    "bytes": 1843400,
+    "parity": {
+      "max_abs": 0.0064514875411987305,
+      "max_rel": 0.003470233763548958
+    },
+    "passes": {
+      "bytes_full_width": 3592048,
+      "bytes_halved": 1843400,
+      "constants_rounded": 62,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 25,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 39
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "7f7860c0ad92c14772af463a678a9df35f0034bff566e792e8cc491c9d1f6ad8"
+  },
+  "trace_max_abs_error": 0.004501938819885254,
+  "version": "0.4.0",
+  "weights_kept_full": 118,
+  "weights_rounded": 39
+}

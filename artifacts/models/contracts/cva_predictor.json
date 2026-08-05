@@ -1,0 +1,106 @@
+{
+  "algorithm": "cva_predictor",
+  "core_path": "cva_pd",
+  "coreml": {
+    "error": "RuntimeError: no core ml precision policy converted: ValueError: Incompatible dim 1 in shapes (1, 64, 512) vs. (1, 512, 1); ValueError: Incompatible dim 1 in shapes (1, 64, 512) vs. (1, 512, 1); ValueError: Incompatible dim 1 in shapes (1, 64, 512) vs. ",
+    "exir_error": "RuntimeError: torch.fx.experimental.proxy_tensor._ModuleNotInstalledAsSubmoduleError | RuntimeError: The following operation failed in the TorchScript interpreter. | RuntimeError: GuardOnDataDependentSymNode: Could not guard on data-dependent expression Eq(u0, 1) (unhinted: Eq(u0, 1)).  (Size-like symbols: none)"
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "pulses",
+      "shape": [
+        1,
+        1499
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "features",
+      "shape": [
+        1,
+        5
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "demographics",
+      "shape": [
+        1,
+        5
+      ]
+    }
+  ],
+  "model": "cva_predictor",
+  "notes": "features are the preprocessor's (mean_dc, max_min, accepted, snr, hr); demographics are (sex, ring size class, age, ring width class, bmi).",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "cva",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "pwv",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "cva_uncalibrated",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "prediction_quality",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "signal_quality",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "sbp",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "dbp",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "embeddings",
+      "shape": [
+        1,
+        128
+      ]
+    }
+  ],
+  "parameters": 1807783,
+  "role": "PPG transformer: cardiovascular age, pulse-wave velocity and blood-pressure probes",
+  "source_asset": "cva_2_1_0.pt",
+  "source_asset_sha256": "b41b69845270952a6dca948c0e6e388433effaee739bc01c44597272b2fba2f0",
+  "tflite": {
+    "error": "RuntimeError: torch.fx.experimental.proxy_tensor._ModuleNotInstalledAsSubmoduleError | RuntimeError: The following operation failed in the TorchScript interpreter. | RuntimeError: GuardOnDataDependentSymNode: Could not guard on data-dependent expression Eq(u0, 1) (unhinted: Eq(u0, 1)).  (Size-like symbols: none)"
+  },
+  "trace_max_abs_error": 33.5643310546875,
+  "version": "2.1.0",
+  "weights_kept_full": 138,
+  "weights_rounded": 43
+}

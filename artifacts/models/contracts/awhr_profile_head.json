@@ -1,0 +1,199 @@
+{
+  "algorithm": "awake_heart_rate_profile_head",
+  "core_path": "model.fc",
+  "coreml": {
+    "artifact": "awhr_profile_head.mlpackage",
+    "bytes": 2702,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        }
+      ],
+      "constants_rounded": 0,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 1
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 1
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2
+          },
+          "parity": {
+            "max_abs": 0.029127120971679688,
+            "max_rel": 0.002959823941740834
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2
+          },
+          "parity": {
+            "max_abs": 0.029127120971679688,
+            "max_rel": 0.002959823941740834
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2
+          },
+          "parity": {
+            "max_abs": 0.029127120971679688,
+            "max_rel": 0.002959823941740834
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2
+          },
+          "parity": {
+            "max_abs": 0.029127120971679688,
+            "max_rel": 0.002959823941740834
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 1
+          },
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "0ecc9552f92c45671f90d8ee1fd9920642bda57fb6af0ae1a0fe9b9ea4a85ca4",
+      "Data/com.apple.CoreML/weights/weight.bin": "e2190697bc45575c56dde0d1e974f87fdc3968a9f6a2ad21ef27632251bb0685",
+      "Manifest.json": "5d5ecfc670d5d13a0a5813e4e7f1d8ec120660eb8eaace9b5343f5b58ae85ae2",
+      "executorch_debug_handle_mapping.json": "f9707ac38e2a39ab72ef9010c736ffc63f9d5da76a350dc02b33d350f8276507"
+    },
+    "parity": {
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "59e25d2a9fde8c1756bc5c8f295eeebe48867729d6ad86e987f06cb1655decff"
+  },
+  "cross_platform": {
+    "max_abs": 2.1457672119140625e-06,
+    "max_rel": 1.5240412425880795e-07
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "features",
+      "shape": [
+        60,
+        32
+      ]
+    }
+  ],
+  "model": "awhr_profile_head",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "profile_logits",
+      "shape": [
+        60,
+        3
+      ]
+    }
+  ],
+  "parameters": 99,
+  "role": "Three-way profile head over the recurrent layer's output",
+  "source_asset": "awhr_profile_selector_1_0_1.pt",
+  "source_asset_sha256": "337046911cdbe4fd6820b068dfb7fa8ccb89fc2d765322c82ee9859a4ab38e58",
+  "tflite": {
+    "artifact": "awhr_profile_head.tflite",
+    "bytes": 1364,
+    "parity": {
+      "max_abs": 3.814697265625e-06,
+      "max_rel": 2.459382680190976e-07
+    },
+    "passes": {
+      "bytes_full_width": 1340,
+      "bytes_halved": 1364,
+      "constants_rounded": 0,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 0
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "f69957dd7f3b6c1d48c68d166c5b7ca04f0ee3437469b2880b0a876420a16fd3"
+  },
+  "trace_max_abs_error": 0.0,
+  "version": "1.0.1",
+  "weights_kept_full": 2,
+  "weights_rounded": 0
+}

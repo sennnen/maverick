@@ -1,0 +1,3 @@
+DEVICE gpu_delegate_supported=true
+DEVICE gpu_precision_loss_allowed_by_default=true quantized_allowed=true inference_preference=0
+DEVICE model=Pixel 7 soc=GS201 manufacturer=Google api=37 abis=arm64-v8a

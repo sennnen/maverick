@@ -1,0 +1,216 @@
+{
+  "algorithm": "activity_ensemble",
+  "core_path": "predictor.ensemble",
+  "coreml": {
+    "artifact": "activity_ensemble.mlpackage",
+    "bytes": 1094679,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.005913734436035156,
+            "max_rel": 0.0007224557203149166
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.005913734436035156,
+            "max_rel": 0.0007224557203149166
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.005913734436035156,
+            "max_rel": 0.0007224557203149166
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.046729087829589844,
+            "max_rel": 0.006989386372925585
+          }
+        }
+      ],
+      "constants_rounded": 5,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 2,
+          "NeuralEngine": 24
+        },
+        "fraction": 0.9230769230769231,
+        "on_neural_engine": 24,
+        "operations": 26
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2,
+              "NeuralEngine": 24
+            },
+            "fraction": 0.9230769230769231,
+            "on_neural_engine": 24,
+            "operations": 26
+          },
+          "parity": {
+            "max_abs": 0.005913734436035156,
+            "max_rel": 0.0007224557203149166
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2,
+              "NeuralEngine": 24
+            },
+            "fraction": 0.9230769230769231,
+            "on_neural_engine": 24,
+            "operations": 26
+          },
+          "parity": {
+            "max_abs": 0.005913734436035156,
+            "max_rel": 0.0007224557203149166
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2,
+              "NeuralEngine": 24
+            },
+            "fraction": 0.9230769230769231,
+            "on_neural_engine": 24,
+            "operations": 26
+          },
+          "parity": {
+            "max_abs": 0.005913734436035156,
+            "max_rel": 0.0007224557203149166
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2,
+              "NeuralEngine": 24
+            },
+            "fraction": 0.9230769230769231,
+            "on_neural_engine": 24,
+            "operations": 26
+          },
+          "parity": {
+            "max_abs": 0.005913734436035156,
+            "max_rel": 0.0007224557203149166
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 24,
+              "unassigned": 5
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 29
+          },
+          "parity": {
+            "max_abs": 0.0024170875549316406,
+            "max_rel": 0.00035774535240013807
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "half",
+      "policy_reason": "half-width arithmetic on the Neural Engine",
+      "unit_spread": 0.006266930652610668
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "d12cc6e51b32a2a17395f2edb049281f2ea0a1709f10e314bf881ddd9c7e08b7",
+      "Data/com.apple.CoreML/weights/weight.bin": "ac00f3e15ba3e68815dd23428d0be531fa225efa0d34ea2fbe137a4ae9ab72c2",
+      "Manifest.json": "6cc94695bb21e49fd1efc5299a1d6b74bcf5b54ef66ac98c93d1feeb03a26413",
+      "executorch_debug_handle_mapping.json": "2f523445b2acae6e586ca48d02862137ff26451f1955683955c0f51adad286c6"
+    },
+    "parity": {
+      "max_abs": 0.005913734436035156,
+      "max_rel": 0.0007224557203149166
+    },
+    "precision": "float16",
+    "sha256": "736df87c44653eee57d6d058699db45551b91bb6afc476796117af15557239aa"
+  },
+  "cross_platform": {
+    "max_abs": 0.0034787580370903015,
+    "max_rel": 0.0005054834120296926
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "primary",
+      "shape": [
+        1,
+        16,
+        260
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "secondary",
+      "shape": [
+        1,
+        16,
+        260
+      ]
+    }
+  ],
+  "model": "activity_ensemble",
+  "notes": "536,900 parameters, and the last piece of the 3.1.11 predictor: with this, all 3,451,144 of its parameters ship as five cores.",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "segment_output",
+      "shape": [
+        1,
+        16,
+        260
+      ]
+    }
+  ],
+  "parameters": 536900,
+  "role": "Combines the primary and secondary segment heads into the final per-segment output",
+  "source_asset": "automatic_activity_detection_3_1_11.pt",
+  "source_asset_sha256": "130d8a20ee0958b79cd19945a227665fcea709a81867e7d2c4a3aa83324e1159",
+  "tflite": {
+    "artifact": "activity_ensemble.tflite",
+    "bytes": 1081584,
+    "parity": {
+      "max_abs": 0.002416849136352539,
+      "max_rel": 0.0003578556995168562
+    },
+    "passes": {
+      "bytes_full_width": 2151672,
+      "bytes_halved": 1081584,
+      "constants_rounded": 5,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 5
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "d3a0e319b063850f6cb06ce09de4a23bb988cc520e8f61376ec1000cb4ca5ba1"
+  },
+  "trace_max_abs_error": 0.0018038749694824219,
+  "version": "3.1.11",
+  "weights_kept_full": 5,
+  "weights_rounded": 5
+}

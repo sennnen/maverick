@@ -1,0 +1,212 @@
+{
+  "algorithm": "popsicle_ovulation_detection",
+  "core_path": "_model_runner.ovulation_detection_runner.trained_detection_model",
+  "coreml": {
+    "artifact": "popsicle_ovulation_detection_v16.mlpackage",
+    "bytes": 1102638,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.0001646578311920166,
+            "max_rel": 0.00016466152147841907
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.0001646578311920166,
+            "max_rel": 0.00016466152147841907
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.0001646578311920166,
+            "max_rel": 0.00016466152147841907
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.0001646578311920166,
+            "max_rel": 0.00016466152147841907
+          }
+        }
+      ],
+      "constants_rounded": 5,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 2051,
+          "unassigned": 5
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 2056
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2053
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2053
+          },
+          "parity": {
+            "max_abs": 0.0015072226524353027,
+            "max_rel": 0.0015072607444855965
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2053
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2053
+          },
+          "parity": {
+            "max_abs": 0.0015072226524353027,
+            "max_rel": 0.0015072607444855965
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2053
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2053
+          },
+          "parity": {
+            "max_abs": 0.0015072226524353027,
+            "max_rel": 0.0015072607444855965
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2053
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2053
+          },
+          "parity": {
+            "max_abs": 0.0015072226524353027,
+            "max_rel": 0.0015072607444855965
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 2051,
+              "unassigned": 5
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 2056
+          },
+          "parity": {
+            "max_abs": 0.0001646578311920166,
+            "max_rel": 0.00016466152147841907
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "e0ea4e355db7910a0b26835b5790920e6d715e7fa666c5e84fc2c74c3be5a8c2",
+      "Data/com.apple.CoreML/weights/weight.bin": "2f61d80a196899e84918a540c49f780770f87ad2a40b4eb43f8f82e18257c250",
+      "Manifest.json": "102ded45130af6eba0fc3be4a83ab8eab91b8c84759ff3dedece10fe17ae4b10",
+      "executorch_debug_handle_mapping.json": "f37221a2f0eec1dc29b3397cc2c1478b0c5992359b45ddaefd4806f1ffad3b77"
+    },
+    "parity": {
+      "max_abs": 0.0001646578311920166,
+      "max_rel": 0.00016466152147841907
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "96c038939721c920eeabd9e5c18c449770f1d10048fe6c36c47b6865586887ad"
+  },
+  "cross_platform": {
+    "max_abs": 2.980232238769531e-07,
+    "max_rel": 2.9803075582030224e-07
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "time_series",
+      "shape": [
+        1,
+        40,
+        3
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "scalars",
+      "shape": [
+        1,
+        40,
+        4
+      ]
+    }
+  ],
+  "model": "popsicle_ovulation_detection_v16",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "ovulation_probability",
+      "shape": [
+        1,
+        40,
+        1
+      ]
+    }
+  ],
+  "parameters": 84385,
+  "role": "The previous generation of the ovulation detector",
+  "source_asset": "popsicle_1_6_0.pt",
+  "source_asset_sha256": "9109e2090638153a6f2c4b7aec05cf7b880d954e00e2175e49bcd61e550861ff",
+  "tflite": {
+    "artifact": "popsicle_ovulation_detection_v16.tflite",
+    "bytes": 450252,
+    "parity": {
+      "max_abs": 0.00016483664512634277,
+      "max_rel": 0.00016484033942029607
+    },
+    "passes": {
+      "bytes_full_width": 605652,
+      "bytes_halved": 450252,
+      "constants_rounded": 5,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 5
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "2e244193a3069b632c00934a15f506f6e8de7efd7adae9b50dd1ea1e04077054"
+  },
+  "trace_max_abs_error": 4.506111145019531e-05,
+  "version": "1.6.0",
+  "weights_kept_full": 11,
+  "weights_rounded": 5
+}

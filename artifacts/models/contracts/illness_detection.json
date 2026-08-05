@@ -1,0 +1,210 @@
+{
+  "algorithm": "illness_detection",
+  "core_path": "_model_runner.trained_model",
+  "coreml": {
+    "artifact": "illness_detection.mlpackage",
+    "bytes": 357134,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.00029613077640533447,
+            "max_rel": 0.016619870971628876
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.00029613077640533447,
+            "max_rel": 0.016619870971628876
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.00029613077640533447,
+            "max_rel": 0.016619870971628876
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.00029613077640533447,
+            "max_rel": 0.016619870971628876
+          }
+        }
+      ],
+      "constants_rounded": 5,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 31,
+          "unassigned": 4
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 35
+      },
+      "norms_folded": 2,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 33
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 33
+          },
+          "parity": {
+            "max_abs": 0.001684442162513733,
+            "max_rel": 0.5598559227507036
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 37
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 37
+          },
+          "parity": {
+            "max_abs": 0.001806512475013733,
+            "max_rel": 0.5598559227507036
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 43
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 43
+          },
+          "parity": {
+            "max_abs": 0.0008790343999862671,
+            "max_rel": 0.5598559227507036
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 45
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 45
+          },
+          "parity": {
+            "max_abs": 0.0008790343999862671,
+            "max_rel": 0.5598559227507036
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 31,
+              "unassigned": 4
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 35
+          },
+          "parity": {
+            "max_abs": 0.00029613077640533447,
+            "max_rel": 0.016619870971628876
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "ddb8019a41dff458cbb59be1c05a40918d31708f205f2eb4e302addf6cb18ba5",
+      "Data/com.apple.CoreML/weights/weight.bin": "1978c02bb9ba0dad759dfe19b9aa4977f6eeec18f33fd64eeb99917e1db33a47",
+      "Manifest.json": "9cbc5d55983302128c38cb7cbc1ec6a332e1a3317d42d3620b887a2e1c5dec1f",
+      "executorch_debug_handle_mapping.json": "4fefa7cc31e23267cae7076576a2414dc4558062bf776e4535125f2745183524"
+    },
+    "parity": {
+      "max_abs": 0.00029613077640533447,
+      "max_rel": 0.016619870971628876
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "624adc42095fff5d19843d65df2469c7002cc51f2575a8c83b14f466d67c7164"
+  },
+  "cross_platform": {
+    "max_abs": 2.357177436351776e-05,
+    "max_rel": 0.0036550702546815695
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "scalars",
+      "shape": [
+        1,
+        4
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "time_series",
+      "shape": [
+        1,
+        8,
+        30
+      ]
+    }
+  ],
+  "model": "illness_detection",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "illness_probability",
+      "shape": [
+        1,
+        1
+      ]
+    }
+  ],
+  "parameters": 155911,
+  "role": "Illness likelihood from thirty days of eight daily biometric deviations",
+  "source_asset": "illness_detection_0_5_1.pt",
+  "source_asset_sha256": "eb6541c5c65f2c8df98686a976ecd3a5882ecfddf16ec1b74d6fac21b3088520",
+  "tflite": {
+    "artifact": "illness_detection.tflite",
+    "bytes": 320728,
+    "parity": {
+      "max_abs": 0.00018317997455596924,
+      "max_rel": 0.01832195803886322
+    },
+    "passes": {
+      "bytes_full_width": 625072,
+      "bytes_halved": 320728,
+      "constants_rounded": 5,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 2,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 4
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "6f8e91b7bd653c1fc6a1b210e46819eb62dc5f55ed973ff8a3c3cad96d5246d0"
+  },
+  "trace_max_abs_error": 2.6883091777563095e-05,
+  "version": "0.5.1",
+  "weights_kept_full": 28,
+  "weights_rounded": 4
+}

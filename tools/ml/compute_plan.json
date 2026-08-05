@@ -1,0 +1,26 @@
+{
+ "activity_context_embedding": {
+  "CPU": 35,
+  "unassigned": 9
+ },
+ "cva_encoder": {
+  "GPU": 424,
+  "unassigned": 40
+ },
+ "pulse_ppg": {
+  "GPU": 113,
+  "unassigned": 25
+ },
+ "pulsenet_foundation": {
+  "GPU": 105,
+  "unassigned": 39
+ },
+ "sleepnet_bdi_v3": {
+  "GPU": 160,
+  "unassigned": 31
+ },
+ "whr_unet_encoder": {
+  "GPU": 31,
+  "unassigned": 16
+ }
+}

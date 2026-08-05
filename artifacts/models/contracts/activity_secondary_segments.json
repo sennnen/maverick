@@ -1,0 +1,207 @@
+{
+  "algorithm": "activity_secondary_segments",
+  "core_path": "predictor.secondary_segments_predictor",
+  "coreml": {
+    "artifact": "activity_secondary_segments.mlpackage",
+    "bytes": 1106889,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.0014934614300727844,
+            "max_rel": 0.0026259842020421495
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.0014934614300727844,
+            "max_rel": 0.0026259842020421495
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.0005286633968353271,
+            "max_rel": 0.0009295598134193872
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.0049285441637039185,
+            "max_rel": 0.00869737238897912
+          }
+        }
+      ],
+      "constants_rounded": 5,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 1,
+          "NeuralEngine": 26
+        },
+        "fraction": 0.9629629629629629,
+        "on_neural_engine": 26,
+        "operations": 27
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 26
+            },
+            "fraction": 0.9629629629629629,
+            "on_neural_engine": 26,
+            "operations": 27
+          },
+          "parity": {
+            "max_abs": 0.0014934614300727844,
+            "max_rel": 0.0026259842020421495
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 26
+            },
+            "fraction": 0.9629629629629629,
+            "on_neural_engine": 26,
+            "operations": 27
+          },
+          "parity": {
+            "max_abs": 0.0014934614300727844,
+            "max_rel": 0.0026259842020421495
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 5,
+              "NeuralEngine": 24
+            },
+            "fraction": 0.8275862068965517,
+            "on_neural_engine": 24,
+            "operations": 29
+          },
+          "parity": {
+            "max_abs": 0.0016235113143920898,
+            "max_rel": 0.0028113383283322794
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 5,
+              "NeuralEngine": 24
+            },
+            "fraction": 0.8275862068965517,
+            "on_neural_engine": 24,
+            "operations": 29
+          },
+          "parity": {
+            "max_abs": 0.0016235113143920898,
+            "max_rel": 0.0028113383283322794
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 26,
+              "unassigned": 5
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 31
+          },
+          "parity": {
+            "max_abs": 0.000254705548286438,
+            "max_rel": 0.00038981846086088553
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "half",
+      "policy_reason": "half-width arithmetic on the Neural Engine",
+      "unit_spread": 0.0077678125755597325
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "05e52d272bad4edd0a6d977fdee596078e3d8a7f4469d99597c23d2cbeb6cfc6",
+      "Data/com.apple.CoreML/weights/weight.bin": "142e33676a3475f87c00d16d6dba1aac5385606569805e8a845bcf75cea147eb",
+      "Manifest.json": "a8b8957e8e7cbc0e032a22fba686c050bd83a1392b74f54dc7cf17ad2b8b3803",
+      "executorch_debug_handle_mapping.json": "100e20d66267470bf70b1b54bc3ac006eae1e7e1ec895bfb39e22bae14f07231"
+    },
+    "parity": {
+      "max_abs": 0.0014934614300727844,
+      "max_rel": 0.0026259842020421495
+    },
+    "precision": "float16",
+    "sha256": "7e77516d83cc2a3b896fbc7c2cf9b5f56082c9e3a77a09966f997fac033670ab"
+  },
+  "cross_platform": {
+    "max_abs": 0.0014450550079345703,
+    "max_rel": 0.00247315629788782
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "features",
+      "shape": [
+        1,
+        16,
+        336
+      ]
+    }
+  ],
+  "model": "activity_secondary_segments",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "segment_output",
+      "shape": [
+        1,
+        16,
+        260
+      ]
+    }
+  ],
+  "parameters": 541220,
+  "role": "Secondary per-segment activity head, over the history encoder's output",
+  "source_asset": "automatic_activity_detection_3_1_11.pt",
+  "source_asset_sha256": "130d8a20ee0958b79cd19945a227665fcea709a81867e7d2c4a3aa83324e1159",
+  "tflite": {
+    "artifact": "activity_secondary_segments.tflite",
+    "bytes": 1091972,
+    "parity": {
+      "max_abs": 0.0002547428011894226,
+      "max_rel": 0.00038987547520313984
+    },
+    "passes": {
+      "bytes_full_width": 2169200,
+      "bytes_halved": 1091972,
+      "constants_rounded": 5,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 5
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "32b2ed7dbd81a4433763be53bc627da9fa89d300a7fa7dd7f107f969176a75bb"
+  },
+  "trace_max_abs_error": 0.00018230080604553223,
+  "version": "3.1.11",
+  "weights_kept_full": 9,
+  "weights_rounded": 5
+}

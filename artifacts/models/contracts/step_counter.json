@@ -1,0 +1,178 @@
+{
+  "algorithm": "step_counter",
+  "core_path": "model",
+  "coreml": {
+    "artifact": "step_counter.mlpackage",
+    "bytes": 341311,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          }
+        }
+      ],
+      "constants_rounded": 6,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 429
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 429
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 429
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 429
+          },
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 429
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 429
+          },
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 455
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 455
+          },
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 458
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 458
+          },
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 423,
+              "unassigned": 6
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 429
+          },
+          "parity": {
+            "max_abs": 0.0,
+            "max_rel": 0.0
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "half",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "1d64c3c6284afa5cfdca5b863d7af4d58576a735664ea8dc3b954db21faaf28d",
+      "Data/com.apple.CoreML/weights/weight.bin": "1962ae529a31e309a41915beb1a45be7e1c4faa48df17c1400cf63f6caf4ba22",
+      "Manifest.json": "b5edf1cc73b06b851cc224045fc647d2070bf6eec41ffd7b1651814301d59d40",
+      "executorch_debug_handle_mapping.json": "27c9b6b8ee7b7c33f383a340be3173f7dca9d53ed4f9eda6a562942213774145"
+    },
+    "parity": {
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "precision": "float16",
+    "sha256": "4fcaf18ec0956552a0e50f83e1ad4b093e94dec04408a61e3cf82531c37f5902"
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "motion",
+      "shape": [
+        1,
+        19
+      ]
+    }
+  ],
+  "model": "step_counter",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "steps",
+      "shape": [
+        1
+      ]
+    }
+  ],
+  "parameters": 7811,
+  "role": "Step count with eligibility gating from one step-motion feature vector",
+  "source_asset": "step_counter_1_3_0.pt",
+  "source_asset_sha256": "e062373c0b74a281c6aeca098af3fc9a43dbd829147acd13910281f54c29857d",
+  "tflite": {
+    "error": "RuntimeError:     raise errors.NonConcreteBooleanIndexError(core.typeof(idx.index)) | jax.errors.NonConcreteBooleanIndexError: Array boolean indices must be concrete; got bool[1] | See https://docs.jax.dev/en/latest/errors.html#jax.errors.NonConcreteBooleanIndexError"
+  },
+  "trace_max_abs_error": 0.0,
+  "version": "1.3.0",
+  "weights_kept_full": 78,
+  "weights_rounded": 6
+}

@@ -1,0 +1,761 @@
+{
+ "archives": 31,
+ "counts": {
+  "blocked": 0,
+  "no_sensor": 0,
+  "partial": 0,
+  "rust": 13,
+  "rust_pending": 0,
+  "shipped": 18
+ },
+ "parameters_covered": 41008090,
+ "parameters_total": 41008090,
+ "rows": [
+  {
+   "archive": "astd_event_detection_0_1_0",
+   "cores": [],
+   "coverage": null,
+   "parameters": 0,
+   "parameters_covered": 0,
+   "reason": "Deterministic: zero learned parameters. Implemented in model_zoo::deterministic::astd_event_detection.",
+   "shipped_cores": 0,
+   "status": "rust",
+   "total_cores": 0
+  },
+  {
+   "archive": "atlas_2_1_0",
+   "cores": [],
+   "coverage": 1.0,
+   "parameters": 60,
+   "parameters_covered": 60,
+   "reason": "Twelve linear regressions over five features \u2014 sixty parameters of dot product, which is not work for an accelerator. Implemented in model_zoo::deterministic::atlas. Its input needs a bioimpedance front end that no supported strap has, so the capability stays unavailable; see docs/ml.md.",
+   "shipped_cores": 0,
+   "status": "rust",
+   "total_cores": 0
+  },
+  {
+   "archive": "atlas_trendline_1_0_0",
+   "cores": [],
+   "coverage": null,
+   "parameters": 0,
+   "parameters_covered": 0,
+   "reason": "Deterministic: zero learned parameters. Implemented in model_zoo::deterministic::atlas_trendline.",
+   "shipped_cores": 0,
+   "status": "rust",
+   "total_cores": 0
+  },
+  {
+   "archive": "automatic_activity_detection_3_0_8",
+   "cores": [
+    {
+     "core": "predictor",
+     "model": "activity_detection",
+     "parameters": 1338910,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 1338910,
+   "parameters_covered": 1338910,
+   "reason": null,
+   "shipped_cores": 1,
+   "status": "shipped",
+   "total_cores": 1
+  },
+  {
+   "archive": "automatic_activity_detection_3_1_11",
+   "cores": [
+    {
+     "core": "predictor.context_embedding",
+     "model": "activity_context_embedding",
+     "parameters": 808080,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "predictor.ensemble",
+     "model": "activity_ensemble",
+     "parameters": 536900,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "predictor.history_segments_transformer",
+     "model": "activity_history_transformer",
+     "parameters": 939184,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "predictor.primary_segments_predictor",
+     "model": "activity_primary_segments",
+     "parameters": 625760,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "predictor.secondary_segments_predictor",
+     "model": "activity_secondary_segments",
+     "parameters": 541220,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "predictor",
+     "model": "activity_segments",
+     "parameters": 3451144,
+     "reason": "Core ML: inplace_ops pass doesn't yet support append op inside conditional; NotImplementedError: inplace_ops pass doesn't yet support append op inside conditio",
+     "shipped": false
+    },
+    {
+     "core": "segmentation.activity_transition_predictor",
+     "model": "activity_transition",
+     "parameters": 86971,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "behavior_embedding",
+     "model": "behavior_embedding",
+     "parameters": 22784,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "history_preprocessor.source_extractor.source_embedding",
+     "model": "source_embedding",
+     "parameters": 88,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 3560987,
+   "parameters_covered": 3560987,
+   "reason": "All 3,560,987 parameters ship as 8 cores. The composing parent does not convert: Core ML: inplace_ops pass doesn't yet support append op inside conditional; NotImplementedError: inplace_ops pass doesn't yet support append op inside conditio",
+   "shipped_cores": 8,
+   "status": "shipped",
+   "total_cores": 9
+  },
+  {
+   "archive": "awhr_imputation_1_2_0",
+   "cores": [
+    {
+     "core": "impute_net",
+     "model": "awhr_imputation",
+     "parameters": 209665,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 209665,
+   "parameters_covered": 209665,
+   "reason": null,
+   "shipped_cores": 1,
+   "status": "shipped",
+   "total_cores": 1
+  },
+  {
+   "archive": "awhr_profile_selector_1_0_1",
+   "cores": [
+    {
+     "core": "model.activity_core_model",
+     "model": "awhr_profile_core",
+     "parameters": 7672,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "model.fc",
+     "model": "awhr_profile_head",
+     "parameters": 99,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "model.rnn",
+     "model": "awhr_profile_recurrent",
+     "parameters": 3072,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "model",
+     "model": "awhr_profile_selector",
+     "parameters": 10843,
+     "reason": "TFLite: Array boolean indices must be concrete; got bool[1,60]",
+     "shipped": false
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 10843,
+   "parameters_covered": 10843,
+   "reason": "All 10,843 parameters ship as 3 cores. The composing parent does not convert: TFLite: Array boolean indices must be concrete; got bool[1,60]",
+   "shipped_cores": 3,
+   "status": "shipped",
+   "total_cores": 4
+  },
+  {
+   "archive": "cumulative_stress_1_2_2",
+   "cores": [],
+   "coverage": null,
+   "parameters": 0,
+   "parameters_covered": 0,
+   "reason": "Deterministic: zero learned parameters. Implemented in model_zoo::deterministic::cumulative_stress.",
+   "shipped_cores": 0,
+   "status": "rust",
+   "total_cores": 0
+  },
+  {
+   "archive": "cva_1_3_0",
+   "cores": [
+    {
+     "core": "cva_pd",
+     "model": "cva_predictor_v1",
+     "parameters": 317522,
+     "reason": "Core ML: no core ml precision policy converted: ValueError: Input 23 has rank 0 != other inputs rank 1; ValueError: Input 23 has rank 0 != other inputs rank 1;",
+     "shipped": false
+    },
+    {
+     "core": "cva_pd.base_model",
+     "model": "cva_predictor_v1_base",
+     "parameters": 317522,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 317522,
+   "parameters_covered": 317522,
+   "reason": "All 317,522 parameters ship as 1 cores. The composing parent does not convert: Core ML: no core ml precision policy converted: ValueError: Input 23 has rank 0 != other inputs rank 1; ValueError: Input 23 has rank 0 != other inputs rank 1;",
+   "shipped_cores": 1,
+   "status": "shipped",
+   "total_cores": 2
+  },
+  {
+   "archive": "cva_2_1_0",
+   "cores": [
+    {
+     "core": "cva_pd.base_model",
+     "model": "cva_encoder",
+     "parameters": 1805312,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "cva_pd",
+     "model": "cva_predictor",
+     "parameters": 1807783,
+     "reason": "Core ML: no core ml precision policy converted: ValueError: Incompatible dim 1 in shapes (1, 64, 512) vs. (1, 512, 1); ValueError: Incompatible dim 1 in shapes",
+     "shipped": false
+    },
+    {
+     "core": "cva_pd.probes",
+     "model": "cva_probes_female",
+     "parameters": 2471,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "cva_pd.probes",
+     "model": "cva_probes_male",
+     "parameters": 2471,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 1807783,
+   "parameters_covered": 1807783,
+   "reason": "All 1,807,783 parameters ship as 3 cores. The composing parent does not convert: Core ML: no core ml precision policy converted: ValueError: Incompatible dim 1 in shapes (1, 64, 512) vs. (1, 512, 1); ValueError: Incompatible dim 1 in shapes",
+   "shipped_cores": 3,
+   "status": "shipped",
+   "total_cores": 4
+  },
+  {
+   "archive": "cva_calibrator_1_3_0",
+   "cores": [],
+   "coverage": null,
+   "parameters": 0,
+   "parameters_covered": 0,
+   "reason": "Deterministic: zero learned parameters. Implemented in model_zoo::deterministic::cva_calibrator.",
+   "shipped_cores": 0,
+   "status": "rust",
+   "total_cores": 0
+  },
+  {
+   "archive": "daily_medians_1_1_0",
+   "cores": [],
+   "coverage": null,
+   "parameters": 0,
+   "parameters_covered": 0,
+   "reason": "Deterministic: zero learned parameters. Implemented in model_zoo::deterministic::daily_medians.",
+   "shipped_cores": 0,
+   "status": "rust",
+   "total_cores": 0
+  },
+  {
+   "archive": "daily_short_term_baselines_1_1_0",
+   "cores": [],
+   "coverage": null,
+   "parameters": 0,
+   "parameters_covered": 0,
+   "reason": "Deterministic: zero learned parameters. Implemented in model_zoo::deterministic::short_term_baselines.",
+   "shipped_cores": 0,
+   "status": "rust",
+   "total_cores": 0
+  },
+  {
+   "archive": "dhrv_imputation_1_1_0",
+   "cores": [
+    {
+     "core": "rf_net",
+     "model": "dhrv_imputation",
+     "parameters": 4577,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 4577,
+   "parameters_covered": 4577,
+   "reason": null,
+   "shipped_cores": 1,
+   "status": "shipped",
+   "total_cores": 1
+  },
+  {
+   "archive": "energy_expenditure_1_0_0",
+   "cores": [
+    {
+     "core": "energy_expenditure_model_hr",
+     "model": "energy_expenditure_hr",
+     "parameters": 199653,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "energy_expenditure_model_no_hr",
+     "model": "energy_expenditure_no_hr",
+     "parameters": 118997,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 318650,
+   "parameters_covered": 318650,
+   "reason": null,
+   "shipped_cores": 2,
+   "status": "shipped",
+   "total_cores": 2
+  },
+  {
+   "archive": "halite_1_2_0",
+   "cores": [
+    {
+     "core": "embedding_model",
+     "model": "halite_ppg_score",
+     "parameters": 257,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "tree_model",
+     "model": "halite_risk_tree",
+     "parameters": 19100,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "pulsenet_model.trained_model",
+     "model": "pulsenet_foundation",
+     "parameters": 890608,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 909965,
+   "parameters_covered": 909965,
+   "reason": null,
+   "shipped_cores": 3,
+   "status": "shipped",
+   "total_cores": 3
+  },
+  {
+   "archive": "illness_detection_0_5_1",
+   "cores": [
+    {
+     "core": "_model_runner.trained_model",
+     "model": "illness_detection",
+     "parameters": 155911,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 155911,
+   "parameters_covered": 155911,
+   "reason": null,
+   "shipped_cores": 1,
+   "status": "shipped",
+   "total_cores": 1
+  },
+  {
+   "archive": "meal_timing_0_1_0",
+   "cores": [],
+   "coverage": null,
+   "parameters": 0,
+   "parameters_covered": 0,
+   "reason": "Deterministic: zero learned parameters. Implemented in model_zoo::deterministic::meal_timing.",
+   "shipped_cores": 0,
+   "status": "rust",
+   "total_cores": 0
+  },
+  {
+   "archive": "popsicle_1_6_0",
+   "cores": [
+    {
+     "core": "_model_runner.min_follicular_runner.trained_prediction_model",
+     "model": "popsicle_min_follicular_v16",
+     "parameters": 865,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "_model_runner.ovulation_detection_runner.trained_detection_model",
+     "model": "popsicle_ovulation_detection_v16",
+     "parameters": 84385,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "_model_runner.ovulation_prediction_runner.trained_prediction_model.lstm",
+     "model": "popsicle_ovulation_prediction_recurrent_v16",
+     "parameters": 84224,
+     "reason": "unknown",
+     "shipped": false
+    },
+    {
+     "core": "_model_runner.ovulation_prediction_runner.trained_prediction_model",
+     "model": "popsicle_ovulation_prediction_v16",
+     "parameters": 84385,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "_model_runner.ovulation_detection_runner.trained_detection_model.lstm",
+     "model": "popsicle_ovulation_recurrent_v16",
+     "parameters": 84224,
+     "reason": "unknown",
+     "shipped": false
+    },
+    {
+     "core": "_model_runner.ovulation_detection_runner.trained_detection_model",
+     "model": "popsicle_ovulation_v16",
+     "parameters": 84385,
+     "reason": "Core ML: GuardOnDataDependentSymNode: Could not extract specialized integer from data-dependent expression u0 (unhinted: u0).  (Size-like symbols: u0)",
+     "shipped": false
+    },
+    {
+     "core": "_model_runner.period_prediction_runner.trained_prediction_model.lstm",
+     "model": "popsicle_period_prediction_recurrent_v16",
+     "parameters": 84224,
+     "reason": "unknown",
+     "shipped": false
+    },
+    {
+     "core": "_model_runner.period_prediction_runner.trained_prediction_model",
+     "model": "popsicle_period_prediction_v16",
+     "parameters": 84385,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 254020,
+   "parameters_covered": 254020,
+   "reason": "All 254,020 parameters ship as 4 cores. The composing parent does not convert: unknown",
+   "shipped_cores": 4,
+   "status": "shipped",
+   "total_cores": 8
+  },
+  {
+   "archive": "popsicle_1_8_1",
+   "cores": [
+    {
+     "core": "_model_runner.min_follicular_runner.trained_prediction_model",
+     "model": "popsicle_min_follicular",
+     "parameters": 865,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "_model_runner.ovulation_detection_runner.trained_detection_model",
+     "model": "popsicle_ovulation",
+     "parameters": 84385,
+     "reason": "Core ML: GuardOnDataDependentSymNode: Could not extract specialized integer from data-dependent expression u0 (unhinted: u0).  (Size-like symbols: u0)",
+     "shipped": false
+    },
+    {
+     "core": "_model_runner.ovulation_detection_runner.trained_detection_model",
+     "model": "popsicle_ovulation_detection",
+     "parameters": 84385,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "_model_runner.ovulation_prediction_runner.trained_prediction_model",
+     "model": "popsicle_ovulation_prediction",
+     "parameters": 84385,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "_model_runner.ovulation_prediction_runner.trained_prediction_model.lstm",
+     "model": "popsicle_ovulation_prediction_recurrent",
+     "parameters": 84224,
+     "reason": "unknown",
+     "shipped": false
+    },
+    {
+     "core": "_model_runner.ovulation_detection_runner.trained_detection_model.lstm",
+     "model": "popsicle_ovulation_recurrent",
+     "parameters": 84224,
+     "reason": "unknown",
+     "shipped": false
+    },
+    {
+     "core": "_model_runner.period_prediction_runner.trained_prediction_model",
+     "model": "popsicle_period_prediction",
+     "parameters": 84385,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "_model_runner.period_prediction_runner.trained_prediction_model.lstm",
+     "model": "popsicle_period_prediction_recurrent",
+     "parameters": 84224,
+     "reason": "unknown",
+     "shipped": false
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 254020,
+   "parameters_covered": 254020,
+   "reason": "All 254,020 parameters ship as 4 cores. The composing parent does not convert: Core ML: GuardOnDataDependentSymNode: Could not extract specialized integer from data-dependent expression u0 (unhinted: u0).  (Size-like symbols: u0)",
+   "shipped_cores": 4,
+   "status": "shipped",
+   "total_cores": 8
+  },
+  {
+   "archive": "pregnancy_biometrics_0_4_0",
+   "cores": [],
+   "coverage": null,
+   "parameters": 0,
+   "parameters_covered": 0,
+   "reason": "Deterministic: zero learned parameters. Implemented in model_zoo::deterministic::pregnancy_biometrics.",
+   "shipped_cores": 0,
+   "status": "rust",
+   "total_cores": 0
+  },
+  {
+   "archive": "sleepnet_bdi_0_3_0",
+   "cores": [
+    {
+     "core": "_model_runner.trained_model",
+     "model": "sleepnet_bdi_v3",
+     "parameters": 290960,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 290960,
+   "parameters_covered": 290960,
+   "reason": null,
+   "shipped_cores": 1,
+   "status": "shipped",
+   "total_cores": 1
+  },
+  {
+   "archive": "sleepnet_bdi_0_4_0",
+   "cores": [
+    {
+     "core": "_model_runner.trained_model",
+     "model": "sleepnet_bdi",
+     "parameters": 1008640,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 1008640,
+   "parameters_covered": 1008640,
+   "reason": null,
+   "shipped_cores": 1,
+   "status": "shipped",
+   "total_cores": 1
+  },
+  {
+   "archive": "sleepnet_moonstone_1_2_0",
+   "cores": [
+    {
+     "core": "_model_runner.trained_model",
+     "model": "sleepnet_moonstone",
+     "parameters": 1075955,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 1075955,
+   "parameters_covered": 1075955,
+   "reason": null,
+   "shipped_cores": 1,
+   "status": "shipped",
+   "total_cores": 1
+  },
+  {
+   "archive": "step_counter_1_3_0",
+   "cores": [
+    {
+     "core": "model",
+     "model": "step_counter",
+     "parameters": 7811,
+     "reason": "TFLite: Array boolean indices must be concrete; got bool[1]",
+     "shipped": false
+    },
+    {
+     "core": "model.step_eligibility_model.features_extractor",
+     "model": "step_eligibility",
+     "parameters": 7804,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "model.step_eligibility_model.head",
+     "model": "step_head",
+     "parameters": 5,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "model.step_count_multiplier",
+     "model": "step_multiplier",
+     "parameters": 2,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 7811,
+   "parameters_covered": 7811,
+   "reason": "All 7,811 parameters ship as 3 cores. The composing parent does not convert: TFLite: Array boolean indices must be concrete; got bool[1]",
+   "shipped_cores": 3,
+   "status": "shipped",
+   "total_cores": 4
+  },
+  {
+   "archive": "steps_motion_decoder_2_0_0",
+   "cores": [],
+   "coverage": null,
+   "parameters": 0,
+   "parameters_covered": 0,
+   "reason": "Deterministic: zero learned parameters. Implemented in model_zoo::deterministic::steps_motion_decoder.",
+   "shipped_cores": 0,
+   "status": "rust",
+   "total_cores": 0
+  },
+  {
+   "archive": "stress_daytime_sensing_1_1_0",
+   "cores": [],
+   "coverage": null,
+   "parameters": 0,
+   "parameters_covered": 0,
+   "reason": "Deterministic: zero learned parameters. Implemented in model_zoo::deterministic::daytime_stress.",
+   "shipped_cores": 0,
+   "status": "rust",
+   "total_cores": 0
+  },
+  {
+   "archive": "stress_resilience_2_2_1",
+   "cores": [],
+   "coverage": null,
+   "parameters": 0,
+   "parameters_covered": 0,
+   "reason": "Deterministic: zero learned parameters. Implemented in model_zoo::deterministic::stress_resilience.",
+   "shipped_cores": 0,
+   "status": "rust",
+   "total_cores": 0
+  },
+  {
+   "archive": "training_stress_score_0_2_1",
+   "cores": [],
+   "coverage": null,
+   "parameters": 0,
+   "parameters_covered": 0,
+   "reason": "Deterministic: zero learned parameters. Implemented in model_zoo::deterministic::training_stress_score.",
+   "shipped_cores": 0,
+   "status": "rust",
+   "total_cores": 0
+  },
+  {
+   "archive": "whr_2_7_1",
+   "cores": [
+    {
+     "core": "predictor.unet_model",
+     "model": "whr_unet",
+     "parameters": 983891,
+     "reason": "Core ML: no core ml precision policy converted: TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d",
+     "shipped": false
+    },
+    {
+     "core": "predictor.unet_model.unet",
+     "model": "whr_unet_encoder",
+     "parameters": 482898,
+     "reason": null,
+     "shipped": true
+    },
+    {
+     "core": "predictor.unet_model.final",
+     "model": "whr_unet_head",
+     "parameters": 500993,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 983891,
+   "parameters_covered": 983891,
+   "reason": "All 983,891 parameters ship as 2 cores. The composing parent does not convert: Core ML: no core ml precision policy converted: TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d tensor; TypeError: iteration over a 0-d",
+   "shipped_cores": 2,
+   "status": "shipped",
+   "total_cores": 3
+  },
+  {
+   "archive": "pulse_ppg",
+   "cores": [
+    {
+     "core": "ResNet1D",
+     "model": "pulse_ppg",
+     "parameters": 28497920,
+     "reason": null,
+     "shipped": true
+    }
+   ],
+   "coverage": 1.0,
+   "parameters": 28497920,
+   "parameters_covered": 28497920,
+   "reason": null,
+   "shipped_cores": 1,
+   "status": "shipped",
+   "total_cores": 1
+  }
+ ],
+ "shipped_models": 41,
+ "weighted_archives": 19
+}

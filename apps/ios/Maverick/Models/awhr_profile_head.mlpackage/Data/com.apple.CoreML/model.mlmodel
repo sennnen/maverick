@@ -1,0 +1,98 @@
+Ÿ
+
+features
+*
+<  €R
+profile_logits
+*
+< €¢å¢@
++com.github.apple.coremltools.source_dialectTorchExport::ATEN¢+
+$com.github.apple.coremltools.version9.0¢4
+#com.github.apple.coremltools.sourcetorch==2.12.1¢:
+,com.github.apple.coremltools.conversion_date
+2026-08-03²‡“
+mainŠ
+
+features
+
+<
+ CoreML7Ş
+CoreML7Òprofile_logits
+const!
+transpose_0
+
+
+ *?
+val8
+
+
+ *"
+@model_path/weights/weight.bin@*!
+name
+
+"
+transpose_0†
+const%
+profile_logits_bias_0
+
+
+*)
+val"
+
+
+
+
+
+1Ò? _¿á„’¾*+
+name#
+
+"
+profile_logits_bias_0¥
+linear
+weight
+
+transpose_0!
+bias
+
+profile_logits_bias_0
+x
+
+
+features$
+profile_logits
+
+<
+*$
+name
+
+"
+profile_logits"ì
+	buildInfoŞ"
+
+
+Ë"È
+6
+!
+
+"
+coremltools-version
+	
+"
+9.0
+A
+)
+!
+"
+coremltools-component-torch
+
+
+"
+2.12.1
+K
+(
+ 
+"
+coremltools-source-dialect
+
+"
+TorchExport::ATEN

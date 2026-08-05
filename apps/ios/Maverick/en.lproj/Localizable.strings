@@ -1,0 +1,22 @@
+/* On-device analytics. Draft copy: every one of these describes a state of the computation,
+   never a health claim, and the model outputs behind them are provisional. */
+"analytics.title" = "On-device analysis";
+"analytics.subtitle" = "Everything here is computed on this phone. Nothing is sent anywhere.";
+"analytics.state.idle" = "Not started";
+"analytics.state.working" = "Analysing %d of %d";
+"analytics.state.ready" = "Up to date";
+"analytics.state.stale" = "New data since this ran";
+"analytics.state.deferred" = "Waiting for a quiet moment";
+"analytics.state.failed" = "Could not finish";
+"analytics.state.computedNotShown" = "Computed — no reading to show yet";
+"analytics.retry" = "Try again";
+"analytics.needsSensor" = "Needs a sensor this device does not have: %@";
+"analytics.needsProfile" = "Add your %@ to enable this";
+"analytics.needsUpstream" = "Waiting on %@";
+"analytics.notPorted" = "Not available in this build: %@";
+"analytics.permissionRequired" = "Needs permission: %@";
+"analytics.empty" = "No analysis has run yet";
+"analytics.coverage" = "%d of %d models can run here";
+"analytics.a11y.signal" = "%@, %@";
+"analytics.a11y.working" = "Analysis in progress";
+"analytics.a11y.retry" = "Retry analysis for %@";

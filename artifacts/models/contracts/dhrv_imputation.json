@@ -1,0 +1,201 @@
+{
+  "algorithm": "daytime_hrv_imputation",
+  "core_path": "rf_net",
+  "coreml": {
+    "artifact": "dhrv_imputation.mlpackage",
+    "bytes": 16918,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.011054039001464844,
+            "max_rel": 0.0011046039235882064
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.011054039001464844,
+            "max_rel": 0.0011046039235882064
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.011054039001464844,
+            "max_rel": 0.0011046039235882064
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.011054039001464844,
+            "max_rel": 0.0011046039235882064
+          }
+        }
+      ],
+      "constants_rounded": 2,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 7,
+          "unassigned": 2
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 9
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 8
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 8
+          },
+          "parity": {
+            "max_abs": 0.02752685546875,
+            "max_rel": 0.0011523413925912007
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 8
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 8
+          },
+          "parity": {
+            "max_abs": 0.02752685546875,
+            "max_rel": 0.0011523413925912007
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 8
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 8
+          },
+          "parity": {
+            "max_abs": 0.02752685546875,
+            "max_rel": 0.0011523413925912007
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 8
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 8
+          },
+          "parity": {
+            "max_abs": 0.02752685546875,
+            "max_rel": 0.0011523413925912007
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 7,
+              "unassigned": 2
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 9
+          },
+          "parity": {
+            "max_abs": 0.011054039001464844,
+            "max_rel": 0.0011046039235882064
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 0.0
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "5dfadac3b7aa3a24d0aa1575d9c3924b8b9a0cdffc7b570169e3462f42fb6132",
+      "Data/com.apple.CoreML/weights/weight.bin": "099ebcceb2ea2b3be931278e2aac1435cddb7becbf1fc5c7975c69d0f3009154",
+      "Manifest.json": "ff38fe407e9a737c1f5f83efa57c98818086a95dd6a355a245d5f381ca0069b0",
+      "executorch_debug_handle_mapping.json": "24f377c0d1e33557007c4d4a454879166bf54142ebe720dfadecc710b85c960a"
+    },
+    "parity": {
+      "max_abs": 0.011054039001464844,
+      "max_rel": 0.0011046039235882064
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "488db1a8051d43344166afd954eb06aa59a6a7bbf043b4cc191b87b88e3ea581"
+  },
+  "cross_platform": {
+    "max_abs": 2.86102294921875e-06,
+    "max_rel": 2.855797096758594e-07
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "features",
+      "shape": [
+        1,
+        10
+      ]
+    }
+  ],
+  "model": "dhrv_imputation",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "imputed_dhrv",
+      "shape": [
+        1,
+        1
+      ]
+    }
+  ],
+  "parameters": 4577,
+  "role": "Daytime HRV imputation from temperature, MET, HR and their baselines",
+  "source_asset": "dhrv_imputation_1_1_0.pt",
+  "source_asset_sha256": "a97ca28b6b30fe12612b750445a195da73c73ec714ac1dc553e9dfb57b5caf6a",
+  "tflite": {
+    "artifact": "dhrv_imputation.tflite",
+    "bytes": 12400,
+    "parity": {
+      "max_abs": 0.011056900024414062,
+      "max_rel": 0.0011048898188319959
+    },
+    "passes": {
+      "bytes_full_width": 20280,
+      "bytes_halved": 12400,
+      "constants_rounded": 2,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 2
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "acb2e38d48aa8789f39692b933d08f668f2402545d92a97cecb8c7b8b2127f45"
+  },
+  "trace_max_abs_error": 0.011058807373046875,
+  "version": "1.1.0",
+  "weights_kept_full": 6,
+  "weights_rounded": 2
+}

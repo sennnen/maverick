@@ -1,3 +1,25 @@
 <resources>
     <string name="app_name">Mav</string>
+    <!-- On-device analytics. Draft copy: every one of these describes a state of the
+         computation, never a health claim, and the model outputs behind them are provisional. -->
+    <string name="analytics_title">On-device analysis</string>
+    <string name="analytics_subtitle">Everything here is computed on this phone. Nothing is sent anywhere.</string>
+    <string name="analytics_state_idle">Not started</string>
+    <string name="analytics_state_working">Analysing %1$d of %2$d</string>
+    <string name="analytics_state_ready">Up to date</string>
+    <string name="analytics_state_stale">New data since this ran</string>
+    <string name="analytics_state_deferred">Waiting for a quiet moment</string>
+    <string name="analytics_state_failed">Could not finish</string>
+    <string name="analytics_retry">Try again</string>
+    <string name="analytics_state_computed_not_shown">Computed — no reading to show yet</string>
+    <string name="analytics_needs_sensor">Needs a sensor this device does not have: %1$s</string>
+    <string name="analytics_needs_profile">Add your %1$s to enable this</string>
+    <string name="analytics_needs_upstream">Waiting on %1$s</string>
+    <string name="analytics_not_ported">Not available in this build: %1$s</string>
+    <string name="analytics_permission_required">Needs permission: %1$s</string>
+    <string name="analytics_empty">No analysis has run yet</string>
+    <string name="analytics_coverage">%1$d of %2$d models can run here</string>
+    <string name="analytics_a11y_signal">%1$s, %2$s</string>
+    <string name="analytics_a11y_working">Analysis in progress</string>
+    <string name="analytics_a11y_retry">Retry analysis for %1$s</string>
 </resources>

@@ -1,0 +1,201 @@
+{
+  "algorithm": "cva_encoder",
+  "core_path": "cva_pd.base_model",
+  "coreml": {
+    "artifact": "cva_encoder.mlpackage",
+    "bytes": 3719258,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.21935272216796875,
+            "max_rel": 0.00465878239057711
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.21925830841064453,
+            "max_rel": 0.004656777158338809
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.21935272216796875,
+            "max_rel": 0.00465878239057711
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.21925830841064453,
+            "max_rel": 0.004656777158338809
+          }
+        }
+      ],
+      "constants_rounded": 46,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "GPU": 424,
+          "unassigned": 40
+        },
+        "fraction": 0.0,
+        "on_neural_engine": 0,
+        "operations": 464
+      },
+      "norms_folded": 7,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 425
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 425
+          },
+          "parity": {
+            "max_abs": 0.45218372344970703,
+            "max_rel": 0.009603826874325006
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 427
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 427
+          },
+          "parity": {
+            "max_abs": 0.45218372344970703,
+            "max_rel": 0.009603826874325006
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 475
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 475
+          },
+          "parity": {
+            "max_abs": 0.530308723449707,
+            "max_rel": 0.01126310591434134
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 475
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 475
+          },
+          "parity": {
+            "max_abs": 0.530308723449707,
+            "max_rel": 0.01126310591434134
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 424,
+              "unassigned": 40
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 464
+          },
+          "parity": {
+            "max_abs": 0.21935272216796875,
+            "max_rel": 0.00465878239057711
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "full",
+      "policy_reason": "no policy reaches the Neural Engine; the most accurate one ships",
+      "unit_spread": 2.0052322383008747e-06
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "b8003fad19a25db301b51a8c3083b8bf693d5740bd7dc610159ab501cca0874d",
+      "Data/com.apple.CoreML/weights/weight.bin": "1c9721c8e6e28b7f1f8410e1a9870efecdc5963883991f036fff949d2100d75a",
+      "Manifest.json": "592d72e45ebe90b45ffb2bdb238caf6371fcfa2640280af2da9945692bab58af",
+      "executorch_debug_handle_mapping.json": "9aa5b4ad5a18527db75c53ec7fadda27dbbbc39a15d91d125cff893f91e6b863"
+    },
+    "parity": {
+      "max_abs": 0.21935272216796875,
+      "max_rel": 0.00465878239057711
+    },
+    "precision": "float16 weights, float32 arithmetic",
+    "sha256": "808841e5914bc386bcbedd394bd09930e15ef6737cdb1704adbf89f018c4b8c5"
+  },
+  "cross_platform": {
+    "max_abs": 0.016923904418945312,
+    "max_rel": 0.0005426754320807723
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "pulses",
+      "shape": [
+        1,
+        1024
+      ]
+    }
+  ],
+  "model": "cva_encoder",
+  "notes": "`forward` on this module computes a contrastive training loss, not an inference result; `get_embeddings_1` is the entry its predictor calls. 1,024 is the model's own block_size, which is why the 1,499-sample pulse train is truncated to it.",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "embeddings",
+      "shape": [
+        1,
+        128
+      ]
+    }
+  ],
+  "parameters": 1805312,
+  "role": "PPG transformer encoder: 1,024 normalised pulse samples to a 128-d embedding",
+  "source_asset": "cva_2_1_0.pt",
+  "source_asset_sha256": "b41b69845270952a6dca948c0e6e388433effaee739bc01c44597272b2fba2f0",
+  "tflite": {
+    "artifact": "cva_encoder.tflite",
+    "bytes": 3502984,
+    "parity": {
+      "max_abs": 0.1323261260986328,
+      "max_rel": 0.0028104443837698528
+    },
+    "passes": {
+      "bytes_full_width": 6839720,
+      "bytes_halved": 3502984,
+      "constants_rounded": 46,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 7,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 40
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "4fbe89e6db08c5da8a0e98f3ff330cf81f9c4cab58c835d734f3e5559e462826"
+  },
+  "trace_max_abs_error": 33.5643310546875,
+  "version": "2.1.0",
+  "weights_kept_full": 99,
+  "weights_rounded": 42
+}

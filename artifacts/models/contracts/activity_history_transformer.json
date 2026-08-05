@@ -1,0 +1,216 @@
+{
+  "algorithm": "activity_history_transformer",
+  "core_path": "predictor.history_segments_transformer",
+  "coreml": {
+    "artifact": "activity_history_transformer.mlpackage",
+    "bytes": 1920449,
+    "compute_units": "ALL",
+    "configuration": {
+      "compute_units": [
+        {
+          "compute_units": "ALL",
+          "parity": {
+            "max_abs": 0.014379024505615234,
+            "max_rel": 0.0022464929650244073
+          }
+        },
+        {
+          "compute_units": "CPU_AND_NE",
+          "parity": {
+            "max_abs": 0.014379024505615234,
+            "max_rel": 0.0022464929650244073
+          }
+        },
+        {
+          "compute_units": "CPU_AND_GPU",
+          "parity": {
+            "max_abs": 0.010051727294921875,
+            "max_rel": 0.001741537618956438
+          }
+        },
+        {
+          "compute_units": "CPU_ONLY",
+          "parity": {
+            "max_abs": 0.0759735107421875,
+            "max_rel": 0.006745059024770012
+          }
+        }
+      ],
+      "constants_rounded": 8,
+      "nearest_downsamples_rewritten": 0,
+      "neural_engine": {
+        "devices": {
+          "CPU": 1,
+          "NeuralEngine": 49
+        },
+        "fraction": 0.98,
+        "on_neural_engine": 49,
+        "operations": 50
+      },
+      "norms_folded": 0,
+      "policies": [
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 49
+            },
+            "fraction": 0.98,
+            "on_neural_engine": 49,
+            "operations": 50
+          },
+          "parity": {
+            "max_abs": 0.014379024505615234,
+            "max_rel": 0.0022464929650244073
+          },
+          "policy": "half"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "CPU": 1,
+              "NeuralEngine": 49
+            },
+            "fraction": 0.98,
+            "on_neural_engine": 49,
+            "operations": 50
+          },
+          "parity": {
+            "max_abs": 0.014379024505615234,
+            "max_rel": 0.0022464929650244073
+          },
+          "policy": "half_pooled"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 56
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 56
+          },
+          "parity": {
+            "max_abs": 0.007454872131347656,
+            "max_rel": 0.0013077236986406193
+          },
+          "policy": "half_reduced"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 56
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 56
+          },
+          "parity": {
+            "max_abs": 0.007454872131347656,
+            "max_rel": 0.0013077236986406193
+          },
+          "policy": "half_stable"
+        },
+        {
+          "neural_engine": {
+            "devices": {
+              "GPU": 49,
+              "unassigned": 8
+            },
+            "fraction": 0.0,
+            "on_neural_engine": 0,
+            "operations": 57
+          },
+          "parity": {
+            "max_abs": 0.0032949447631835938,
+            "max_rel": 0.0005376354421833312
+          },
+          "policy": "full"
+        }
+      ],
+      "policy": "half",
+      "policy_reason": "half-width arithmetic on the Neural Engine",
+      "unit_spread": 0.005003521405813574
+    },
+    "frontend": "exir",
+    "members": {
+      "Data/com.apple.CoreML/model.mlmodel": "8a3f8e1aba3967b2bd0f28eee8b99d83a9cd45cae2eddcd9bbad634617b57081",
+      "Data/com.apple.CoreML/weights/weight.bin": "add335cd38275dbe088cc8d6f273f8e64020f95c6ba2b94e216205431c93d49b",
+      "Manifest.json": "2d104abda12c99da63b372730a434a6ab9d3fff3cfc956587c3a1e56397ad829",
+      "executorch_debug_handle_mapping.json": "1f48ca1dc01ca59d1115d952cf20160481b9c7c658ac93b4f3c0255577f86696"
+    },
+    "parity": {
+      "max_abs": 0.014379024505615234,
+      "max_rel": 0.0022464929650244073
+    },
+    "precision": "float16",
+    "sha256": "f4a0e31675ce9dfd3842c0225ad497a6aa2fbcaa70b1ed1f116f308202b57458"
+  },
+  "cross_platform": {
+    "max_abs": 0.013324737548828125,
+    "max_rel": 0.0018590109233402826
+  },
+  "inputs": [
+    {
+      "dtype": "float32",
+      "name": "segments",
+      "shape": [
+        1,
+        16,
+        573
+      ]
+    }
+  ],
+  "model": "activity_history_transformer",
+  "notes": "",
+  "outputs": [
+    {
+      "dtype": "float32",
+      "name": "encoded",
+      "shape": [
+        1,
+        16,
+        336
+      ]
+    },
+    {
+      "dtype": "float32",
+      "name": "attention",
+      "shape": [
+        1,
+        1,
+        6,
+        16,
+        18
+      ]
+    }
+  ],
+  "parameters": 939184,
+  "role": "Self-attention over sixteen history segments; also returns its attention map",
+  "source_asset": "automatic_activity_detection_3_1_11.pt",
+  "source_asset_sha256": "130d8a20ee0958b79cd19945a227665fcea709a81867e7d2c4a3aa83324e1159",
+  "tflite": {
+    "artifact": "activity_history_transformer.tflite",
+    "bytes": 1898440,
+    "parity": {
+      "max_abs": 0.0031976699829101562,
+      "max_rel": 0.0005191413674003675
+    },
+    "passes": {
+      "bytes_full_width": 3766016,
+      "bytes_halved": 1898440,
+      "constants_rounded": 8,
+      "legacy_convolutions_rewritten": 0,
+      "nearest_downsamples_rewritten": 0,
+      "norms_folded": 0,
+      "precision": "float16 weights, float32 activations",
+      "weights_halved": 8
+    },
+    "precision": "float16 weights, float32 activations",
+    "sha256": "5ae0d644ed116890d069136bfff653feaf48522141c492aa43f886c0fab4ea63"
+  },
+  "trace_max_abs_error": 0.003295421600341797,
+  "version": "3.1.11",
+  "weights_kept_full": 12,
+  "weights_rounded": 8
+}
