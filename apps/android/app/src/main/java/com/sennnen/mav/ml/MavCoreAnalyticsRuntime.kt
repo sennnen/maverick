@@ -32,9 +32,14 @@ class MavCoreAnalyticsRuntime(private val runtime: MavRuntime) : MavAnalyticsRun
             runtime.cancelModelInference(requestId)
     }
 
-    override fun admitPpgStages(deviceId: ULong, atMs: Long) {
-        runtime.admitPpgStages(deviceId, atMs)
-    }
+    override fun admitPpgStages(deviceId: ULong, atMs: Long): List<MavStageHealth> =
+        runtime.admitPpgStages(deviceId, atMs).map {
+            MavStageHealth(
+                model = it.modelSlug,
+                applicability = MavApplicability.parse(it.applicability),
+                substitutions = it.substitutions,
+            )
+        }
 
     override fun plan(
         deviceId: ULong,

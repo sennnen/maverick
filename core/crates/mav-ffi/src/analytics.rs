@@ -22,6 +22,8 @@
 //! against the wrong tensors.
 
 use crate::{FfiError, MavRuntime};
+use mav_analytic::model_zoo::cycle::{self, CycleDay, CycleProfile};
+use mav_analytic::model_zoo::health::InputHealth;
 use mav_analytic::model_zoo::pipeline::{ProfileField, COMPOSITES, PIPELINE};
 use mav_analytic::model_zoo::{ppg, ModelId, NamedTensor};
 use mav_engine::analytics::{
@@ -100,7 +102,10 @@ pub struct AnalyticsPlanReport {
 }
 
 /// What happened when a stage's tensors were offered.
-#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+///
+/// Not `Eq`: `real_fraction` is a float, and a record carrying one has no total equality worth
+/// deriving.
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct StageAdmission {
     pub model_slug: String,
     /// The id to answer against, absent when the answer was already known.
@@ -108,6 +113,16 @@ pub struct StageAdmission {
     /// True when these exact tensors had already been answered by an artefact this build still
     /// admits, so nothing was queued.
     pub already_known: bool,
+    /// Fraction of the prepared tensors that carried a real reading rather than a substitution.
+    pub real_fraction: f32,
+    /// The archive's own validity gate, where it defines one. `None` is "no opinion", which is
+    /// not the same as passing.
+    pub gate_passed: Option<bool>,
+    /// `sound`, `degraded` or `unfounded`. A surface must not present an `unfounded` result as a
+    /// reading: the model answered, but it answered about padding.
+    pub applicability: String,
+    /// Why anything was substituted: `padded`, `out_of_range`, `missing`.
+    pub substitutions: Vec<String>,
 }
 
 /// A remembered result, as the platform persists it.
@@ -193,7 +208,7 @@ impl MavRuntime {
         })
     }
 
-    /// Queue one stage's tensors, unless the same tensors have already been answered.
+    /// Queue one stage's tensors, unless the same tensors are already answered or already running.
     ///
     /// This is the production enqueue. It differs from `enqueue_model_inference` in exactly one
     /// way — it remembers — and that difference is why the app uses it: a wearer who opens the
@@ -209,38 +224,15 @@ impl MavRuntime {
                 format!("this build ships no model named {slug}"),
             )
         })?;
-        let tensors: Vec<NamedTensor> = inputs
+        let tensors = inputs
             .into_iter()
             .map(|tensor| NamedTensor {
                 name: tensor.name,
                 values: tensor.values,
             })
             .collect();
-        let mark = fingerprint(&tensors);
-
-        let mut scheduler = self.scheduler_lock()?;
-        if scheduler.is_fresh(model, mark) {
-            return Ok(StageAdmission {
-                model_slug: slug,
-                request_id: None,
-                already_known: true,
-            });
-        }
-        // Validate and queue before recording the fingerprint: a request the host refuses must
-        // not leave an issued entry behind that a later id could collide with.
-        let request_id = {
-            let mut host = self.model_host_lock()?;
-            host.enqueue(mav_analytic::model_zoo::ModelRequest {
-                model,
-                inputs: tensors,
-            })?
-        };
-        scheduler.note_issued(request_id, model, mark);
-        Ok(StageAdmission {
-            model_slug: slug,
-            request_id: Some(request_id),
-            already_known: false,
-        })
+        // The caller supplied these tensors, so the core has no view on what they are made of.
+        self.admit_prepared(model, tensors, InputHealth::unmeasured())
     }
 
     /// Everything worth persisting across a relaunch.
@@ -286,6 +278,66 @@ impl MavRuntime {
     pub fn invalidate_analytics_cache(&self) -> Result<(), FfiError> {
         self.scheduler_lock()?.forget_all();
         Ok(())
+    }
+
+    /// Queue the cycle heads from a logged cycle history.
+    ///
+    /// The six runnable popsicle models share one input pair, so they share one call. The
+    /// history is the wearer's own logged cycle days, oldest first, and the caller supplies it
+    /// rather than the core reading it: cycle logging is app state, not a sensor stream, and the
+    /// core has no table for it.
+    ///
+    /// Each day carries three optional readings. `None` and a reading the archive rejects both
+    /// become zero in the tensor — that is what the training pipeline does — and the returned
+    /// admission says which happened and how much of the window was real. A caller that ignores
+    /// `applicability` will show an ovulation probability computed from padding, so it is
+    /// returned rather than logged.
+    #[allow(clippy::too_many_arguments)]
+    pub fn admit_cycle_stages(
+        &self,
+        highest_temperature_c: Vec<f32>,
+        average_breath_rate: Vec<f32>,
+        average_heart_rate_bpm: Vec<f32>,
+        age_years: Option<f32>,
+        typical_cycle_length_days: Option<f32>,
+        typical_luteal_length_days: Option<f32>,
+    ) -> Result<Vec<StageAdmission>, FfiError> {
+        let days = highest_temperature_c.len();
+        if average_breath_rate.len() != days || average_heart_rate_bpm.len() != days {
+            return Err(FfiError::from(MavError::new(
+                codes::ML_MODEL_TENSOR_INVALID,
+                "a cycle history needs the same number of days in every column",
+            )));
+        }
+        // A non-finite value is how a caller spells "not recorded" across the FFI, since uniffi
+        // has no per-element optional. It reaches the front-end as the missing case it is.
+        let optional = |value: f32| value.is_finite().then_some(value);
+        let history: Vec<CycleDay> = (0..days)
+            .map(|index| CycleDay {
+                highest_temperature_c: optional(highest_temperature_c[index]),
+                average_breath_rate: optional(average_breath_rate[index]),
+                average_heart_rate_bpm: optional(average_heart_rate_bpm[index]),
+            })
+            .collect();
+        let profile = CycleProfile {
+            age_years,
+            typical_cycle_length_days,
+            typical_luteal_length_days,
+        };
+        let prepared = cycle::cycle_input(&history, &profile)?;
+
+        let mut admitted = Vec::new();
+        for model in cycle::CYCLE_MODELS {
+            admitted.push(self.admit_prepared(
+                *model,
+                vec![
+                    NamedTensor::new("time_series", prepared.time_series.clone()),
+                    NamedTensor::new("scalars", prepared.scalars.clone()),
+                ],
+                prepared.health.clone(),
+            )?);
+        }
+        Ok(admitted)
     }
 
     /// Read the day's stored optical signal and queue every encoder this build can feed from it.
@@ -338,22 +390,31 @@ impl MavRuntime {
 
         let mut admitted = Vec::new();
         // Pulse-PPG: the four-minute window, resampled and z-scored by its own front-end.
-        if let Ok(prepared) = ppg::pulse_ppg_input(&signal, rate) {
-            admitted.push(
-                self.admit_prepared(ModelId::PulsePpg, vec![NamedTensor::new("ppg", prepared)])?,
-            );
+        if let Ok((prepared, health)) = ppg::pulse_ppg_input_with_health(&signal, rate) {
+            admitted.push(self.admit_prepared(
+                ModelId::PulsePpg,
+                vec![NamedTensor::new("ppg", prepared)],
+                health,
+            )?);
         }
         // The two thirty-second front-ends share a resample and a fit, so do it once.
-        let at_fifty = if rate == ppg::PPG_SAMPLE_RATE_HZ {
-            signal.clone()
-        } else {
-            ppg::linear_resample(&signal, rate, ppg::PPG_SAMPLE_RATE_HZ)
-        };
-        let segment = ppg::fit_or_pad(&at_fifty, ppg::PPG_SEGMENT_SAMPLES);
+        let segment = ppg::resample_window(
+            &signal,
+            rate,
+            ppg::PPG_SAMPLE_RATE_HZ,
+            ppg::PPG_SEGMENT_SAMPLES,
+        );
+        // Measured against the resampled length, not the fitted one: the fit is what inserts the
+        // zeros, so asking afterwards would report a padded window as complete.
+        let segment_health = ppg::window_health(
+            ppg::resampled_len(signal.len(), rate, ppg::PPG_SAMPLE_RATE_HZ),
+            ppg::PPG_SEGMENT_SAMPLES,
+        );
         if let Ok(prepared) = ppg::pulsenet_input(&segment) {
             admitted.push(self.admit_prepared(
                 ModelId::PulsenetFoundation,
                 vec![NamedTensor::new("ppg", prepared)],
+                segment_health.clone(),
             )?);
         }
         if let Ok(pulse) = ppg::cva_pulse(&segment) {
@@ -368,6 +429,13 @@ impl MavRuntime {
                 admitted.push(self.admit_prepared(
                     ModelId::CvaEncoder,
                     vec![NamedTensor::new("pulses", pulse.pulses[..block].to_vec())],
+                    // The archive's shape gate, and the window's own completeness. A padded
+                    // segment that still passes the gate is not sound.
+                    InputHealth {
+                        real_fraction: segment_health.real_fraction,
+                        gate_passed: pulse.health.gate_passed,
+                        substitutions: segment_health.substitutions.clone(),
+                    },
                 )?);
             }
         }
@@ -534,8 +602,11 @@ fn sample_rate_hz(samples: &[mav_model::stream::Sample<mav_model::raw::RawValue>
     if gaps.is_empty() {
         return None;
     }
-    gaps.sort_unstable();
-    let median = gaps[gaps.len() / 2];
+    // Only the middle element is wanted, and a day of optical samples is millions of gaps; a full
+    // sort to read one of them is the wrong shape of work.
+    let middle = gaps.len() / 2;
+    let (_, median, _) = gaps.select_nth_unstable(middle);
+    let median = *median;
     let rate = (1_000_000_000_f64 / median as f64).round();
     (1.0..=1000.0).contains(&rate).then_some(rate as u32)
 }
@@ -546,23 +617,44 @@ impl MavRuntime {
         &self,
         model: ModelId,
         inputs: Vec<NamedTensor>,
+        health: InputHealth,
     ) -> Result<StageAdmission, FfiError> {
         let slug = model.contract().slug.to_owned();
         let mark = fingerprint(&inputs);
+        let applicability = health.applicability().name().to_owned();
+        let substitutions: Vec<String> = health
+            .substitutions
+            .iter()
+            .map(|reason| reason.name().to_owned())
+            .collect();
         let mut scheduler = self.scheduler_lock()?;
-        if scheduler.is_fresh(model, mark) {
+        // Answered already, or already in flight. Both mean "do not queue this again"; only the
+        // first means the answer exists, which is why `already_known` distinguishes them.
+        let known = scheduler.is_fresh(model, mark);
+        if known || scheduler.is_issued(model, mark) {
             return Ok(StageAdmission {
                 model_slug: slug,
                 request_id: None,
-                already_known: true,
+                already_known: known,
+                real_fraction: health.real_fraction,
+                gate_passed: health.gate_passed,
+                applicability,
+                substitutions,
             });
         }
+        // Validate and queue before recording the fingerprint: a request the host refuses must not
+        // leave an issued entry behind that a later id could collide with. The scheduler guard is
+        // still held, which is the one nesting this facade allows (see `MavRuntime`'s fields).
         let request_id = {
             let mut host = self.model_host_lock()?;
             host.enqueue(mav_analytic::model_zoo::ModelRequest { model, inputs })?
         };
         scheduler.note_issued(request_id, model, mark);
         Ok(StageAdmission {
+            real_fraction: health.real_fraction,
+            gate_passed: health.gate_passed,
+            applicability,
+            substitutions,
             model_slug: slug,
             request_id: Some(request_id),
             already_known: false,

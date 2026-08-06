@@ -19,13 +19,26 @@ sealed interface MavSignalState {
      * Every stage answered. [atMs] is when the last one did, so a surface can age the reading
      * rather than presenting an overnight result as current.
      */
-    data class Ready(val atMs: Long, val displayable: Boolean) : MavSignalState
+    data class Ready(
+        val atMs: Long,
+        val displayable: Boolean,
+        /**
+         * How much of what went in was real. [MavApplicability.DEGRADED] means the reading
+         * stands but should carry a qualification; [MavApplicability.SOUND] means it needs none.
+         * An unfounded result never reaches this state — see [Unfounded].
+         */
+        val applicability: MavApplicability = MavApplicability.SOUND,
+    ) : MavSignalState
 
     /**
      * Answered, but from inputs that have since moved. The previous values stay on screen —
      * blanking a good reading because a newer one is pending is worse than labelling it.
      */
-    data class Stale(val atMs: Long, val displayable: Boolean) : MavSignalState
+    data class Stale(
+        val atMs: Long,
+        val displayable: Boolean,
+        val applicability: MavApplicability = MavApplicability.SOUND,
+    ) : MavSignalState
 
     /**
      * Nothing here can run on this device as it stands. [reasons] carries one entry per stage,
@@ -33,6 +46,20 @@ sealed interface MavSignalState {
      * SpO2" and not "5 models unavailable".
      */
     data class Unavailable(val reasons: List<MavUnavailable>) : MavSignalState
+
+    /**
+     * Every stage answered, and it answered about padding rather than about the wearer.
+     *
+     * A separate state rather than a flag on [Ready], because the difference has to be
+     * unrepresentable rather than merely documented: a surface that matches on `Ready` to draw a
+     * number cannot reach this branch by accident, which is exactly the mistake worth making
+     * impossible. The model did run and the result may be stored; it is not a reading.
+     *
+     * [substitutions] says why — `out_of_range` when the wearer's readings fall outside the band
+     * the archive accepts, `missing` when they were never taken, `padded` when the window was too
+     * short. The three send a wearer to three different places.
+     */
+    data class Unfounded(val atMs: Long, val substitutions: List<String>) : MavSignalState
 
     /** The OS declined or postponed the work. It will be retried when the app is next open. */
     data object Deferred : MavSignalState
@@ -108,6 +135,10 @@ object MavSignalReducer {
      * @param failures attempts so far per model, kept by the engine across retries.
      * @param deferred true when the OS declined the background window this pass.
      * @param missingPermission a permission the work needs and does not have, if any.
+     * @param health what the core said about the tensors behind each model, keyed by slug. A
+     *   model absent from the map is treated as sound: the two front-ends that report health are
+     *   the ported ones, and a stage whose inputs were never measured must not be reported worse
+     *   than one that was measured and passed.
      */
     fun reduce(
         stages: List<MavPlannedStage>,
@@ -117,6 +148,7 @@ object MavSignalReducer {
         failures: Map<String, Int> = emptyMap(),
         deferred: Boolean = false,
         missingPermission: String? = null,
+        health: Map<String, MavStageHealth> = emptyMap(),
     ): List<MavSignal> =
         // `groupBy` keeps first-appearance order, so the surface does not reshuffle between
         // passes.
@@ -124,7 +156,15 @@ object MavSignalReducer {
             val counts = coverage[name]
             MavSignal(
                 name = name,
-                state = stateOf(group, completedAtMs, invalidated, failures, deferred, missingPermission),
+                state = stateOf(
+                    group,
+                    completedAtMs,
+                    invalidated,
+                    failures,
+                    deferred,
+                    missingPermission,
+                    health,
+                ),
                 total = counts?.total ?: group.size,
                 runnable = counts?.runnable
                     ?: group.count { it.state != MavStageState.UNAVAILABLE },
@@ -138,6 +178,7 @@ object MavSignalReducer {
         failures: Map<String, Int>,
         deferred: Boolean,
         missingPermission: String?,
+        health: Map<String, MavStageHealth>,
     ): MavSignalState {
         // A permission the work cannot proceed without outranks everything: the wearer can fix
         // it, and every other state would be describing a consequence rather than the cause.
@@ -168,16 +209,75 @@ object MavSignalReducer {
 
         val displayable = runnable.any { it.displayable }
         val at = runnable.mapNotNull { completedAtMs[it.model] }.maxOrNull() ?: 0L
+        val verdict = MavApplicability.worst(
+            runnable.mapNotNull { health[it.model]?.applicability },
+        )
+        if (verdict == MavApplicability.UNFOUNDED) {
+            return MavSignalState.Unfounded(
+                atMs = at,
+                substitutions = runnable
+                    .mapNotNull { health[it.model] }
+                    .flatMap { it.substitutions }
+                    .distinct(),
+            )
+        }
         return if (runnable.any { invalidated.contains(it.model) }) {
-            MavSignalState.Stale(at, displayable)
+            MavSignalState.Stale(at, displayable, verdict)
         } else {
-            MavSignalState.Ready(at, displayable)
+            MavSignalState.Ready(at, displayable, verdict)
         }
     }
 }
 
 /** The states the core's plan reports, as an enum the reducer can switch on exhaustively. */
 enum class MavStageState { READY, BLOCKED, CACHED, UNAVAILABLE }
+
+/**
+ * How much of a model's input was real, mirroring `mav_analytic::model_zoo::health::Applicability`.
+ *
+ * This is not a confidence score and must not be rendered as one. It says what went in, not how
+ * right the answer is — the models in this build have never been checked against labelled ground
+ * truth, so no honest confidence exists to show.
+ */
+enum class MavApplicability {
+    SOUND,
+    DEGRADED,
+    UNFOUNDED,
+
+    /** The core did not build these tensors, so it has no view. The replay and test path. */
+    UNMEASURED;
+
+    companion object {
+        /** Parse the core's wire name. An unknown name is [UNMEASURED], never [SOUND]. */
+        fun parse(name: String): MavApplicability = when (name) {
+            "sound" -> SOUND
+            "degraded" -> DEGRADED
+            "unfounded" -> UNFOUNDED
+            else -> UNMEASURED
+        }
+
+        /**
+         * The verdict for a group: the worst one present.
+         *
+         * A signal fed by several models is only as sound as its weakest input, and taking the
+         * best would let one complete stage vouch for five padded ones.
+         */
+        fun worst(values: Collection<MavApplicability>): MavApplicability = when {
+            values.isEmpty() -> SOUND
+            values.contains(UNFOUNDED) -> UNFOUNDED
+            values.contains(DEGRADED) -> DEGRADED
+            values.contains(UNMEASURED) -> UNMEASURED
+            else -> SOUND
+        }
+    }
+}
+
+/** What the core said about the tensors behind one model, as the FFI reports it. */
+data class MavStageHealth(
+    val model: String,
+    val applicability: MavApplicability,
+    val substitutions: List<String>,
+)
 
 /** How many of one signal's models this device can run, as the core counted them. */
 data class MavSignalCoverage(val total: Int, val runnable: Int)

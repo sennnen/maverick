@@ -63,7 +63,7 @@ final class MavAnalyticsEngine: @unchecked Sendable {
 
   /// Observe snapshot changes. Delivered on the main queue, because the only caller is a view.
   func onChange(_ handler: @escaping @Sendable (MavAnalyticsSnapshot) -> Void) {
-    state.onChange = handler
+    state.setOnChange(handler)
   }
 
   /// Run one pass for `deviceID`.
@@ -93,21 +93,24 @@ final class MavAnalyticsEngine: @unchecked Sendable {
 
     // Queue whatever the day's stored optical signal can feed. The core reads the store and
     // builds the tensors; nothing here ever sees a raw sample.
+    let health: [MavStageHealth]
     do {
-      try runtime.admitPPGStages(deviceID: deviceID, atMs: now)
+      health = try runtime.admitPPGStages(deviceID: deviceID, atMs: now)
     } catch {
       state.setWorking(false)
       return .failed
     }
 
     var failed = 0
+    // One bridge and one host for the whole pass, as on Android. Building them per round made a
+    // fresh host adapter up to sixteen times for a queue that is usually empty by the second.
+    let bridge = MavModelBridge(host: runtime.host(), runner: runner, clock: clock)
     // Drain until the queue is empty. An encoder completing can queue its heads *inside* the
     // core, so an empty queue — not a fixed count — is the terminating condition.
     var rounds = 0
     while rounds < Self.maxRounds {
       rounds += 1
-      let outcome = MavModelBridge(host: runtime.host(), runner: runner, clock: clock)
-        .drain(limit: mode.burst)
+      let outcome = bridge.drain(limit: mode.burst)
       failed += outcome.failed
       if outcome.completed == 0 && outcome.failed == 0 { break }
     }
@@ -129,7 +132,8 @@ final class MavAnalyticsEngine: @unchecked Sendable {
           completedAtMs: completedAt,
           failures: failures,
           deferred: mode == .deferred && failed > 0,
-          missingPermission: permissionMissing
+          missingPermission: permissionMissing,
+          health: Dictionary(uniqueKeysWithValues: health.map { ($0.model, $0) })
         ),
         working: false,
         lastPassAtMs: now
@@ -176,12 +180,21 @@ final class MavAnalyticsEngine: @unchecked Sendable {
 private final class MavAnalyticsState: @unchecked Sendable {
   private let lock = NSLock()
   private var current = MavAnalyticsSnapshot()
-  var onChange: (@Sendable (MavAnalyticsSnapshot) -> Void)?
+  /// Written from the main thread when a view appears, read from the analytics queue on every
+  /// publish. Both go through the lock: it was a plain `var` before, which is a data race in the
+  /// exact window that matters — a view subscribing while a background pass is publishing.
+  private var onChange: (@Sendable (MavAnalyticsSnapshot) -> Void)?
 
   var snapshot: MavAnalyticsSnapshot {
     lock.lock()
     defer { lock.unlock() }
     return current
+  }
+
+  func setOnChange(_ handler: @escaping @Sendable (MavAnalyticsSnapshot) -> Void) {
+    lock.lock()
+    onChange = handler
+    lock.unlock()
   }
 
   func publish(_ next: MavAnalyticsSnapshot) {
@@ -215,7 +228,13 @@ private final class MavAnalyticsState: @unchecked Sendable {
 /// tested with no device, no model and no Rust.
 protocol MavAnalyticsRuntime {
   func host() -> MavModelBridge.Host
-  func admitPPGStages(deviceID: UInt64, atMs: Int64) throws
+  /// Queue whatever the day's stored optical signal can feed, and report what the tensors were
+  /// made of.
+  ///
+  /// The return value used to be discarded. It carries the only label-free evidence this build
+  /// has about whether a model answered about the wearer or about padding, so dropping it made
+  /// every result look equally trustworthy on screen.
+  func admitPPGStages(deviceID: UInt64, atMs: Int64) throws -> [MavStageHealth]
   func plan(
     deviceID: UInt64,
     atMs: Int64,

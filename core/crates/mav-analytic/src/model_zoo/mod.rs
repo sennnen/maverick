@@ -38,6 +38,7 @@
 
 pub mod cycle;
 pub mod deterministic;
+pub mod health;
 pub mod pipeline;
 pub mod ppg;
 pub mod registry;

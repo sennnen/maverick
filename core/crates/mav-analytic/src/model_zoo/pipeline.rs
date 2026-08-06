@@ -172,11 +172,34 @@ pub enum Blocker {
     /// The wrapper's logic is readable in the archive and every input exists on a supported
     /// strap. This is work, and the note names what has to be built.
     Recoverable,
-    /// The model reads features an Oura ring's own firmware computes — `stride_frequency`,
-    /// `gait_amplitude_frac`, `acm_average_*`, `ring_met`, `motion_seconds` and the rest of the
-    /// `stepmotion`/`motion` blocks. The archives consume those features; they do not contain the
-    /// code that produces them, and no strap Maverick supports emits them. Porting the wrapper
-    /// would produce a correctly shaped tensor with nothing real in it.
+    /// The model reads features an Oura ring's own firmware computes. The archives consume them;
+    /// they do not contain the code that produces them, and no strap Maverick supports emits them.
+    /// Porting the wrapper would give a correctly shaped tensor with nothing real in it.
+    ///
+    /// The schema is fully known, from the Oura app's own database classes
+    /// (`NexusDbRingMotion`, `NexusDbRingRealStepsFeatures`) — the `Ring` in those names is the
+    /// point, the ring computes them and the app only stores them:
+    ///
+    /// - **motion, 8 columns**, matching `step_counter`'s `selected_motion_columns = [0..7]`:
+    ///   `acm_average_x/y/z`, `motion_seconds`, `orientation`, `regular_motion`,
+    ///   `low_intensity_motion_count`, `high_intensity_motion_count`.
+    /// - **step motion, 11 columns**, matching `selected_stepmotion_columns = [0..10]`: one
+    ///   windowed-FFT block of eight — `stride_frequency`, `stride_amplitude_frac`,
+    ///   `gait_amplitude_frac`, `total_amplitude_mg`, `frequency_bin_high_frac`,
+    ///   `frequency_bin_mid_frac`, `first_non_locomotor_frequency`,
+    ///   `first_non_locomotor_amplitude_frac` — plus three time-domain statistics,
+    ///   `sum_accel_mg_std`, `y_accel_std_ratio`, `z_accel_std_ratio`. The ring stores three such
+    ///   FFT blocks (`fft1_`/`fft2_`/`fft3_`) and the models take one.
+    ///
+    /// So these are windowed FFT gait features and accelerometer standard-deviation ratios, and
+    /// Maverick already has the raw signal they would be computed from ([`StreamKind::Imu`]). What
+    /// is missing is not the *kind* of computation but its constants: FFT window length, sample
+    /// rate, the frequency-bin boundaries, and the stride and non-locomotor peak definitions.
+    /// Those live in the ring firmware, and both images available here are encrypted — a
+    /// `.cyacd2` carrying a Cypress `@EIV:` whose rows the ring's own bootloader decrypts (the
+    /// app only forwards them, so there is no key in the app), and a `.bin` at 7.997 bits/byte.
+    /// Guessing the constants would be inventing the feature, which is the one thing this module
+    /// exists to prevent.
     RingFirmwareFeatures,
 }
 
@@ -275,7 +298,9 @@ const RISK_LEVEL_NOT_ADMITTED: &str =
     "the tree returns its own argmax, not a risk level; the calibration onto one is not in this \
      build";
 
-/// One row per admitted model, in the same order as [`ALL_MODELS`].
+/// One row per admitted model, grouped by [`Signal`] rather than in [`ALL_MODELS`]'s
+/// alphabetical-by-slug order — a model's row makes sense next to the ones it shares a product
+/// surface with, not next to whatever sorts near it.
 ///
 /// `tests::every_model_has_exactly_one_row` holds the two lists together, so a conversion that
 /// adds a model fails here until someone says where its inputs come from. That is the point:
@@ -827,7 +852,7 @@ pub fn pipeline_of(model: ModelId) -> Option<&'static ModelPipeline> {
     PIPELINE.iter().find(|entry| entry.model == model)
 }
 
-/// Every model that contributes to one signal, in [`ALL_MODELS`] order.
+/// Every model that contributes to one signal, in [`PIPELINE`] order.
 pub fn models_for(signal: Signal) -> Vec<ModelId> {
     PIPELINE
         .iter()
@@ -1214,8 +1239,6 @@ mod tests {
         }
     }
 
-    /// A model marked `Upstream` must actually have upstream models, or it is a root claiming
-    /// someone else will feed it and nothing ever will.
     /// Eleven models are blocked on Oura ring firmware features, and the list is pinned. A model
     /// moving out of this set means someone found a way to produce those features; a model moving
     /// into it means a capability was quietly given up. Both deserve to be a failing test.
@@ -1251,6 +1274,8 @@ mod tests {
         }
     }
 
+    /// A model marked `Upstream` must actually have upstream models, or it is a root claiming
+    /// someone else will feed it and nothing ever will.
     #[test]
     fn an_upstream_fed_model_has_upstream_models() {
         for entry in PIPELINE {

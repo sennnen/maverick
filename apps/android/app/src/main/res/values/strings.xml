@@ -12,6 +12,13 @@
     <string name="analytics_state_failed">Could not finish</string>
     <string name="analytics_retry">Try again</string>
     <string name="analytics_state_computed_not_shown">Computed — no reading to show yet</string>
+    <!-- Some of the input was substituted, so the reading stands but is qualified. Draft copy. -->
+    <string name="analytics_state_ready_partial">Up to date — based on partial data</string>
+    <!-- The model answered, but every reading behind it fell outside the range this model
+         accepts, so the answer is arithmetic on padding rather than a reading. Draft copy. -->
+    <string name="analytics_state_unfounded_out_of_range">Not enough usable data — your readings are outside the range this model accepts</string>
+    <!-- Same, but the readings were never taken rather than rejected. Draft copy. -->
+    <string name="analytics_state_unfounded_missing">Not enough data recorded yet to compute this</string>
     <string name="analytics_needs_sensor">Needs a sensor this device does not have: %1$s</string>
     <string name="analytics_needs_profile">Add your %1$s to enable this</string>
     <string name="analytics_needs_upstream">Waiting on %1$s</string>

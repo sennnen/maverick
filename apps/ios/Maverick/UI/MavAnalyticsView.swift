@@ -153,11 +153,22 @@ enum MavSignalCopy {
         done,
         total
       )
-    case let .ready(_, displayable):
-      // The model ran and its vocabulary is not admitted. Saying "up to date" here would imply
-      // a reading exists to be up to date.
+    case let .ready(_, displayable, applicability):
+      if !displayable {
+        // The model ran and its vocabulary is not admitted. Saying "up to date" here would imply
+        // a reading exists to be up to date.
+        return NSLocalizedString("analytics.state.computedNotShown", comment: "")
+      }
       return NSLocalizedString(
-        displayable ? "analytics.state.ready" : "analytics.state.computedNotShown",
+        applicability == .degraded ? "analytics.state.readyPartial" : "analytics.state.ready",
+        comment: ""
+      )
+    // Answered, and answered about padding. The substitution says which fix is available:
+    // readings outside the band this model accepts is a different sentence from no readings.
+    case let .unfounded(_, substitutions):
+      return NSLocalizedString(
+        substitutions.contains("out_of_range")
+          ? "analytics.state.unfoundedOutOfRange" : "analytics.state.unfoundedMissing",
         comment: ""
       )
     case .stale:

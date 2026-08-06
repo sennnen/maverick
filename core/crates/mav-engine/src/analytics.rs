@@ -338,9 +338,17 @@ impl AnalyticsScheduler {
         self.issued.remove(&request_id).is_some()
     }
 
-    /// How many issued inferences have not yet been filed or abandoned.
-    pub fn issued_count(&self) -> usize {
-        self.issued.len()
+    /// True when this model already has an inference in flight for exactly these inputs.
+    ///
+    /// [`Self::is_fresh`] answers about *completed* work, which is not enough on its own: a
+    /// second planning pass that runs before the first has been answered would queue the same
+    /// tensors again, and the platform would run them twice. That is the duplicate work this
+    /// scheduler exists to prevent, and nothing else notices it — both passes look correct in
+    /// isolation.
+    pub fn is_issued(&self, model: ModelId, fingerprint: u64) -> bool {
+        self.issued
+            .values()
+            .any(|(issued, mark)| *issued == model && *mark == fingerprint)
     }
 
     /// Decide what this pass should do.
@@ -884,6 +892,24 @@ mod tests {
         let age = vec![NamedTensor::new("age", vec![40.0])];
         let weight = vec![NamedTensor::new("weight", vec![40.0])];
         assert_ne!(fingerprint(&age), fingerprint(&weight));
+    }
+
+    /// In-flight work is not queued a second time.
+    #[test]
+    fn work_already_in_flight_is_not_issued_again() {
+        let mut scheduler = AnalyticsScheduler::new();
+        let id = model("pulse_ppg");
+        assert!(!scheduler.is_issued(id, 7));
+        scheduler.note_issued(1, id, 7);
+        assert!(scheduler.is_issued(id, 7), "the same inputs are in flight");
+        assert!(!scheduler.is_issued(id, 8), "different inputs are not");
+        assert!(
+            !scheduler.is_issued(model("cva_encoder"), 7),
+            "a different model with the same fingerprint is not in flight"
+        );
+        // Once abandoned it may be issued again.
+        assert!(scheduler.note_abandoned(1));
+        assert!(!scheduler.is_issued(id, 7));
     }
 
     #[test]

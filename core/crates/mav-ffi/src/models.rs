@@ -141,12 +141,12 @@ impl MavRuntime {
         segment: Vec<f32>,
         source_rate_hz: u32,
     ) -> Result<u64, FfiError> {
-        let resampled = if source_rate_hz == ppg::PPG_SAMPLE_RATE_HZ {
-            segment
-        } else {
-            ppg::linear_resample(&segment, source_rate_hz, ppg::PPG_SAMPLE_RATE_HZ)
-        };
-        let fitted = ppg::fit_or_pad(&resampled, ppg::PPG_SEGMENT_SAMPLES);
+        let fitted = ppg::resample_window(
+            &segment,
+            source_rate_hz,
+            ppg::PPG_SAMPLE_RATE_HZ,
+            ppg::PPG_SEGMENT_SAMPLES,
+        );
         let prepared = ppg::pulsenet_input(&fitted)?;
         let request = ModelRequest {
             model: ModelId::PulsenetFoundation,
@@ -191,8 +191,8 @@ impl MavRuntime {
         // File the result against the inputs it was issued for, so the next pass knows not to
         // ask again. Only requests that came through `admit_analytics_stage` are known here; a
         // replay driving the raw queue files nothing, which is correct — it never asked to be
-        // remembered. The host lock is released first: taking the scheduler while holding it
-        // is the one place in this facade where two of these mutexes would nest.
+        // remembered. The host lock is released first: the facade's order is scheduler before
+        // models (see `MavRuntime`), and taking them the other way round here would invert it.
         self.scheduler_lock()?.note_completed(
             completed.request_id,
             completed.model_sha256.clone(),

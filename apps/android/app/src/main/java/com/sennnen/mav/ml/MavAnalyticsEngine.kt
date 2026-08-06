@@ -82,8 +82,9 @@ class MavAnalyticsEngine(
             val now = clock()
             // Queue whatever the day's stored optical signal can feed. The core reads the store
             // and builds the tensors; nothing here ever sees a raw sample.
-            runCatching { runtime.admitPpgStages(deviceId, now) }
-                .onFailure { return failPass() }
+            val health = runCatching { runtime.admitPpgStages(deviceId, now) }
+                .getOrElse { return failPass() }
+                .associateBy { it.model }
 
             var failed = 0
             // One bridge and one host for the whole pass. Building them per round allocated a
@@ -113,6 +114,7 @@ class MavAnalyticsEngine(
                     failures = failureCounts(),
                     deferred = mode == MavRunMode.DEFERRED && failed > 0,
                     missingPermission = permissionMissing,
+                    health = health,
                 ),
                 working = false,
                 lastPassAtMs = now,
@@ -210,7 +212,15 @@ enum class MavRunMode(val wire: String, val burst: Int) {
 interface MavAnalyticsRuntime {
     fun host(): MavModelBridge.Host
 
-    fun admitPpgStages(deviceId: ULong, atMs: Long)
+    /**
+     * Queue whatever the day's stored optical signal can feed, and report what the tensors were
+     * made of.
+     *
+     * The return value used to be discarded. It carries the only label-free evidence this build
+     * has about whether a model answered about the wearer or about padding, so dropping it made
+     * every result look equally trustworthy on screen.
+     */
+    fun admitPpgStages(deviceId: ULong, atMs: Long): List<MavStageHealth>
 
     fun plan(
         deviceId: ULong,

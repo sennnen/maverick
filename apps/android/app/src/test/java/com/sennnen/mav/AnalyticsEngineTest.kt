@@ -5,9 +5,11 @@ import com.sennnen.mav.ml.MavAnalyticsRuntime
 import com.sennnen.mav.ml.MavModelBridge
 import com.sennnen.mav.ml.MavPlan
 import com.sennnen.mav.ml.MavPlannedStage
+import com.sennnen.mav.ml.MavStageHealth
 import com.sennnen.mav.ml.MavRunMode
 import com.sennnen.mav.ml.MavSignalState
 import com.sennnen.mav.ml.MavStageState
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -27,6 +29,7 @@ import uniffi.mav_ffi.ModelTensor
  * run the zoo twice, that a failure is attributed and retried, and that the clock the core is
  * told about is the platform's.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class AnalyticsEngineTest {
 
     /** A queue of requests the drain loop will find, and a record of what came back. */
@@ -79,13 +82,15 @@ class AnalyticsEngineTest {
         private val host: FakeHost,
         var stages: List<MavPlannedStage> = emptyList(),
         var completedAt: Map<String, Long> = emptyMap(),
+        var health: List<MavStageHealth> = emptyList(),
     ) : MavAnalyticsRuntime {
         var admitCalls = 0
 
         override fun host(): MavModelBridge.Host = host
 
-        override fun admitPpgStages(deviceId: ULong, atMs: Long) {
+        override fun admitPpgStages(deviceId: ULong, atMs: Long): List<MavStageHealth> {
             admitCalls += 1
+            return health
         }
 
         override fun plan(

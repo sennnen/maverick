@@ -372,6 +372,62 @@ Two deliberate deviations, recorded because they differ from the training pipeli
 - `cva_pulse` is implemented and tested but has no model to feed, because `cva_predictor` does not
   convert. It is kept because the preprocessing is the harder half.
 
+## Input health: what a model answered *about*
+
+These weights cannot be retrained. There is no labelled corpus to fit a replacement against, so
+every model ships fitted on a cohort and a wear site that may not be the wearer's. That is a
+decision, not an oversight, and `mav_analytic::model_zoo::health` is what makes it survivable.
+
+The split that makes it tractable: **accuracy needs labels and there are none; input health needs
+nothing.** Whether the numbers entering a graph are readings or substitutions is fully knowable at
+inference time and costs almost nothing to record. It separates two failures that look identical
+from outside — a model that ran on real data and was somewhat wrong, which is the price of using
+it, and a model that ran on zeros and returned a confident number anyway, which is not a reading.
+
+The second is not hypothetical. `cycle_input` rejects a temperature outside `[35.5, 37.5]` °C to
+`NaN` and then fills `NaN` with zero, because that is what the archive does. A wearer whose skin
+temperature sits outside that band gets a forty-day series of zeros and an ovulation probability
+computed from none of their own data.
+
+`InputHealth` carries three things: the fraction of contract positions holding a real reading, the
+archive's own validity gate where it defines one, and why anything was substituted. From those it
+reports one of four verdicts:
+
+| verdict | meaning |
+| --- | --- |
+| `sound` | substantially real input, and any gate the archive defines passed |
+| `degraded` | some input substituted, or a gate failed. The reading stands, qualified |
+| `unfounded` | below a quarter of the input was real. Storable; not a reading |
+| `unmeasured` | the core did not build these tensors — the replay and test path |
+
+Three details are deliberate. `out_of_range` and `missing` are reported separately even though both
+become zero, because "your readings fall outside the band this model accepts" and "no readings" send
+a wearer to different places. A failed gate is not outvoted by a complete input, because the gate
+tests a shape the weights were not fitted against and completeness does not answer that. And
+`gate_passed` is an `Option`: no gate is not a passing gate, and defaulting it to `true` would
+manufacture assurance.
+
+### The gate the archives already gave us
+
+`cva_pulse` sets `accepted` from the min-max normalised pulse — mean within `[52.35, 79.81]` and
+standard deviation at least `20.36`. Because min-max normalisation has already removed absolute
+amplitude, this is a **shape** gate rather than an amplitude one: a weaker signal does not fail it,
+a differently shaped pulse does. That makes it an out-of-distribution detector calibrated by the
+people who fitted the encoder, on exactly the axis that matters when a model fitted at one wear site
+is fed another. It was being computed and discarded; it now travels with the prepared pulse.
+
+### What the platforms do with it
+
+`StageAdmission` carries the verdict across the FFI, and both apps reduce it to a per-signal state.
+`unfounded` is a **separate UI state**, not a flag on `ready`: a surface that matches on `ready` to
+draw a number cannot reach it by accident, which is the mistake worth making impossible rather than
+merely documenting. A signal fed by several models takes the worst verdict among them, and an
+unrecognised verdict name parses as `unmeasured` rather than `sound`, so a newer core cannot make an
+older app more trusting than it should be.
+
+This is not a confidence score and must not be rendered as one. It says what went in, not how right
+the answer is.
+
 ## Artefacts, precision and size
 
 ### Where the hashes live

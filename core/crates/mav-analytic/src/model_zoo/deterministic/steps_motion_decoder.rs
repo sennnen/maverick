@@ -364,3 +364,96 @@ mod tests {
         assert_eq!(checked, 5, "every generated vector should be checked");
     }
 }
+
+/// What the decoder's own constants imply about the ring's feature extractor.
+///
+/// The extractor itself runs on the ring and its firmware is encrypted, so this is inference,
+/// not observation — but it is inference from exact numbers rather than from plausibility, and
+/// the arithmetic is pinned here so it can be checked against a real capture the day one exists.
+///
+/// `first_non_locomotor_frequency`'s range ends at **24.804688 Hz**, which is not a round number
+/// anybody types. Requiring it to be the last FFT bin below Nyquist — `(N/2 - 1) * fs / N` — has
+/// exactly one solution in the plausible range with `N` a power of two: **`fs` = 50 Hz, `N` =
+/// 256**. Every other sample rate tried gives a non-integer `N`. The field is 7 bits, which is
+/// 128 codes, which is exactly bins 0..=127: one code per bin, and that is the second, independent
+/// confirmation.
+///
+/// The sub-window is 10 s, from two directions: three sub-windows share a 30 s row here, and
+/// `sleepnet`'s own `low_res` normalisation clips `Motion seconds` to `[0, 10]`.
+///
+/// What this does *not* give, and what still blocks the models that read these columns: the mid
+/// and high frequency band boundaries, the numerator and denominator of the two amplitude
+/// fractions, which signal the transform runs on, the window function, and the peak-selection
+/// rule behind "first non-locomotor". Those are definitions, not constants, and guessing them
+/// would be inventing the feature.
+pub mod recovered {
+    /// Accelerometer sample rate the ring's motion FFT runs at, in hertz.
+    pub const SAMPLE_RATE_HZ: f64 = 50.0;
+
+    /// FFT length.
+    pub const FFT_LENGTH: usize = 256;
+
+    /// Highest bin the ring will report, and the top of `first_non_locomotor_frequency`'s range.
+    pub const TOP_BIN: usize = FFT_LENGTH / 2 - 1;
+
+    /// Spacing between FFT bins, in hertz.
+    pub const BIN_SPACING_HZ: f64 = SAMPLE_RATE_HZ / FFT_LENGTH as f64;
+
+    /// One transform's span, in seconds.
+    pub const FFT_WINDOW_SECONDS: f64 = FFT_LENGTH as f64 / SAMPLE_RATE_HZ;
+
+    /// One sub-window, in seconds. Three of these share a row.
+    pub const SUB_WINDOW_SECONDS: f64 = 10.0;
+}
+
+#[cfg(test)]
+mod recovered_tests {
+    use super::recovered::*;
+    use super::WINDOW_COLUMNS;
+
+    /// The derivation, held to the constant it came from.
+    ///
+    /// If a re-read of the archive ever moves that range endpoint, this fails and the sample rate
+    /// and FFT length have to be derived again rather than quietly carried forward.
+    #[test]
+    fn the_top_of_the_non_locomotor_range_is_the_last_bin_below_nyquist() {
+        let declared = f64::from(WINDOW_COLUMNS[3].high);
+        let derived = TOP_BIN as f64 * BIN_SPACING_HZ;
+        assert!(
+            (declared - derived).abs() < 1e-6,
+            "declared {declared} vs derived {derived}",
+        );
+        assert_eq!(BIN_SPACING_HZ, 0.1953125);
+        assert_eq!(FFT_WINDOW_SECONDS, 5.12);
+    }
+
+    /// No other power-of-two FFT length at a plausible sample rate reaches that endpoint.
+    #[test]
+    fn fifty_hertz_over_two_hundred_and_fifty_six_is_the_only_solution() {
+        let target = f64::from(WINDOW_COLUMNS[3].high);
+        let mut solutions = Vec::new();
+        for rate in [
+            25.0, 26.0, 32.0, 50.0, 52.0, 64.0, 100.0, 104.0, 128.0, 200.0, 256.0,
+        ] {
+            let denominator = 1.0 - 2.0 * target / rate;
+            if denominator <= 0.0 {
+                continue;
+            }
+            let length = 2.0 / denominator;
+            if (length - length.round()).abs() < 1e-6
+                && [32.0, 64.0, 128.0, 256.0, 512.0, 1024.0].contains(&length.round())
+            {
+                solutions.push((rate, length.round() as usize));
+            }
+        }
+        assert_eq!(solutions, vec![(SAMPLE_RATE_HZ, FFT_LENGTH)]);
+    }
+
+    /// The 7-bit field is exactly one code per reported bin, which is the independent check on
+    /// the same derivation: 2^7 = 128 codes, bins 0..=127.
+    #[test]
+    fn the_field_width_matches_the_bin_count() {
+        assert_eq!(WINDOW_COLUMNS[3].bits, 7);
+        assert_eq!(1usize << WINDOW_COLUMNS[3].bits, TOP_BIN + 1);
+    }
+}

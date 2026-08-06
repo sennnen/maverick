@@ -10,6 +10,13 @@
 "analytics.state.deferred" = "Waiting for a quiet moment";
 "analytics.state.failed" = "Could not finish";
 "analytics.state.computedNotShown" = "Computed — no reading to show yet";
+/* Some of the input was substituted, so the reading stands but is qualified. Draft copy. */
+"analytics.state.readyPartial" = "Up to date — based on partial data";
+/* The model answered, but every reading behind it fell outside the range this model accepts, so
+   the answer is arithmetic on padding rather than a reading. Draft copy. */
+"analytics.state.unfoundedOutOfRange" = "Not enough usable data — your readings are outside the range this model accepts";
+/* Same, but the readings were never taken rather than rejected. Draft copy. */
+"analytics.state.unfoundedMissing" = "Not enough data recorded yet to compute this";
 "analytics.retry" = "Try again";
 "analytics.needsSensor" = "Needs a sensor this device does not have: %@";
 "analytics.needsProfile" = "Add your %@ to enable this";

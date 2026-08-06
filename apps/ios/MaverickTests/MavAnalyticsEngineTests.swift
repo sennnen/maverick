@@ -73,7 +73,11 @@ final class MavAnalyticsEngineTests: XCTestCase {
     init(_ host: FakeHost) { self.fakeHost = host }
 
     func host() -> MavModelBridge.Host { fakeHost }
-    func admitPPGStages(deviceID: UInt64, atMs: Int64) throws { admitCalls += 1 }
+    var health: [MavStageHealth] = []
+    func admitPPGStages(deviceID: UInt64, atMs: Int64) throws -> [MavStageHealth] {
+      admitCalls += 1
+      return health
+    }
     func plan(
       deviceID: UInt64,
       atMs: Int64,
@@ -89,13 +93,32 @@ final class MavAnalyticsEngineTests: XCTestCase {
     mode: MavAnalyticsEngine.RunMode = .interactive
   ) -> MavAnalyticsEngine.Outcome {
     let done = expectation(description: "pass")
-    var result: MavAnalyticsEngine.Outcome = .failed
+    // The completion lands on the engine's queue and the value is read back here, so it travels
+    // through a box with a lock rather than a captured `var`.
+    let result = OutcomeBox()
     engine.runPass(deviceID: 1, mode: mode) { outcome in
-      result = outcome
+      result.set(outcome)
       done.fulfill()
     }
     wait(for: [done], timeout: 5)
-    return result
+    return result.value
+  }
+
+  private final class OutcomeBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var outcome: MavAnalyticsEngine.Outcome = .failed
+
+    func set(_ next: MavAnalyticsEngine.Outcome) {
+      lock.lock()
+      outcome = next
+      lock.unlock()
+    }
+
+    var value: MavAnalyticsEngine.Outcome {
+      lock.lock()
+      defer { lock.unlock() }
+      return outcome
+    }
   }
 
   func testAPassDrainsUntilTheQueueIsEmpty() {

@@ -16,10 +16,17 @@ enum MavSignalState: Equatable {
   case working(done: Int, total: Int)
   /// Every stage answered. `atMs` is when the last one did, so a reading can be aged rather than
   /// presented as current.
-  case ready(atMs: Int64, displayable: Bool)
+  case ready(atMs: Int64, displayable: Bool, applicability: MavApplicability = .sound)
   /// Answered, from inputs that have since moved. The previous values stay on screen — blanking a
   /// good reading because a newer one is pending is worse than labelling it.
-  case stale(atMs: Int64, displayable: Bool)
+  case stale(atMs: Int64, displayable: Bool, applicability: MavApplicability = .sound)
+
+  /// Every stage answered, and it answered about padding rather than about the wearer.
+  ///
+  /// A separate case rather than a flag on `ready`, so that a surface switching on `ready` to
+  /// draw a number cannot reach this branch by accident. The model did run and the result may be
+  /// stored; it is not a reading.
+  case unfounded(atMs: Int64, substitutions: [String])
   /// Nothing here can run on this device as it stands, with one entry per distinct cause.
   case unavailable(reasons: [MavUnavailable])
   /// The OS declined or postponed the work. Retried when the app is next open.
@@ -115,7 +122,8 @@ enum MavSignalReducer {
     invalidated: Set<String> = [],
     failures: [String: Int] = [:],
     deferred: Bool = false,
-    missingPermission: String? = nil
+    missingPermission: String? = nil,
+    health: [String: MavStageHealth] = [:]
   ) -> [MavSignal] {
     // Grouped in first-appearance order rather than by Dictionary iteration, so the surface does
     // not reshuffle itself between passes.
@@ -136,7 +144,8 @@ enum MavSignalReducer {
           invalidated: invalidated,
           failures: failures,
           deferred: deferred,
-          missingPermission: missingPermission
+          missingPermission: missingPermission,
+          health: health
         ),
         total: counts?.total ?? group.count,
         runnable: counts?.runnable ?? group.filter { $0.state != .unavailable }.count
@@ -150,7 +159,8 @@ enum MavSignalReducer {
     invalidated: Set<String>,
     failures: [String: Int],
     deferred: Bool,
-    missingPermission: String?
+    missingPermission: String?,
+    health: [String: MavStageHealth]
   ) -> MavSignalState {
     // A permission the work cannot proceed without outranks everything: the wearer can fix it,
     // and every other state would be describing a consequence rather than the cause.
@@ -180,9 +190,58 @@ enum MavSignalReducer {
 
     let displayable = runnable.contains { $0.displayable }
     let at = runnable.compactMap { completedAtMs[$0.model] }.max() ?? 0
-    if runnable.contains(where: { invalidated.contains($0.model) }) {
-      return .stale(atMs: at, displayable: displayable)
+    let verdict = MavApplicability.worst(runnable.compactMap { health[$0.model]?.applicability })
+    if verdict == .unfounded {
+      var reasons: [String] = []
+      for stage in runnable {
+        for reason in health[stage.model]?.substitutions ?? [] where !reasons.contains(reason) {
+          reasons.append(reason)
+        }
+      }
+      return .unfounded(atMs: at, substitutions: reasons)
     }
-    return .ready(atMs: at, displayable: displayable)
+    if runnable.contains(where: { invalidated.contains($0.model) }) {
+      return .stale(atMs: at, displayable: displayable, applicability: verdict)
+    }
+    return .ready(atMs: at, displayable: displayable, applicability: verdict)
   }
+}
+
+/// How much of a model's input was real, mirroring
+/// `mav_analytic::model_zoo::health::Applicability` and Android's `MavApplicability`.
+///
+/// Not a confidence score and not to be rendered as one. It says what went in, not how right the
+/// answer is: nothing in this build has been checked against labelled ground truth, so there is no
+/// honest confidence to show.
+enum MavApplicability: String, Equatable, Sendable {
+  case sound
+  case degraded
+  case unfounded
+  /// The core did not build these tensors, so it has no view. The replay and test path.
+  case unmeasured
+
+  /// Parse the core's wire name. An unknown name is `.unmeasured`, never `.sound` — a newer core
+  /// must not be able to make this one more trusting than it should be.
+  static func parse(_ name: String) -> MavApplicability {
+    MavApplicability(rawValue: name) ?? .unmeasured
+  }
+
+  /// The verdict for a group: the worst one present.
+  ///
+  /// A signal fed by several models is only as sound as its weakest input; taking the best would
+  /// let one complete stage vouch for the padded ones beside it.
+  static func worst(_ values: [MavApplicability]) -> MavApplicability {
+    if values.isEmpty { return .sound }
+    if values.contains(.unfounded) { return .unfounded }
+    if values.contains(.degraded) { return .degraded }
+    if values.contains(.unmeasured) { return .unmeasured }
+    return .sound
+  }
+}
+
+/// What the core said about the tensors behind one model, as the FFI reports it.
+struct MavStageHealth: Equatable, Sendable {
+  let model: String
+  let applicability: MavApplicability
+  let substitutions: [String]
 }

@@ -22,6 +22,7 @@
 //! CVA's jump limit for PulseNet would change which samples survive, so each is written out with
 //! the value its own training wrapper holds.
 
+use super::health::{InputHealth, Substitution};
 use mav_model::error::{codes, MavError, Result};
 
 /// One PPG segment as both in-house encoders expect it: thirty seconds at 50 Hz.
@@ -80,7 +81,11 @@ const CVA_STD_LIMIT: f32 = 20.36;
 const CVA_MEAN_LOWER_LIMIT: f32 = 52.35;
 const CVA_MEAN_UPPER_LIMIT: f32 = 79.81;
 
-/// The five values CVA's predictor takes beside the pulse train.
+/// The five values CVA's front-end computes beside the pulse train.
+///
+/// Not a tensor. `cva_predictor_v1` takes eight exogenous values, not these five, and its
+/// front-end is not ported — so the order they would be packed in is a question for whoever ports
+/// it, against the contract, rather than a claim to make here in advance.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CvaFeatures {
     /// Mean of the raw segment: the DC level the AFE was sitting at.
@@ -96,24 +101,18 @@ pub struct CvaFeatures {
     pub heart_rate_bpm: f32,
 }
 
-impl CvaFeatures {
-    /// In the order the predictor's second input tensor expects.
-    pub fn to_tensor(self) -> Vec<f32> {
-        vec![
-            self.mean_dc,
-            self.max_min,
-            self.accepted,
-            self.snr_db,
-            self.heart_rate_bpm,
-        ]
-    }
-}
-
 /// A prepared CVA input: the normalised pulse train and the feature vector beside it.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CvaPulse {
     pub pulses: Vec<f32>,
     pub features: CvaFeatures,
+    /// What the segment was made of, carrying the archive's own `accepted` gate.
+    ///
+    /// That gate is the most useful thing in this struct for a build that cannot retrain: it
+    /// tests the *shape* of the min-max normalised pulse, not its amplitude, so it is exactly an
+    /// out-of-distribution check on the morphology the encoder was fitted against — calibrated by
+    /// the people who fitted it, and otherwise thrown away.
+    pub health: InputHealth,
 }
 
 /// Reflect-pad, then take a sliding statistic — the `moving_average` both wrappers share.
@@ -130,23 +129,27 @@ pub fn moving_average(data: &[f32], kind: FilterKind, window: usize) -> Vec<f32>
     if padded.len() < window {
         return data.to_vec();
     }
-    let count = padded.len() - window + 1;
-    let mut output = Vec::with_capacity(count);
-    let mut scratch = vec![0.0_f32; window];
-    for start in 0..count {
-        let slice = &padded[start..start + window];
-        output.push(match kind {
-            FilterKind::Mean => {
+    // Branch on the kind once rather than per sample. The mean path takes the sum fresh over each
+    // window on purpose: a running sum would drift from the reference vectors in the last bits.
+    match kind {
+        FilterKind::Mean => padded
+            .windows(window)
+            .map(|slice| {
                 let total: f64 = slice.iter().map(|value| f64::from(*value)).sum();
                 (total / window as f64) as f32
-            }
-            FilterKind::Median => {
-                scratch.copy_from_slice(slice);
-                median_in_place(&mut scratch)
-            }
-        });
+            })
+            .collect(),
+        FilterKind::Median => {
+            let mut scratch = vec![0.0_f32; window];
+            padded
+                .windows(window)
+                .map(|slice| {
+                    scratch.copy_from_slice(slice);
+                    median_in_place(&mut scratch)
+                })
+                .collect()
+        }
     }
-    output
 }
 
 /// The shared detrend body: jump-limit the first difference, integrate, remove a twice-smoothed
@@ -252,7 +255,11 @@ pub fn cva_pulse(segment: &[f32]) -> Result<CvaPulse> {
         )));
     }
 
+    // Every sample of a CVA segment is a reading — the length is checked above, so nothing is
+    // padded — and the only question the archive asks is whether the shape is one it accepts.
+    let health = InputHealth::sound().with_gate(accepted);
     Ok(CvaPulse {
+        health,
         pulses,
         features: CvaFeatures {
             mean_dc,
@@ -262,6 +269,57 @@ pub fn cva_pulse(segment: &[f32]) -> Result<CvaPulse> {
             heart_rate_bpm,
         },
     })
+}
+
+/// [`pulse_ppg_input`], and how much of the window was real.
+///
+/// The encoder takes a fixed four-minute window and a shorter recording is centre-padded with
+/// zeros to reach it. Those zeros are indistinguishable from signal once the tensor is built, so
+/// the fraction is measured here, where the padding is still visible.
+pub fn pulse_ppg_input_with_health(
+    signal: &[f32],
+    source_rate_hz: u32,
+) -> Result<(Vec<f32>, InputHealth)> {
+    let prepared = pulse_ppg_input(signal, source_rate_hz)?;
+    let resampled = resampled_len(signal.len(), source_rate_hz, PULSE_PPG_SAMPLE_RATE_HZ);
+    Ok((
+        prepared,
+        window_health(resampled, PULSE_PPG_SEGMENT_SAMPLES),
+    ))
+}
+
+/// How many samples [`linear_resample`] would produce, without producing them.
+///
+/// The heaviest window in the zoo is Pulse-PPG's four minutes, and resampling it a second time
+/// purely to measure its length would double the most expensive preprocessing on the path. The
+/// count is a pure function of the input length and the two rates, so it is computed rather than
+/// observed — and `resampled_len_matches_the_resampler` holds the two together.
+///
+/// Public so a caller pairing [`resample_window`] with [`window_health`] can say how much of the
+/// window was real without building the intermediate the window helper exists to avoid.
+pub fn resampled_len(available: usize, source_rate_hz: u32, target_rate_hz: u32) -> usize {
+    if source_rate_hz == target_rate_hz || available < 2 {
+        return available;
+    }
+    let duration = (available - 1) as f64 / f64::from(source_rate_hz);
+    (duration * f64::from(target_rate_hz)).round() as usize + 1
+}
+
+/// How much of a fixed-length window `available` samples actually covered.
+///
+/// A longer recording is centre-cropped rather than padded, so it is fully real; only a short one
+/// carries substitution.
+///
+/// Public because the padding does not always happen here. [`pulsenet_input`] *refuses* a segment
+/// that is not already 1,500 samples, so its caller resamples and calls [`fit_or_pad`] first —
+/// which means the caller is the only place that still knows how much of the window was real.
+/// Measuring inside `pulsenet_input` would see 1,500 of 1,500 every time and report a padded
+/// window as sound.
+pub fn window_health(available: usize, required: usize) -> InputHealth {
+    if available >= required {
+        return InputHealth::sound();
+    }
+    InputHealth::of(available, required).substituting(Substitution::Padded)
 }
 
 /// Prepare a window for Pulse-PPG: resample to 50 Hz, fit to four minutes, z-score.
@@ -286,9 +344,12 @@ pub fn pulse_ppg_input(signal: &[f32], source_rate_hz: u32) -> Result<Vec<f32>> 
             "PPG segment contains a non-finite sample",
         ));
     }
-    let resampled = linear_resample(signal, source_rate_hz, PULSE_PPG_SAMPLE_RATE_HZ);
-    let fitted = fit_or_pad(&resampled, PULSE_PPG_SEGMENT_SAMPLES);
-    Ok(z_score(&fitted))
+    Ok(z_score(&resample_window(
+        signal,
+        source_rate_hz,
+        PULSE_PPG_SAMPLE_RATE_HZ,
+        PULSE_PPG_SEGMENT_SAMPLES,
+    )))
 }
 
 /// Resample by linear interpolation at `index / target * source`, the same positions
@@ -298,20 +359,71 @@ pub fn linear_resample(signal: &[f32], source_rate_hz: u32, target_rate_hz: u32)
     if source_rate_hz == target_rate_hz || signal.len() < 2 {
         return signal.to_vec();
     }
-    let duration = (signal.len() - 1) as f64 / f64::from(source_rate_hz);
-    let count = (duration * f64::from(target_rate_hz)).round() as usize + 1;
-    let mut output = Vec::with_capacity(count);
-    for index in 0..count {
-        let position = index as f64 / f64::from(target_rate_hz) * f64::from(source_rate_hz);
-        let left = (position.floor() as usize).min(signal.len() - 1);
-        let right = (left + 1).min(signal.len() - 1);
-        let fraction = position - left as f64;
-        output.push(
-            ((1.0 - fraction) * f64::from(signal[left]) + fraction * f64::from(signal[right]))
-                as f32,
+    resample_range(
+        signal,
+        source_rate_hz,
+        target_rate_hz,
+        0,
+        resampled_len(signal.len(), source_rate_hz, target_rate_hz),
+    )
+}
+
+/// `fit_or_pad(&linear_resample(signal, source, target), length)` without ever holding the whole
+/// resampled signal.
+///
+/// The callers hand this a day's stored optical samples and take a fixed window out of the middle:
+/// four minutes for Pulse-PPG, thirty seconds for the two in-house front-ends. Materialising the
+/// intermediate meant resampling millions of samples to keep twelve thousand, and holding both at
+/// once. Every output sample is an independent function of its own index, so the crop can be
+/// applied to the index range instead — `resample_window_matches_resample_then_fit` holds the two
+/// to the same bytes.
+pub fn resample_window(
+    signal: &[f32],
+    source_rate_hz: u32,
+    target_rate_hz: u32,
+    length: usize,
+) -> Vec<f32> {
+    if signal.len() < 2 {
+        return fit_or_pad(signal, length);
+    }
+    let available = resampled_len(signal.len(), source_rate_hz, target_rate_hz);
+    if available <= length {
+        return fit_or_pad(
+            &resample_range(signal, source_rate_hz, target_rate_hz, 0, available),
+            length,
         );
     }
-    output
+    resample_range(
+        signal,
+        source_rate_hz,
+        target_rate_hz,
+        (available - length) / 2,
+        length,
+    )
+}
+
+/// `count` resampled values starting at resampled index `start`.
+fn resample_range(
+    signal: &[f32],
+    source_rate_hz: u32,
+    target_rate_hz: u32,
+    start: usize,
+    count: usize,
+) -> Vec<f32> {
+    if source_rate_hz == target_rate_hz {
+        return signal[start.min(signal.len())..(start + count).min(signal.len())].to_vec();
+    }
+    let last = signal.len() - 1;
+    (start..start + count)
+        .map(|index| {
+            let position = index as f64 / f64::from(target_rate_hz) * f64::from(source_rate_hz);
+            let left = (position.floor() as usize).min(last);
+            let right = (left + 1).min(last);
+            let fraction = position - left as f64;
+            ((1.0 - fraction) * f64::from(signal[left]) + fraction * f64::from(signal[right]))
+                as f32
+        })
+        .collect()
 }
 
 /// Centre-crop or zero-pad to `length`, matching the ECG path's fit rule.
@@ -484,7 +596,7 @@ mod tests {
     use std::f32::consts::TAU;
 
     /// A pulse-shaped test signal: a fundamental, a dicrotic-notch harmonic, and a slow drift.
-    fn synthetic_ppg(samples: usize, bpm: f32) -> Vec<f32> {
+    pub(super) fn synthetic_ppg(samples: usize, bpm: f32) -> Vec<f32> {
         let rate = PPG_SAMPLE_RATE_HZ as f32;
         (0..samples)
             .map(|index| {
@@ -572,7 +684,6 @@ mod tests {
         let segment = synthetic_ppg(PPG_SEGMENT_SAMPLES, 72.0);
         let prepared = cva_pulse(&segment).expect("prepared");
         assert_eq!(prepared.pulses.len(), CVA_PULSE_SAMPLES);
-        assert_eq!(prepared.features.to_tensor().len(), 5);
         assert!(prepared
             .pulses
             .iter()
@@ -665,5 +776,158 @@ mod tests {
     fn fit_or_pad_centres_in_both_directions() {
         assert_eq!(fit_or_pad(&[1.0, 2.0, 3.0, 4.0], 2), vec![2.0, 3.0]);
         assert_eq!(fit_or_pad(&[1.0, 2.0], 4), vec![0.0, 1.0, 2.0, 0.0]);
+    }
+}
+
+#[cfg(test)]
+mod health_tests {
+    use super::tests::synthetic_ppg;
+    use super::*;
+    use crate::model_zoo::health::{Applicability, Substitution};
+
+    /// The predicted length and the real one must not drift, or the health fraction quietly
+    /// starts describing a window that was never built.
+    #[test]
+    fn resampled_len_matches_the_resampler() {
+        for available in [2usize, 3, 100, 999, 1_500, 12_000, 12_001] {
+            for (source, target) in [(50u32, 50u32), (25, 50), (100, 50), (64, 50), (50, 25)] {
+                let signal = vec![0.5_f32; available];
+                assert_eq!(
+                    resampled_len(available, source, target),
+                    linear_resample(&signal, source, target).len(),
+                    "{available} samples at {source} -> {target}",
+                );
+            }
+        }
+        // Degenerate inputs the resampler short-circuits on.
+        assert_eq!(resampled_len(0, 25, 50), 0);
+        assert_eq!(resampled_len(1, 25, 50), 1);
+    }
+
+    /// The windowed resampler is the old two-step spelled once, and must agree to the bit.
+    ///
+    /// This is the whole justification for it existing: the callers hand it a day of stored
+    /// samples and keep a few thousand, so building the full resampled signal first was the most
+    /// expensive thing on the admission path. An approximation here would move every model input
+    /// it feeds, which is why the comparison is exact rather than within a tolerance.
+    #[test]
+    fn resample_window_matches_resample_then_fit() {
+        for available in [2usize, 3, 100, 1_499, 1_500, 1_501, 12_000, 40_000] {
+            for (source, target) in [(50u32, 50u32), (25, 50), (100, 50), (64, 50), (50, 25)] {
+                for length in [PPG_SEGMENT_SAMPLES, PULSE_PPG_SEGMENT_SAMPLES, 7] {
+                    let signal = synthetic_ppg(available, 61.0);
+                    let expected = fit_or_pad(&linear_resample(&signal, source, target), length);
+                    assert_eq!(
+                        resample_window(&signal, source, target, length),
+                        expected,
+                        "{available} samples at {source} -> {target}, window {length}",
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_full_length_window_is_sound() {
+        let segment = synthetic_ppg(PULSE_PPG_SEGMENT_SAMPLES, 65.0);
+        let (values, health) =
+            pulse_ppg_input_with_health(&segment, PPG_SAMPLE_RATE_HZ).expect("prepared");
+        assert_eq!(values.len(), PULSE_PPG_SEGMENT_SAMPLES);
+        assert_eq!(health.applicability(), Applicability::Sound);
+        assert!(health.substitutions.is_empty());
+    }
+
+    /// Half a window is half padding, and the fraction says so rather than the tensor looking
+    /// like four minutes of signal.
+    #[test]
+    fn a_half_length_window_reports_its_padding() {
+        let segment = synthetic_ppg(PULSE_PPG_SEGMENT_SAMPLES / 2, 65.0);
+        let (_, health) =
+            pulse_ppg_input_with_health(&segment, PPG_SAMPLE_RATE_HZ).expect("prepared");
+        assert!(
+            (health.real_fraction - 0.5).abs() < 1e-3,
+            "{}",
+            health.real_fraction
+        );
+        assert_eq!(health.applicability(), Applicability::Degraded);
+        assert!(health.substitutions.contains(&Substitution::Padded));
+    }
+
+    /// A recording far shorter than the window produces a tensor that is mostly zeros, and the
+    /// encoder will still return 512 numbers for it.
+    #[test]
+    fn a_window_that_is_mostly_padding_is_unfounded() {
+        let segment = synthetic_ppg(PULSE_PPG_SEGMENT_SAMPLES / 10, 65.0);
+        let (_, health) =
+            pulse_ppg_input_with_health(&segment, PPG_SAMPLE_RATE_HZ).expect("prepared");
+        assert_eq!(health.applicability(), Applicability::Unfounded);
+        assert!(!health.presentable());
+    }
+
+    /// A longer recording is centre-cropped, not padded, so it is fully real.
+    #[test]
+    fn a_longer_recording_is_cropped_and_stays_sound() {
+        let segment = synthetic_ppg(PULSE_PPG_SEGMENT_SAMPLES * 2, 65.0);
+        let (_, health) =
+            pulse_ppg_input_with_health(&segment, PPG_SAMPLE_RATE_HZ).expect("prepared");
+        assert_eq!(health.applicability(), Applicability::Sound);
+    }
+
+    /// Resampling is accounted for: 25 Hz in means half as many samples, which after resampling
+    /// to 50 Hz still fills the window.
+    #[test]
+    fn a_lower_source_rate_is_measured_after_resampling_not_before() {
+        let segment = synthetic_ppg(PULSE_PPG_SEGMENT_SAMPLES / 2, 65.0);
+        let (_, health) = pulse_ppg_input_with_health(&segment, 25).expect("prepared");
+        assert_eq!(
+            health.applicability(),
+            Applicability::Sound,
+            "half the samples at half the rate is a full window"
+        );
+    }
+
+    /// PulseNet's padding happens in its caller, so the health has to be measured there too.
+    ///
+    /// This pins the trap: `pulsenet_input` only accepts an already-fitted 1,500-sample segment,
+    /// so anything measured after `fit_or_pad` reports a fully padded window as sound. The
+    /// pre-fit length is the only honest input to `window_health`.
+    #[test]
+    fn pulsenet_padding_is_measured_before_the_fit_not_after() {
+        // An eighth, not a quarter: a quarter lands exactly on UNFOUNDED_BELOW, and the
+        // boundary itself is pinned in `health`, not here.
+        let segment = synthetic_ppg(PPG_SEGMENT_SAMPLES / 8, 65.0);
+        let fitted = fit_or_pad(&segment, PPG_SEGMENT_SAMPLES);
+        pulsenet_input(&fitted).expect("a fitted segment is accepted");
+        pulsenet_input(&segment).expect_err("a short segment is refused, not padded");
+
+        assert_eq!(
+            window_health(fitted.len(), PPG_SEGMENT_SAMPLES).applicability(),
+            Applicability::Sound,
+            "measuring after the fit hides the padding",
+        );
+        let honest = window_health(segment.len(), PPG_SEGMENT_SAMPLES);
+        assert_eq!(honest.applicability(), Applicability::Unfounded);
+        assert!(honest.substitutions.contains(&Substitution::Padded));
+    }
+
+    /// The archive's own shape gate reaches the health record, which is the whole point: a
+    /// complete segment whose morphology the encoder was not fitted on is not `Sound`.
+    #[test]
+    fn the_cva_accept_gate_travels_with_the_prepared_pulse() {
+        let segment = synthetic_ppg(PPG_SEGMENT_SAMPLES, 65.0);
+        let prepared = cva_pulse(&segment).expect("prepared");
+        assert_eq!(
+            prepared.health.gate_passed,
+            Some(prepared.features.accepted == 1.0)
+        );
+        assert_eq!(prepared.health.real_fraction, 1.0);
+
+        // A flat segment has no pulse shape at all; the gate must refuse it and the verdict must
+        // follow, even though every sample is present.
+        let flat = vec![1000.0_f32; PPG_SEGMENT_SAMPLES];
+        let prepared = cva_pulse(&flat).expect("prepared");
+        assert_eq!(prepared.features.accepted, 0.0);
+        assert_eq!(prepared.health.gate_passed, Some(false));
+        assert_eq!(prepared.health.applicability(), Applicability::Degraded);
     }
 }

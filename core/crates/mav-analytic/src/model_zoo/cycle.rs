@@ -34,7 +34,23 @@
 //!
 //! This is awareness only. Nothing here is contraception, fertility prediction, or a diagnosis.
 
+use super::health::{InputHealth, Substitution};
 use mav_model::error::{codes, MavError, Result};
+
+/// The cycle heads this front-end can feed.
+///
+/// The two `min_follicular` heads are deliberately absent: they take a nine-value `features`
+/// tensor, not the day-sequence pair built here, and their front-end is not ported. Listing them
+/// would queue them with tensors of the wrong shape, which `validate_request` would refuse — but
+/// only after the caller believed the model was running.
+pub const CYCLE_MODELS: &[super::ModelId] = &[
+    super::ModelId::PopsicleOvulationDetection,
+    super::ModelId::PopsicleOvulationDetectionV16,
+    super::ModelId::PopsicleOvulationPrediction,
+    super::ModelId::PopsicleOvulationPredictionV16,
+    super::ModelId::PopsiclePeriodPrediction,
+    super::ModelId::PopsiclePeriodPredictionV16,
+];
 
 /// Days of history the converted cores were built at.
 ///
@@ -58,11 +74,11 @@ pub const DEFAULT_AGE_YEARS: f32 = 35.0;
 pub const DEFAULT_CYCLE_LENGTH_DAYS: f32 = 28.0;
 pub const DEFAULT_LUTEAL_LENGTH_DAYS: f32 = 13.0;
 
-/// Bounds the archive's input validator accepts for the scalar block.
+/// Bounds the archive's input validator accepts for the scalar block. There is no luteal-length
+/// bound here because no wearer-supplied luteal length ever reaches the model — see
+/// [`CycleProfile::resolved`].
 const AGE_RANGE: (f32, f32) = (1.0, 140.0);
 const CYCLE_LENGTH_RANGE: (f32, f32) = (12.0, 90.0);
-#[allow(dead_code)]
-const LUTEAL_LENGTH_RANGE: (f32, f32) = (8.0, 19.0);
 
 /// One cycle day's physiology, as the wearer's own history holds it.
 ///
@@ -96,27 +112,12 @@ impl CycleProfile {
     /// population default unconditionally, so passing theirs through here would feed the model a
     /// column it was never given in training.
     fn resolved(&self) -> (f32, f32, f32) {
-        fn pick(value: Option<f32>, default: f32, range: (f32, f32)) -> f32 {
-            match value {
-                Some(value) if value.is_finite() && value >= range.0 && value <= range.1 => value,
-                _ => default,
-            }
-        }
         (
-            pick(self.age_years, DEFAULT_AGE_YEARS, AGE_RANGE),
-            pick(
-                self.typical_cycle_length_days,
-                DEFAULT_CYCLE_LENGTH_DAYS,
-                CYCLE_LENGTH_RANGE,
-            ),
+            admit(self.age_years, AGE_RANGE).unwrap_or(DEFAULT_AGE_YEARS),
+            admit(self.typical_cycle_length_days, CYCLE_LENGTH_RANGE)
+                .unwrap_or(DEFAULT_CYCLE_LENGTH_DAYS),
             DEFAULT_LUTEAL_LENGTH_DAYS,
         )
-    }
-
-    /// Follicular length, as the archive derives it: cycle length less luteal length.
-    pub fn typical_follicular_length_days(&self) -> f32 {
-        let (_, cycle, luteal) = self.resolved();
-        cycle - luteal
     }
 }
 
@@ -130,18 +131,24 @@ pub struct CycleInput {
     /// How many of the forty rows are real history rather than padding. Carried so a caller can
     /// refuse to read a prediction that is mostly padding.
     pub days: usize,
+    /// What the series was actually made of: real readings, days the archive rejected as
+    /// out-of-range, and days that were never recorded.
+    ///
+    /// The counted positions are the series cells, not the scalar ones — the scalars are the
+    /// wearer's profile repeated per day and are always present, so including them would dilute
+    /// the fraction with values that cannot be missing and make an empty history look
+    /// three-sevenths real.
+    pub health: InputHealth,
 }
 
-/// Reject a reading outside its column's valid range, and zero anything missing.
+/// A reading the archive's validator accepts for its column, or `None`.
 ///
-/// One function because the two cases have to agree: the archive discards an implausible value to
-/// `NaN` and then fills every `NaN` with zero, so "37.6 °C" and "no reading" reach the model as
-/// the same number. Splitting them would be tidier and wrong.
-fn admit(value: Option<f32>, range: (f32, f32)) -> f32 {
-    match value {
-        Some(value) if value.is_finite() && value >= range.0 && value <= range.1 => value,
-        _ => 0.0,
-    }
+/// One predicate for the series cells and the scalar block both, because they have to agree: the
+/// archive discards an implausible value to `NaN` and then fills every `NaN` with zero, so
+/// "37.6 °C" and "no reading" reach the model as the same number. The callers differ only in what
+/// they substitute — zero for a series cell, the population default for a scalar.
+fn admit(value: Option<f32>, range: (f32, f32)) -> Option<f32> {
+    value.filter(|value| value.is_finite() && *value >= range.0 && *value <= range.1)
 }
 
 /// Build the popsicle input from a cycle history, oldest day first.
@@ -165,11 +172,29 @@ pub fn cycle_input(history: &[CycleDay], profile: &CycleProfile) -> Result<Cycle
 
     let mut time_series = vec![0.0; CYCLE_DAYS * SERIES_COLUMNS];
     let mut scalars = vec![0.0; CYCLE_DAYS * SCALAR_COLUMNS];
+    let mut real = 0usize;
+    let mut rejected = false;
+    let mut missing = window.len() < CYCLE_DAYS;
     for (index, day) in window.iter().enumerate() {
         let base = index * SERIES_COLUMNS;
-        time_series[base] = admit(day.highest_temperature_c, SERIES_VALID[0]);
-        time_series[base + 1] = admit(day.average_breath_rate, SERIES_VALID[1]);
-        time_series[base + 2] = admit(day.average_heart_rate_bpm, SERIES_VALID[2]);
+        let cells = [
+            (day.highest_temperature_c, SERIES_VALID[0]),
+            (day.average_breath_rate, SERIES_VALID[1]),
+            (day.average_heart_rate_bpm, SERIES_VALID[2]),
+        ];
+        for (offset, (value, range)) in cells.iter().enumerate() {
+            match admit(*value, *range) {
+                Some(admitted) => {
+                    time_series[base + offset] = admitted;
+                    real += 1;
+                }
+                // A reading that exists and was discarded is a different fact from one that was
+                // never taken, and the wearer is owed the difference. A non-finite value counts as
+                // discarded: something was recorded, and it was not usable.
+                None if value.is_some() => rejected = true,
+                None => missing = true,
+            }
+        }
 
         let base = index * SCALAR_COLUMNS;
         scalars[base] = age;
@@ -178,10 +203,18 @@ pub fn cycle_input(history: &[CycleDay], profile: &CycleProfile) -> Result<Cycle
         // One-based, counting up across the window — the archive's own numbering.
         scalars[base + 3] = (index + 1) as f32;
     }
+    let mut health = InputHealth::of(real, CYCLE_DAYS * SERIES_COLUMNS);
+    if rejected {
+        health = health.substituting(Substitution::OutOfRange);
+    }
+    if missing {
+        health = health.substituting(Substitution::Missing);
+    }
     Ok(CycleInput {
         time_series,
         scalars,
         days: window.len(),
+        health,
     })
 }
 
@@ -330,14 +363,171 @@ mod tests {
             );
         }
     }
+}
+
+#[cfg(test)]
+mod health_tests {
+    use super::*;
+    use crate::model_zoo::health::{Applicability, Substitution};
+
+    fn day(temperature: f32) -> CycleDay {
+        CycleDay {
+            highest_temperature_c: Some(temperature),
+            average_breath_rate: Some(15.0),
+            average_heart_rate_bpm: Some(58.0),
+        }
+    }
 
     #[test]
-    fn follicular_length_is_the_cycle_less_the_luteal_phase() {
-        let profile = CycleProfile {
-            age_years: Some(30.0),
-            typical_cycle_length_days: Some(28.0),
-            typical_luteal_length_days: Some(13.0),
-        };
-        assert_eq!(profile.typical_follicular_length_days(), 15.0);
+    fn a_full_history_of_readings_is_sound() {
+        let history = vec![day(36.5); CYCLE_DAYS];
+        let built = cycle_input(&history, &CycleProfile::default()).expect("build");
+        assert_eq!(built.health.real_fraction, 1.0);
+        assert_eq!(built.health.applicability(), Applicability::Sound);
+    }
+
+    /// The case this whole module exists for.
+    ///
+    /// A wearer whose skin temperature sits outside `[35.5, 37.5]` — a different wear site reads
+    /// cooler, and the archive's band was fitted on a finger — has every day rejected. The tensor
+    /// is all zeros, the model still returns an ovulation probability, and without this the
+    /// number is indistinguishable from one computed from a real month.
+    #[test]
+    fn a_history_the_archive_rejects_entirely_is_unfounded_not_merely_empty() {
+        let history = vec![day(34.9); CYCLE_DAYS];
+        let built = cycle_input(&history, &CycleProfile::default()).expect("build");
+        // Only the temperature column is out of range; the other two survive untouched. That
+        // asymmetry is the point — a rejection is per-column, so a wearer can lose one signal
+        // and keep the rest, and the fraction has to reflect that rather than rounding to "no
+        // data".
+        assert_eq!(built.time_series[0], 0.0, "rejected temperature");
+        assert_eq!(built.time_series[1], 15.0, "breath rate survives");
+        assert_eq!(built.time_series[2], 58.0, "heart rate survives");
+        assert!(
+            (built.health.real_fraction - 2.0 / 3.0).abs() < 1e-6,
+            "two of three columns are real, got {}",
+            built.health.real_fraction
+        );
+        // Two of three columns still survive, so this is not zero overall — but the verdict has
+        // to reflect that a third of every row is a discarded reading.
+        assert!(built
+            .health
+            .substitutions
+            .contains(&Substitution::OutOfRange));
+        assert_ne!(built.health.applicability(), Applicability::Sound);
+    }
+
+    /// Every column rejected, which is the total case.
+    #[test]
+    fn a_history_rejected_on_every_column_is_unfounded() {
+        let history = vec![
+            CycleDay {
+                highest_temperature_c: Some(34.0),
+                average_breath_rate: Some(40.0),
+                average_heart_rate_bpm: Some(200.0),
+            };
+            CYCLE_DAYS
+        ];
+        let built = cycle_input(&history, &CycleProfile::default()).expect("build");
+        assert_eq!(built.health.real_fraction, 0.0);
+        assert_eq!(built.health.applicability(), Applicability::Unfounded);
+        assert!(
+            !built.health.presentable(),
+            "a prediction from an all-zero series must not reach a surface"
+        );
+    }
+
+    /// A short history is padded, and the padding is counted honestly rather than being allowed
+    /// to look like data.
+    #[test]
+    fn a_short_history_reports_the_padding_it_needed() {
+        let history = vec![day(36.5); 4];
+        let built = cycle_input(&history, &CycleProfile::default()).expect("build");
+        assert_eq!(built.days, 4);
+        assert!((built.health.real_fraction - 4.0 / CYCLE_DAYS as f32).abs() < 1e-6);
+        assert_eq!(built.health.applicability(), Applicability::Unfounded);
+        assert!(built.health.substitutions.contains(&Substitution::Missing));
+    }
+
+    /// Rejected and unrecorded days are reported apart, because the wearer can act on one and
+    /// not the other.
+    #[test]
+    fn a_rejected_day_and_an_unrecorded_day_are_named_separately() {
+        let mut history = vec![day(36.5); 20];
+        history[0].highest_temperature_c = Some(39.0);
+        history[1].average_breath_rate = None;
+        let built = cycle_input(&history, &CycleProfile::default()).expect("build");
+        assert!(built
+            .health
+            .substitutions
+            .contains(&Substitution::OutOfRange));
+        assert!(built.health.substitutions.contains(&Substitution::Missing));
+    }
+}
+
+#[cfg(test)]
+mod model_list_tests {
+    use super::*;
+    use crate::model_zoo::pipeline::{pipeline_of, FrontEnd};
+
+    /// Every model this front-end claims to feed must actually take the tensors it builds.
+    ///
+    /// This is the guard against the mistake that was already made once here: all eight popsicle
+    /// heads were marked as fed by `cycle_input`, and two of them take a nine-value vector this
+    /// module does not produce.
+    #[test]
+    fn every_listed_model_takes_the_pair_this_module_builds() {
+        for model in CYCLE_MODELS {
+            let contract = model.contract();
+            let series = contract
+                .input("time_series")
+                .unwrap_or_else(|| panic!("{} has no time_series input", contract.slug));
+            let scalars = contract
+                .input("scalars")
+                .unwrap_or_else(|| panic!("{} has no scalars input", contract.slug));
+            assert_eq!(series.element_count(), CYCLE_DAYS * SERIES_COLUMNS);
+            assert_eq!(scalars.element_count(), CYCLE_DAYS * SCALAR_COLUMNS);
+            assert_eq!(contract.inputs.len(), 2, "{}", contract.slug);
+        }
+    }
+
+    /// And the pipeline table has to agree with this list in both directions.
+    #[test]
+    fn the_pipeline_marks_exactly_these_as_fed_by_this_front_end() {
+        let declared: Vec<&str> = crate::model_zoo::pipeline::PIPELINE
+            .iter()
+            .filter(|entry| matches!(entry.front_end, FrontEnd::Ported("cycle::cycle_input")))
+            .map(|entry| entry.model.contract().slug)
+            .collect();
+        let listed: Vec<&str> = CYCLE_MODELS
+            .iter()
+            .map(|model| model.contract().slug)
+            .collect();
+        assert_eq!(declared, listed);
+        for model in CYCLE_MODELS {
+            let entry = pipeline_of(*model).expect("every model has a pipeline row");
+            assert!(matches!(
+                entry.front_end,
+                FrontEnd::Ported("cycle::cycle_input")
+            ));
+        }
+    }
+
+    /// The two heads this module cannot feed must not be in the list, and must still say why.
+    #[test]
+    fn the_min_follicular_heads_are_excluded_and_explain_themselves() {
+        use crate::model_zoo::ModelId;
+        for model in [
+            ModelId::PopsicleMinFollicular,
+            ModelId::PopsicleMinFollicularV16,
+        ] {
+            assert!(
+                !CYCLE_MODELS.contains(&model),
+                "{} takes a nine-value vector this module does not build",
+                model.contract().slug
+            );
+            let entry = pipeline_of(model).expect("every model has a pipeline row");
+            assert!(matches!(entry.front_end, FrontEnd::NotPorted(_, _)));
+        }
     }
 }

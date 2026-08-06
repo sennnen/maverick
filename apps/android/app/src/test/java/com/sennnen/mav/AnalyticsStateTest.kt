@@ -1,6 +1,8 @@
 package com.sennnen.mav
 
+import com.sennnen.mav.ml.MavApplicability
 import com.sennnen.mav.ml.MavPlannedStage
+import com.sennnen.mav.ml.MavStageHealth
 import com.sennnen.mav.ml.MavSignalCoverage
 import com.sennnen.mav.ml.MavSignalReducer
 import com.sennnen.mav.ml.MavSignalState
@@ -236,5 +238,113 @@ class AnalyticsStateTest {
         )
         assertEquals(9, signals.single().total)
         assertEquals(4, signals.single().runnable)
+    }
+
+    private fun health(
+        model: String,
+        applicability: MavApplicability,
+        vararg substitutions: String,
+    ) = model to MavStageHealth(model, applicability, substitutions.toList())
+
+    /**
+     * The case the whole health path exists for: every stage answered, and answered about
+     * padding. It must not arrive as `Ready`, because a card that matches on `Ready` to draw a
+     * number would draw one.
+     */
+    @Test
+    fun a_signal_computed_entirely_from_padding_is_unfounded_not_ready() {
+        val signals = MavSignalReducer.reduce(
+            listOf(stage("popsicle_ovulation_detection", signal = "cycle_awareness", state = MavStageState.CACHED)),
+            completedAtMs = mapOf("popsicle_ovulation_detection" to 1_000L),
+            health = mapOf(
+                health("popsicle_ovulation_detection", MavApplicability.UNFOUNDED, "out_of_range"),
+            ),
+        )
+        assertEquals(
+            MavSignalState.Unfounded(atMs = 1_000L, substitutions = listOf("out_of_range")),
+            signals.single().state,
+        )
+    }
+
+    /** Degraded still reads, and says so. */
+    @Test
+    fun a_partly_substituted_signal_is_ready_and_carries_the_qualification() {
+        val signals = MavSignalReducer.reduce(
+            listOf(stage("cva_encoder", state = MavStageState.CACHED)),
+            completedAtMs = mapOf("cva_encoder" to 5L),
+            health = mapOf(health("cva_encoder", MavApplicability.DEGRADED, "padded")),
+        )
+        assertEquals(
+            MavSignalState.Ready(atMs = 5L, displayable = true, applicability = MavApplicability.DEGRADED),
+            signals.single().state,
+        )
+    }
+
+    /**
+     * A signal is only as sound as its weakest stage. Taking the best would let one complete
+     * model vouch for the padded ones beside it.
+     */
+    @Test
+    fun a_signal_takes_the_worst_verdict_among_its_stages() {
+        val signals = MavSignalReducer.reduce(
+            listOf(
+                stage("cva_encoder", state = MavStageState.CACHED),
+                stage("cva_probes_male", state = MavStageState.CACHED),
+            ),
+            completedAtMs = mapOf("cva_encoder" to 9L, "cva_probes_male" to 9L),
+            health = mapOf(
+                health("cva_encoder", MavApplicability.SOUND),
+                health("cva_probes_male", MavApplicability.UNFOUNDED, "missing"),
+            ),
+        )
+        assertTrue(signals.single().state is MavSignalState.Unfounded)
+    }
+
+    /** A stage the core never measured must not be reported worse than one it measured and passed. */
+    @Test
+    fun an_unmeasured_stage_does_not_degrade_a_sound_signal() {
+        val signals = MavSignalReducer.reduce(
+            listOf(stage("cva_encoder", state = MavStageState.CACHED)),
+            completedAtMs = mapOf("cva_encoder" to 3L),
+        )
+        assertEquals(
+            MavSignalState.Ready(atMs = 3L, displayable = true, applicability = MavApplicability.SOUND),
+            signals.single().state,
+        )
+    }
+
+    @Test
+    fun the_worst_verdict_ranks_unfounded_above_degraded_above_unmeasured() {
+        assertEquals(MavApplicability.SOUND, MavApplicability.worst(emptyList()))
+        assertEquals(
+            MavApplicability.UNFOUNDED,
+            MavApplicability.worst(listOf(MavApplicability.SOUND, MavApplicability.DEGRADED, MavApplicability.UNFOUNDED)),
+        )
+        assertEquals(
+            MavApplicability.DEGRADED,
+            MavApplicability.worst(listOf(MavApplicability.SOUND, MavApplicability.DEGRADED, MavApplicability.UNMEASURED)),
+        )
+    }
+
+    /** An unknown wire name must never be read as the flattering answer. */
+    @Test
+    fun an_unrecognised_verdict_parses_as_unmeasured_rather_than_sound() {
+        assertEquals(MavApplicability.SOUND, MavApplicability.parse("sound"))
+        assertEquals(MavApplicability.DEGRADED, MavApplicability.parse("degraded"))
+        assertEquals(MavApplicability.UNFOUNDED, MavApplicability.parse("unfounded"))
+        assertEquals(MavApplicability.UNMEASURED, MavApplicability.parse("unmeasured"))
+        assertEquals(MavApplicability.UNMEASURED, MavApplicability.parse("a_verdict_from_a_newer_core"))
+    }
+
+    /** An unfounded verdict outranks staleness: the reading was never founded to go stale. */
+    @Test
+    fun unfounded_outranks_stale() {
+        val signals = MavSignalReducer.reduce(
+            listOf(stage("cva_encoder", state = MavStageState.CACHED)),
+            completedAtMs = mapOf("cva_encoder" to 2L),
+            invalidated = setOf("cva_encoder"),
+            health = mapOf(health("cva_encoder", MavApplicability.UNFOUNDED, "missing")),
+        )
+        assertTrue(signals.single().state is MavSignalState.Unfounded)
     }
 }

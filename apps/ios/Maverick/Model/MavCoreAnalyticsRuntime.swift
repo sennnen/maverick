@@ -12,8 +12,14 @@ struct MavCoreAnalyticsRuntime: MavAnalyticsRuntime {
 
   func host() -> MavModelBridge.Host { runtime }
 
-  func admitPPGStages(deviceID: UInt64, atMs: Int64) throws {
-    _ = try runtime.admitPpgStages(deviceId: deviceID, atMs: atMs)
+  func admitPPGStages(deviceID: UInt64, atMs: Int64) throws -> [MavStageHealth] {
+    try runtime.admitPpgStages(deviceId: deviceID, atMs: atMs).map {
+      MavStageHealth(
+        model: $0.modelSlug,
+        applicability: MavApplicability.parse($0.applicability),
+        substitutions: $0.substitutions
+      )
+    }
   }
 
   func plan(

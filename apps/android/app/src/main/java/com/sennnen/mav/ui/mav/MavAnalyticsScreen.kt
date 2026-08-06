@@ -21,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sennnen.mav.R
 import com.sennnen.mav.ml.MavAnalyticsSnapshot
 import com.sennnen.mav.ml.MavSignal
+import com.sennnen.mav.ml.MavApplicability
 import com.sennnen.mav.ml.MavSignalState
 import com.sennnen.mav.ml.MavUnavailable
 import com.sennnen.mav.ui.AppViewModel
@@ -151,11 +152,24 @@ private fun describe(state: MavSignalState): String = when (state) {
         state.total,
     )
     is MavSignalState.Ready ->
-        if (state.displayable) stringResource(R.string.analytics_state_ready)
-        // The model ran and its vocabulary is not admitted. Saying "up to date" here would
-        // imply a reading exists to be up to date.
-        else stringResource(R.string.analytics_state_computed_not_shown)
+        if (!state.displayable) {
+            // The model ran and its vocabulary is not admitted. Saying "up to date" here would
+            // imply a reading exists to be up to date.
+            stringResource(R.string.analytics_state_computed_not_shown)
+        } else if (state.applicability == MavApplicability.DEGRADED) {
+            stringResource(R.string.analytics_state_ready_partial)
+        } else {
+            stringResource(R.string.analytics_state_ready)
+        }
     is MavSignalState.Stale -> stringResource(R.string.analytics_state_stale)
+    // Answered, and answered about padding. The substitution says which fix is available:
+    // readings outside the band this model accepts is a different sentence from no readings.
+    is MavSignalState.Unfounded ->
+        if (state.substitutions.contains("out_of_range")) {
+            stringResource(R.string.analytics_state_unfounded_out_of_range)
+        } else {
+            stringResource(R.string.analytics_state_unfounded_missing)
+        }
     MavSignalState.Deferred -> stringResource(R.string.analytics_state_deferred)
     is MavSignalState.Failed -> stringResource(R.string.analytics_state_failed)
     is MavSignalState.PermissionRequired ->

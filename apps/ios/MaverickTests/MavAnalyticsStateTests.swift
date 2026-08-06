@@ -183,4 +183,86 @@ final class MavAnalyticsStateTests: XCTestCase {
     ])
     XCTAssertEqual(signals.map(\.name), ["ppg_foundation", "cardiovascular", "sleep"])
   }
+
+  private func health(
+    _ model: String,
+    _ applicability: MavApplicability,
+    _ substitutions: [String] = []
+  ) -> (String, MavStageHealth) {
+    (model, MavStageHealth(model: model, applicability: applicability, substitutions: substitutions))
+  }
+
+  /// The case the whole health path exists for: every stage answered, and answered about padding.
+  /// It must not arrive as `.ready`, because a surface switching on `.ready` to draw a number
+  /// would draw one.
+  func testSignalComputedEntirelyFromPaddingIsUnfoundedNotReady() {
+    let signals = MavSignalReducer.reduce(
+      stages: [stage("popsicle_ovulation_detection", signal: "cycle_awareness", state: .cached)],
+      completedAtMs: ["popsicle_ovulation_detection": 1_000],
+      health: Dictionary(uniqueKeysWithValues: [
+        health("popsicle_ovulation_detection", .unfounded, ["out_of_range"])
+      ])
+    )
+    XCTAssertEqual(signals.first?.state, .unfounded(atMs: 1_000, substitutions: ["out_of_range"]))
+  }
+
+  func testPartlySubstitutedSignalIsReadyAndCarriesTheQualification() {
+    let signals = MavSignalReducer.reduce(
+      stages: [stage("cva_encoder", state: .cached)],
+      completedAtMs: ["cva_encoder": 5],
+      health: Dictionary(uniqueKeysWithValues: [health("cva_encoder", .degraded, ["padded"])])
+    )
+    XCTAssertEqual(signals.first?.state, .ready(atMs: 5, displayable: true, applicability: .degraded))
+  }
+
+  /// A signal is only as sound as its weakest stage.
+  func testSignalTakesTheWorstVerdictAmongItsStages() {
+    let signals = MavSignalReducer.reduce(
+      stages: [stage("cva_encoder", state: .cached), stage("cva_probes_male", state: .cached)],
+      completedAtMs: ["cva_encoder": 9, "cva_probes_male": 9],
+      health: Dictionary(uniqueKeysWithValues: [
+        health("cva_encoder", .sound),
+        health("cva_probes_male", .unfounded, ["missing"]),
+      ])
+    )
+    guard case .unfounded = signals.first?.state else {
+      return XCTFail("expected unfounded, got \(String(describing: signals.first?.state))")
+    }
+  }
+
+  func testUnmeasuredStageDoesNotDegradeASoundSignal() {
+    let signals = MavSignalReducer.reduce(
+      stages: [stage("cva_encoder", state: .cached)],
+      completedAtMs: ["cva_encoder": 3]
+    )
+    XCTAssertEqual(signals.first?.state, .ready(atMs: 3, displayable: true, applicability: .sound))
+  }
+
+  func testWorstVerdictRanksUnfoundedAboveDegradedAboveUnmeasured() {
+    XCTAssertEqual(MavApplicability.worst([]), .sound)
+    XCTAssertEqual(MavApplicability.worst([.sound, .degraded, .unfounded]), .unfounded)
+    XCTAssertEqual(MavApplicability.worst([.sound, .degraded, .unmeasured]), .degraded)
+  }
+
+  /// An unknown wire name must never be read as the flattering answer.
+  func testUnrecognisedVerdictParsesAsUnmeasuredRatherThanSound() {
+    XCTAssertEqual(MavApplicability.parse("sound"), .sound)
+    XCTAssertEqual(MavApplicability.parse("degraded"), .degraded)
+    XCTAssertEqual(MavApplicability.parse("unfounded"), .unfounded)
+    XCTAssertEqual(MavApplicability.parse("unmeasured"), .unmeasured)
+    XCTAssertEqual(MavApplicability.parse("a_verdict_from_a_newer_core"), .unmeasured)
+  }
+
+  /// An unfounded verdict outranks staleness: the reading was never founded to go stale.
+  func testUnfoundedOutranksStale() {
+    let signals = MavSignalReducer.reduce(
+      stages: [stage("cva_encoder", state: .cached)],
+      completedAtMs: ["cva_encoder": 2],
+      invalidated: ["cva_encoder"],
+      health: Dictionary(uniqueKeysWithValues: [health("cva_encoder", .unfounded, ["missing"])])
+    )
+    guard case .unfounded = signals.first?.state else {
+      return XCTFail("expected unfounded, got \(String(describing: signals.first?.state))")
+    }
+  }
 }
