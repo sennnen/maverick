@@ -381,6 +381,14 @@ never chooses another namespace. Values and aggregate namespace bytes are bounde
 within one event and become visible only at `StateCommit`. Core journals schema, digest, source
 version, and migration result.
 
+**Not yet connected end to end.** `mav-connector-store` implements the durable half — `save_state`,
+`load_state`, migration and rollback, all covered by `tests/lifecycle.rs` — and `ConnectorHost`
+implements the session half, mirroring and bounding the state actions and exposing the connector's
+own `mav_snapshot` through `snapshot_state`. Nothing joins them, so a connector's state today lives
+for one session and no longer. The two ends are deliberately kept rather than deleted; what is
+missing is the decision about when a session snapshots and how that interacts with activation, and
+that belongs in a packet rather than in a passing change.
+
 Update runs `PrepareStateMigration` in an ephemeral copy. Success returns bounded replacement state
 and a deterministic hash; core commits it with artifact activation. Failure leaves prior artifact
 and state active. Rollback restores the prior snapshot. Cross-publisher state adoption is forbidden

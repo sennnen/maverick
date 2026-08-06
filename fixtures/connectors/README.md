@@ -10,14 +10,15 @@ is linked into Maverick.
 - `whoop4_v1.mavconn` (1.0.3): SHA-256
   `085369dacb6ae747e9bec0a1f8588e18a0e5539e6ea07a4bc41253d607e47304`.
 - `whoop5_v1.mavconn` (1.0.7): SHA-256
-  `e2b730f03ce313ea0f7d2e234d0412d775ad7aac8bedc9b20cc3c93a55eb9f7c`.
+  `166dfeaab9752de02eda845dd5cfabd5e6689625a46f1955480c683344503584`.
 
 Each of those is an `artifact_sha256` the signed registry names at the commit `CONNECTORS_REF`
 pins, and `ConnectorParityTest` recomputes them from the bytes on disk rather than trusting this
-list. They last moved when a refused ECG capture started reporting why instead of returning an
-empty batch — both connectors, because the shared protocol crate changed with them. The pin, this
-list and the frozen expectations in that test all have to move together, in the same commit;
-missing that is what left the three disagreeing once before.
+list. `whoop5` last moved when it stopped parsing the SIG heart-rate characteristic by hand and
+went through `ble-sig` like `whoop4` always has; before that, both moved when a refused ECG capture
+started reporting why instead of returning an empty batch. The pin, this list and the frozen
+expectations in that test all have to move together, in the same commit; missing that is what left
+the three disagreeing once before.
 - `*_parity_v1.expected.json`: canonical event, action, sample, final-state, fuel, and linear-memory
   results produced by `mavconn-test --report` from those exact bytes.
 

@@ -146,27 +146,30 @@ impl Store {
         device: DeviceId,
         sample: &Sample<RawValue>,
     ) -> Result<InsertOutcome> {
+        // Cached rather than `execute`: a burst commits up to MAX_SAMPLES_PER_ACTION rows in one
+        // transaction, and re-parsing this statement for every one of them was most of the cost.
         let changed = self
             .conn
-            .execute(
+            .prepare_cached(
                 "INSERT OR IGNORE INTO sample \
                  (device_id, stream, device_time_ns, seq, value_tag, value_bits, wall_time_ns, \
                   placement, quality_score, quality_reason, provenance_id) \
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-                params![
-                    device.get() as i64,
-                    sample.kind.code(),
-                    sample.device_time.as_nanos(),
-                    sample.seq,
-                    sample.value.tag(),
-                    sample.value.key_bits() as i64,
-                    sample.wall_time().map(WallTime::as_nanos),
-                    sample.placement.code(),
-                    f64::from(sample.quality.score),
-                    sample.quality.reason.map(RejectReason::code),
-                    sample.provenance.get() as i64,
-                ],
             )
+            .map_err(|e| query_err("preparing a sample insert", &e))?
+            .execute(params![
+                device.get() as i64,
+                sample.kind.code(),
+                sample.device_time.as_nanos(),
+                sample.seq,
+                sample.value.tag(),
+                sample.value.key_bits() as i64,
+                sample.wall_time().map(WallTime::as_nanos),
+                sample.placement.code(),
+                f64::from(sample.quality.score),
+                sample.quality.reason.map(RejectReason::code),
+                sample.provenance.get() as i64,
+            ])
             .map_err(|e| query_err("inserting a sample", &e))?;
         Ok(if changed == 1 {
             InsertOutcome::Inserted
@@ -271,20 +274,22 @@ impl Store {
     }
 
     pub fn upsert_provenance(&self, provenance: &Provenance) -> Result<()> {
+        // Cached for the same reason as `insert_sample`: one row per admitted sample in a burst.
         self.conn
-            .execute(
+            .prepare_cached(
                 "INSERT OR REPLACE INTO provenance \
                  (metadata_id, source_stream, quality, algorithm_id, algorithm_version, sample_count) \
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-                params![
-                    provenance.metadata.get() as i64,
-                    to_json(&provenance.source_stream)?,
-                    f64::from(provenance.quality),
-                    provenance.algorithm_id,
-                    provenance.algorithm_version.to_string(),
-                    provenance.sample_count,
-                ],
             )
+            .map_err(|e| query_err("preparing a provenance write", &e))?
+            .execute(params![
+                provenance.metadata.get() as i64,
+                to_json(&provenance.source_stream)?,
+                f64::from(provenance.quality),
+                provenance.algorithm_id,
+                provenance.algorithm_version.to_string(),
+                provenance.sample_count,
+            ])
             .map_err(|e| query_err("writing provenance", &e))?;
         Ok(())
     }

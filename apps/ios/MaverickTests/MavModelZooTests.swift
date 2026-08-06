@@ -146,8 +146,11 @@ struct MavModelZooTests {
       _ = try runner.model(for: slug)
     }
     #expect(runner.residentCount <= MavModelRunner.maxResident)
-    // The one asked for last is the one still there; evicting it would make the cache a treadmill.
-    #expect(try runner.model(for: try #require(slugs.last)) != nil)
+    // The one asked for last is the one still there and the one asked for first is gone; an LRU
+    // that evicted the newest would make the cache a treadmill. Asked of the cache rather than
+    // through `model(for:)`, which would reload an evicted model and report it as present.
+    #expect(runner.isResident(try #require(slugs.last)))
+    #expect(!runner.isResident(try #require(slugs.first)))
 
     runner.releaseCache()
     #expect(runner.residentCount == 0)

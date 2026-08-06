@@ -609,22 +609,22 @@ fun MavConnectorsScreen(
                 }
 
             is ConnectorApprovalPhase.Installed ->
-                MavOutcome("Installed", phase.connectorId, false, onCancel)
+                MavOutcome("Installed", phase.connectorId, onCancel)
 
             is ConnectorApprovalPhase.Failed ->
-                MavOutcome("Import failed", phase.message, true, onCancel)
+                MavOutcome("Import failed", phase.message, onCancel)
 
             is ConnectorApprovalPhase.RolledBack ->
-                MavOutcome("Rolled back", phase.connectorId, false, onCancel)
+                MavOutcome("Rolled back", phase.connectorId, onCancel)
 
             is ConnectorApprovalPhase.Revoked ->
-                MavOutcome("Revoked", phase.connectorId, true, onCancel)
+                MavOutcome("Revoked", phase.connectorId, onCancel)
         }
     }
 }
 
 @Composable
-private fun MavOutcome(title: String, detail: String, destructive: Boolean, onDone: () -> Unit) {
+private fun MavOutcome(title: String, detail: String, onDone: () -> Unit) {
     val palette = MavTheme.palette
     MavStatusCard {
         Text(title, style = MavType.title, color = palette.ink)

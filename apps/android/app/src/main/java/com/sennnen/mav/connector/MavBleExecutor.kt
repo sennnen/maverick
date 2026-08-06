@@ -525,7 +525,11 @@ class MavBleExecutor(
             handler.post(::finishSubscription)
         }
 
+        // `characteristic.value` is the only way to read a payload on the pre-13 overload, and
+        // that getter is deprecated alongside the callback itself. Both have to stay until
+        // minSdk reaches 33.
         @Deprecated("Called through Android 12")
+        @Suppress("DEPRECATION")
         override fun onCharacteristicRead(
             gatt: BluetoothGatt,
             characteristic: BluetoothGattCharacteristic,
@@ -557,6 +561,7 @@ class MavBleExecutor(
         }
 
         @Deprecated("Called through Android 12")
+        @Suppress("DEPRECATION")
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             finishNotification(characteristic, characteristic.value ?: byteArrayOf())
         }

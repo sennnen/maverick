@@ -250,13 +250,13 @@ class MavThemeTest {
         // Old Standard TT used to ship inside the APK. It was a Didone revival, which reads thin
         // and academic at display sizes, and it made the one role carrying the brand look like a
         // different product from iOS. Apple's faces cannot legally ship here, so each platform now
-        // uses its own system serif. A FontListFontFamily reappearing here means a face came back
-        // into the APK.
-        assertTrue(
+        // uses its own system serif. A bundled face reappearing would make this a
+        // FontListFontFamily rather than the platform's generic one.
+        assertEquals(
             "the serif is bundled again rather than the platform's",
-            MavSerif is androidx.compose.ui.text.font.GenericFontFamily,
+            FontFamily.Serif,
+            MavSerif,
         )
-        assertEquals(FontFamily.Serif, MavSerif)
     }
 
     @Test

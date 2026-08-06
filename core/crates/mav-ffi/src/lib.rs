@@ -56,6 +56,11 @@ pub struct RuntimeConfig {
     pub app_version: String,
 }
 
+/// Lock order, where two of the mutexes below are ever held at once: `scheduler` before `models`,
+/// and never the reverse. `admit_prepared` is the only place that nests them, because deciding
+/// "already answered or already running" and queueing the work have to be one atomic step or two
+/// planning passes race and the platform runs the same tensors twice. Everything else — including
+/// `submit_model_inference`, which touches both — releases one before taking the other.
 #[derive(uniffi::Object)]
 pub struct MavRuntime {
     connectors: Mutex<mav_connector_store::ConnectorRepository>,

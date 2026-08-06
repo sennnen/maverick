@@ -189,6 +189,9 @@ pub struct ConnectorHost {
     next_host_deadline_token: u64,
     pending_timers: BTreeSet<u64>,
     staged_state: BTreeMap<String, Option<Vec<u8>>>,
+    /// The host's mirror of what the connector has committed, kept so the session can bound the
+    /// namespace. Session-local: nothing writes it through to `mav-connector-store` yet, so it
+    /// dies with the session — see [`Self::snapshot_state`].
     committed_state: BTreeMap<String, Vec<u8>>,
     state_revision: u64,
     timeline: Timeline,
@@ -642,6 +645,11 @@ impl ConnectorHost {
         self.config.device_id
     }
 
+    /// The connector's own serialised state, as its `mav_snapshot` export produces it.
+    ///
+    /// Nothing calls this yet, and that is the honest state of durable connector state: the store
+    /// can persist, migrate and roll back a namespace, the host mirrors and bounds the state
+    /// actions, and the seam between the two is not built. See `docs/connectors.md`.
     pub fn snapshot_state(&mut self) -> Result<Vec<u8>> {
         self.program.snapshot()
     }
@@ -718,22 +726,27 @@ impl ConnectorHost {
                 "connector transport action queue is full",
             ));
         }
-        let mut operations = self.seen_operations.clone();
-        let mut deadlines = self.seen_deadlines.clone();
+        // Only the ids this batch introduces are collected; the session sets stay untouched until
+        // the whole batch has validated. Cloning them to get that atomicity meant copying up to
+        // MAX_SESSION_OPERATIONS entries twice per event, on the busiest path in the host.
+        let mut operations = BTreeSet::new();
+        let mut deadlines = BTreeSet::new();
         let mut simulated = self.lifecycle;
         for action in &batch.actions {
             self.validate_action(action, caused_by, &mut operations, &mut deadlines)?;
             self.simulate_action(&action.body, &mut simulated)?;
         }
         self.validate_state_batch(&batch)?;
-        if operations.len() > MAX_SESSION_OPERATIONS || deadlines.len() > MAX_SESSION_OPERATIONS {
+        if self.seen_operations.len() + operations.len() > MAX_SESSION_OPERATIONS
+            || self.seen_deadlines.len() + deadlines.len() > MAX_SESSION_OPERATIONS
+        {
             return Err(error(
                 codes::CONNECTOR_HOST_OPERATION_DUPLICATE,
                 "connector session operation budget exhausted",
             ));
         }
-        self.seen_operations = operations;
-        self.seen_deadlines = deadlines;
+        self.seen_operations.append(&mut operations);
+        self.seen_deadlines.append(&mut deadlines);
         for action in &batch.actions {
             self.trace_hash = trace_action(self.trace_hash, action)?;
         }

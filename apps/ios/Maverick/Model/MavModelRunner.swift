@@ -96,6 +96,14 @@ final class MavModelRunner {
     return loaded.count
   }
 
+  /// Whether one model is resident right now. Also for the tests: asking `model(for:)` would
+  /// reload an evicted model and report it as present, which is the opposite of the question.
+  func isResident(_ slug: String) -> Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return loaded[slug] != nil
+  }
+
   /// Move one model to the most-recently-used end. Caller holds `lock`.
   private func touch(_ slug: String) {
     recency.removeAll { $0 == slug }

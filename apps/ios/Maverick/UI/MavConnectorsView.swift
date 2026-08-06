@@ -32,13 +32,13 @@ struct MavConnectorsView: View {
           }
         }
       case .installed(let id):
-        outcome(title: "Installed", detail: id, destructive: false)
+        outcome(title: "Installed", detail: id)
       case .failed(let message):
-        outcome(title: "Import failed", detail: message, destructive: true)
+        outcome(title: "Import failed", detail: message)
       case .rolledBack(let id):
-        outcome(title: "Rolled back", detail: id, destructive: false)
+        outcome(title: "Rolled back", detail: id)
       case .revoked(let id):
-        outcome(title: "Revoked", detail: id, destructive: true)
+        outcome(title: "Revoked", detail: id)
       }
     }
     .fileImporter(isPresented: $showImporter, allowedContentTypes: [.data]) { result in
@@ -181,7 +181,7 @@ struct MavConnectorsView: View {
     }
   }
 
-  private func outcome(title: String, detail: String, destructive: Bool) -> some View {
+  private func outcome(title: String, detail: String) -> some View {
     VStack(alignment: .leading, spacing: MavTheme.cardSpacing) {
       MavStatusCard {
         VStack(alignment: .leading, spacing: 7) {

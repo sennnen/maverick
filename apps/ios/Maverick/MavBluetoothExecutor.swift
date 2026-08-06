@@ -186,7 +186,10 @@ final class MavBluetoothExecutor: NSObject {
   }
 }
 
-extension MavBluetoothExecutor: CBCentralManagerDelegate {
+// CoreBluetooth is created with `queue: nil`, so every delegate callback below is delivered on
+// the main queue. The conformances say so rather than being marked `@preconcurrency`: the isolation
+// is a fact about how the central was built, not a check worth turning off.
+extension MavBluetoothExecutor: @MainActor CBCentralManagerDelegate {
   func centralManagerDidUpdateState(_ central: CBCentralManager) {
     guard central.state == .poweredOn else { return }
     let pending = queued
@@ -263,7 +266,7 @@ extension MavBluetoothExecutor: CBCentralManagerDelegate {
   }
 }
 
-extension MavBluetoothExecutor: CBPeripheralDelegate {
+extension MavBluetoothExecutor: @MainActor CBPeripheralDelegate {
   func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
     if let error {
       fail(nil, code: 5, error.localizedDescription)

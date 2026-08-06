@@ -80,7 +80,7 @@ class MavSnapshotDecoderTest {
     }
 
     private fun platformFixture(): JSONObject {
-        var dir: File? = File(System.getProperty("user.dir"))
+        var dir: File? = File(System.getProperty("user.dir") ?: ".")
         while (dir != null) {
             val candidate = File(dir, "fixtures/platform/host_snapshot_v1.expected.json")
             if (candidate.exists()) return JSONObject(candidate.readText())

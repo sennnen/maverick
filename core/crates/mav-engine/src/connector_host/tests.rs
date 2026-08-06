@@ -335,6 +335,52 @@ pub(super) fn transport_ids_are_host_assigned() {
     assert_eq!(action.deadline_token, 1);
 }
 
+/// Operation and deadline ids stay unique for the life of a session, not just within one batch.
+///
+/// The session's sets used to be cloned per batch so a failed batch could be dropped without
+/// having touched them; they are now updated only after a batch validates, which is the same
+/// guarantee without the copy. Worth pinning because losing it is silent — a connector reusing
+/// an id would keep working right up until two operations answered to the same number.
+#[test]
+pub(super) fn operation_ids_stay_unique_across_batches_and_not_only_within_one() {
+    let scan = |operation: u64| {
+        action(
+            2,
+            operation,
+            ActionBody::StartScan {
+                service_uuids: vec!["service".to_owned()],
+                manufacturer_ids: Vec::new(),
+            },
+        )
+    };
+    let session = |first: u64, second: u64| {
+        host(
+            vec![
+                empty(),
+                batch(vec![scan(first)]),
+                batch(vec![action(3, second, ActionBody::StopScan)]),
+            ],
+            8,
+        )
+    };
+
+    let mut repeated = session(1, 1);
+    repeated.start().expect("start");
+    assert_eq!(
+        repeated
+            .apply(advertisement(), None)
+            .expect_err("an id an earlier batch already used")
+            .code,
+        codes::CONNECTOR_HOST_OPERATION_DUPLICATE
+    );
+
+    let mut distinct = session(1, 2);
+    distinct.start().expect("start");
+    distinct
+        .apply(advertisement(), None)
+        .expect("a fresh id in a later batch");
+}
+
 #[test]
 pub(super) fn wrong_order_and_undeclared_actions_reject_exactly() {
     let mut wrong_order = host(vec![empty(), empty()], 8);

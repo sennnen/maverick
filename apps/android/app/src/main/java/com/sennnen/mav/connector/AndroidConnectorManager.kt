@@ -628,25 +628,25 @@ class AndroidConnectorManager(
         val state = runCatching {
             gate.withLock {
                 val active = ensureRuntime()
-                Triple(
-                    active.connectorCaptureCapabilities(),
-                    active.ecgCaptureState(System.currentTimeMillis()),
-                    active.ecgInferenceRequest(),
-                )
+                active.connectorCaptureCapabilities() to
+                    active.ecgCaptureState(System.currentTimeMillis())
             }
         }.getOrElse {
             mutableEcgCapabilities.value = emptyList()
             return
         }
-        mutableEcgCapabilities.value = state.first
-        mutableEcgCapture.value = state.second
-        val request = state.third
-        if (state.second?.phase != "analysing" ||
-            request == null ||
-            ecgInferenceInFlight == request.captureId
-        ) {
-            return
-        }
+        val (capabilities, capture) = state
+        mutableEcgCapabilities.value = capabilities
+        mutableEcgCapture.value = capture
+        // This runs after every transport event, and the inference request carries seven tensors
+        // of 7,680 floats each — boxed, across the FFI. Fetching it unconditionally meant copying
+        // a third of a megabyte per notification for the one tick where the capture is actually
+        // waiting on the classifier.
+        if (capture?.phase != "analysing" || ecgInferenceInFlight == capture.captureId) return
+        val request = runCatching {
+            gate.withLock { ensureRuntime().ecgInferenceRequest() }
+        }.getOrNull() ?: return
+        if (ecgInferenceInFlight == request.captureId) return
         ecgInferenceInFlight = request.captureId
         runCatching {
             val predictions = MavEcgClassifier(appContext).use { classifier ->

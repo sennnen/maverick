@@ -28,7 +28,7 @@ class ConnectorParityTest {
                 "whoop5",
                 "dev.maverick.whoop5",
                 16,
-                "e2b730f03ce313ea0f7d2e234d0412d775ad7aac8bedc9b20cc3c93a55eb9f7c",
+                "166dfeaab9752de02eda845dd5cfabd5e6689625a46f1955480c683344503584",
                 setOf(
                     "history-cursor-retry",
                     "state-restart",

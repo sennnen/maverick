@@ -5,6 +5,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -15,7 +16,6 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.MonitorHeart
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.Spa
@@ -40,7 +40,7 @@ object MavIcons {
     val chevronRight: ImageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight
     val check: ImageVector = Icons.Rounded.CheckCircle
     val alert: ImageVector = Icons.Rounded.Warning
-    val unknown: ImageVector = Icons.Rounded.HelpOutline
+    val unknown: ImageVector = Icons.AutoMirrored.Rounded.HelpOutline
 
     fun tabIcon(tab: MavTab): ImageVector = when (tab) {
         MavTab.TODAY -> Icons.Rounded.WbSunny

@@ -3,6 +3,9 @@
 use super::*;
 
 impl ConnectorHost {
+    /// `operations` and `deadlines` collect the ids this batch introduces. Uniqueness is against
+    /// them *and* against everything the session has already seen; the split is what lets a failed
+    /// batch be dropped without having touched the session's sets.
     pub(super) fn validate_action(
         &self,
         action: &ConnectorAction,
@@ -21,8 +24,10 @@ impl ConnectorHost {
             ));
         }
         if action.operation_id.0 == 0
+            || self.seen_operations.contains(&action.operation_id.0)
             || !operations.insert(action.operation_id.0)
             || action.deadline_token.0 == 0
+            || self.seen_deadlines.contains(&action.deadline_token.0)
             || !deadlines.insert(action.deadline_token.0)
         {
             return Err(error(
@@ -178,29 +183,44 @@ impl ConnectorHost {
         Ok(value)
     }
 
+    /// Would this batch push staged or committed state past the session bound?
+    ///
+    /// Simulated over value *lengths*, not values. The bound is a byte count, so copying every
+    /// stored blob to answer it meant memcpying up to two times `MAX_STATE_BYTES` per event —
+    /// 128 KiB of pure waste on the path a streaming connector takes for every packet.
     pub(super) fn validate_state_batch(&self, batch: &ActionBatch) -> Result<()> {
-        let mut staged = self.staged_state.clone();
-        let mut committed = self.committed_state.clone();
+        let mut staged: BTreeMap<&str, Option<usize>> = self
+            .staged_state
+            .iter()
+            .map(|(key, value)| (key.as_str(), value.as_ref().map(Vec::len)))
+            .collect();
+        let mut committed: BTreeMap<&str, usize> = self
+            .committed_state
+            .iter()
+            .map(|(key, value)| (key.as_str(), value.len()))
+            .collect();
         for action in &batch.actions {
             match &action.body {
                 ActionBody::StatePut { key, value } => {
-                    staged.insert(key.clone(), Some(value.clone()));
+                    staged.insert(key, Some(value.len()));
                 }
                 ActionBody::StateDelete { key } => {
-                    staged.insert(key.clone(), None);
+                    staged.insert(key, None);
                 }
                 ActionBody::StateCommit => {
                     for (key, value) in std::mem::take(&mut staged) {
                         match value {
-                            Some(value) => {
-                                committed.insert(key, value);
+                            Some(len) => {
+                                committed.insert(key, len);
                             }
                             None => {
-                                committed.remove(&key);
+                                committed.remove(key);
                             }
                         }
                     }
-                    if state_bytes(&committed) > MAX_STATE_BYTES {
+                    if simulated_bytes(committed.iter().map(|(key, len)| (*key, Some(*len))))
+                        > MAX_STATE_BYTES
+                    {
                         return Err(error(
                             codes::CONNECTOR_HOST_ACTION_INVALID,
                             "connector committed state exceeds the session bound",
@@ -209,7 +229,7 @@ impl ConnectorHost {
                 }
                 _ => {}
             }
-            if staged_state_bytes(&staged) > MAX_STATE_BYTES {
+            if simulated_bytes(staged.iter().map(|(key, len)| (*key, *len))) > MAX_STATE_BYTES {
                 return Err(error(
                     codes::CONNECTOR_HOST_ACTION_INVALID,
                     "connector staged state exceeds the session bound",
@@ -277,16 +297,12 @@ pub(super) fn transport_request(body: ActionBody) -> Result<ConnectorTransportRe
     Ok(request)
 }
 
-pub(super) fn state_bytes(values: &BTreeMap<String, Vec<u8>>) -> usize {
-    values.iter().fold(0_usize, |total, (key, value)| {
-        total.saturating_add(key.len()).saturating_add(value.len())
-    })
-}
-
-pub(super) fn staged_state_bytes(values: &BTreeMap<String, Option<Vec<u8>>>) -> usize {
-    values.iter().fold(0_usize, |total, (key, value)| {
+/// Key bytes plus value bytes, over key/value-length pairs. Lengths rather than values because
+/// the bound is a byte count and nothing here needs to look inside a blob.
+fn simulated_bytes<'a>(entries: impl Iterator<Item = (&'a str, Option<usize>)>) -> usize {
+    entries.fold(0_usize, |total, (key, len)| {
         total
             .saturating_add(key.len())
-            .saturating_add(value.as_deref().map_or(0, <[u8]>::len))
+            .saturating_add(len.unwrap_or(0))
     })
 }
