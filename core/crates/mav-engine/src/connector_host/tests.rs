@@ -34,19 +34,45 @@ use mav_connector_abi::{
     LimitsProfileId, Permission, ServiceDecl, TimerToken, UpdatePolicy, MANIFEST_SCHEMA_V2,
 };
 
+/// What a scripted connector saw and what it will hand back, shared with the test that built it.
+#[derive(Default)]
+struct ProgramLog {
+    /// Every event body the program was given, in order.
+    seen: Vec<EventBody>,
+    /// What `mav_snapshot` returns. A test that wants to prove a snapshot was taken at a
+    /// particular moment sets this to something recognisable first.
+    snapshot: Vec<u8>,
+    /// When set, the program refuses this many leading events. For the connector that cannot read
+    /// its own stored state.
+    refuse_first: usize,
+}
+
 #[derive(Default)]
 struct ScriptedProgram {
     batches: VecDeque<ActionBatch>,
+    log: Arc<std::sync::Mutex<ProgramLog>>,
 }
 
 impl ScriptedProgram {
     fn new(batches: Vec<ActionBatch>) -> Self {
         Self {
             batches: batches.into(),
+            log: Arc::new(std::sync::Mutex::new(ProgramLog {
+                snapshot: vec![1, 2, 3],
+                ..ProgramLog::default()
+            })),
         }
     }
 
-    fn next(&mut self) -> Result<ActionBatch> {
+    fn next(&mut self, event: &ConnectorEvent) -> Result<ActionBatch> {
+        {
+            let mut log = self.log.lock().map_err(|_| host_state("poisoned log"))?;
+            log.seen.push(event.body.clone());
+            if log.refuse_first > 0 {
+                log.refuse_first -= 1;
+                return Err(host_state("scripted connector refuses this event"));
+            }
+        }
         self.batches
             .pop_front()
             .ok_or_else(|| host_state("test program ran out of batches"))
@@ -54,16 +80,21 @@ impl ScriptedProgram {
 }
 
 impl ConnectorProgram for ScriptedProgram {
-    fn init(&mut self, _event: &ConnectorEvent) -> Result<ActionBatch> {
-        self.next()
+    fn init(&mut self, event: &ConnectorEvent) -> Result<ActionBatch> {
+        self.next(event)
     }
 
-    fn handle(&mut self, _event: &ConnectorEvent) -> Result<ActionBatch> {
-        self.next()
+    fn handle(&mut self, event: &ConnectorEvent) -> Result<ActionBatch> {
+        self.next(event)
     }
 
     fn snapshot(&mut self) -> Result<Vec<u8>> {
-        Ok(vec![1, 2, 3])
+        Ok(self
+            .log
+            .lock()
+            .map_err(|_| host_state("poisoned log"))?
+            .snapshot
+            .clone())
     }
 }
 
@@ -154,6 +185,28 @@ pub(super) fn empty() -> ActionBatch {
 
 pub(super) fn host(batches: Vec<ActionBatch>, capacity: u32) -> ConnectorHost {
     host_with_manifest(manifest(), batches, capacity)
+}
+
+/// A host plus a handle on what its connector saw and returns.
+fn host_logged(
+    batches: Vec<ActionBatch>,
+    capacity: u32,
+) -> (ConnectorHost, Arc<std::sync::Mutex<ProgramLog>>) {
+    let program = ScriptedProgram::new(batches);
+    let log = Arc::clone(&program.log);
+    let host = ConnectorHost::with_program(
+        manifest(),
+        [7; 32],
+        Box::new(program),
+        Store::open_in_memory().expect("store"),
+        ConnectorHostConfig {
+            session_id: 7,
+            device_id: 9,
+            transport_capacity: capacity,
+        },
+    )
+    .expect("host");
+    (host, log)
 }
 
 fn host_with_manifest(
@@ -1219,4 +1272,128 @@ pub(super) fn cancelling_an_active_capture_queues_stop_before_disconnect() {
     ));
     assert_eq!(actions[1].body, ConnectorTransportRequest::Disconnect);
     assert_eq!(active.active_capture(), None);
+}
+
+// ------------------------------------------------------------------- durable connector state
+
+/// A restored session's first event is `RestoreState`, and it replaces `Init` rather than
+/// following it.
+///
+/// That order is not a preference: it is the order the embedded fixtures run under, so it is the
+/// order every connector's parity report was produced against. A production restore that took a
+/// different path would be exercising something no fixture covers.
+#[test]
+pub(super) fn a_restored_session_replaces_init_with_restore_state() {
+    let (mut fresh, fresh_log) = host_logged(vec![empty(), empty()], 8);
+    fresh.start().expect("fresh start");
+    assert_eq!(
+        fresh_log.lock().expect("log").seen,
+        vec![
+            EventBody::Init {
+                manifest_hash: [7; 32]
+            },
+            EventBody::Activate,
+        ],
+    );
+
+    let (mut restored, restored_log) = host_logged(vec![empty(), empty()], 8);
+    restored.start_restored(&[9, 8, 7]).expect("restored start");
+    assert_eq!(
+        restored_log.lock().expect("log").seen,
+        vec![
+            EventBody::RestoreState {
+                bytes: vec![9, 8, 7]
+            },
+            EventBody::Activate,
+        ],
+        "a restored session must not also be told Init",
+    );
+    // Either way the session is live and in the same place.
+    assert_eq!(
+        restored.lifecycle_snapshot().lifecycle,
+        fresh.lifecycle_snapshot().lifecycle
+    );
+}
+
+/// The revision only moves on a commit, and the snapshot is the connector's own bytes.
+///
+/// `mav-ffi` writes state through exactly when the revision moves, so a revision that advanced
+/// without a commit would re-serialise a connector's state on every packet, and one that failed to
+/// advance on a commit would lose it.
+#[test]
+pub(super) fn the_state_revision_moves_only_on_a_commit_and_carries_the_connectors_own_snapshot() {
+    let (mut host, log) = host_logged(
+        vec![
+            empty(),
+            batch(vec![action(
+                2,
+                1,
+                ActionBody::StartScan {
+                    service_uuids: vec!["service".to_owned()],
+                    manufacturer_ids: Vec::new(),
+                },
+            )]),
+            // Staging alone is not durability.
+            batch(vec![action(
+                3,
+                2,
+                ActionBody::StatePut {
+                    key: "session".to_owned(),
+                    value: vec![4, 5, 6],
+                },
+            )]),
+            batch(vec![action(4, 3, ActionBody::StateCommit)]),
+            // One for the `StateCommitted` the commit chains back into the connector, one for the
+            // quiet event below.
+            empty(),
+            empty(),
+        ],
+        8,
+    );
+    log.lock().expect("log").snapshot = vec![42, 43];
+
+    host.start().expect("start");
+    host.apply(advertisement(), None).expect("staging event");
+    assert_eq!(host.state_revision(), 0, "a put is not a commit");
+
+    host.apply(advertisement(), None).expect("commit event");
+    assert_eq!(host.state_revision(), 1);
+    assert_eq!(host.snapshot_state().expect("snapshot"), vec![42, 43]);
+
+    // An event that commits nothing leaves the revision where it was, which is what keeps the
+    // write-through off the packet path.
+    host.apply(advertisement(), None).expect("quiet event");
+    assert_eq!(host.state_revision(), 1);
+}
+
+/// A connector that refuses its own stored state fails the session rather than silently
+/// continuing from a blank slate.
+///
+/// `mav-ffi` catches this, drops the row and starts fresh — but it can only do that if the host
+/// tells it, so "restore failed" must be an error and not a shrug.
+#[test]
+pub(super) fn a_connector_that_refuses_its_stored_state_fails_the_session() {
+    let (mut host, log) = host_logged(vec![empty(), empty()], 8);
+    log.lock().expect("log").refuse_first = 1;
+
+    let error = host
+        .start_restored(&[1, 2, 3])
+        .expect_err("a refused restore is not success");
+    assert_eq!(error.code, codes::CONNECTOR_HOST_STATE);
+    assert_eq!(
+        host.lifecycle_snapshot().lifecycle,
+        ConnectorLifecycle::Failed
+    );
+}
+
+/// The namespace a session writes to comes from the signed manifest, not from anything a caller
+/// passes in. The store refuses a namespace that disagrees with the active artifact, so this is
+/// what keeps state from one publisher out of another's.
+#[test]
+pub(super) fn the_state_namespace_comes_from_the_signed_manifest() {
+    let host = host(vec![empty(), empty()], 8);
+    let (publisher, schema) = host.state_namespace();
+    assert_eq!(publisher, manifest().publisher_key_id);
+    assert_eq!(schema, manifest().state_schema);
+    assert_eq!(host.connector_id(), manifest().connector_id.as_str());
 }

@@ -761,6 +761,30 @@ impl ConnectorRepository {
         .transpose()
     }
 
+    /// Forget one namespace's state. Returns whether a row was there to forget.
+    ///
+    /// For the one case where keeping state is worse than losing it: the connector refused to
+    /// restore from it. Leaving the row would make every reconnect fail identically, so a device
+    /// that hit one bad write would stay broken until it was reinstalled.
+    pub fn clear_state(&mut self, namespace: &StateNamespace) -> Result<bool> {
+        validate_namespace(namespace)?;
+        let removed = self
+            .connection
+            .execute(
+                "DELETE FROM connector_state
+                 WHERE connector_id = ?1 AND publisher_key_id = ?2
+                   AND device_id = ?3 AND state_schema = ?4",
+                params![
+                    namespace.connector_id,
+                    namespace.publisher_key_id,
+                    namespace.device_id,
+                    i64::from(namespace.state_schema)
+                ],
+            )
+            .map_err(|source| storage("clear connector state", source))?;
+        Ok(removed > 0)
+    }
+
     pub fn migrate_and_activate<F>(
         &mut self,
         connector_id: &str,

@@ -381,13 +381,37 @@ never chooses another namespace. Values and aggregate namespace bytes are bounde
 within one event and become visible only at `StateCommit`. Core journals schema, digest, source
 version, and migration result.
 
-**Not yet connected end to end.** `mav-connector-store` implements the durable half — `save_state`,
-`load_state`, migration and rollback, all covered by `tests/lifecycle.rs` — and `ConnectorHost`
-implements the session half, mirroring and bounding the state actions and exposing the connector's
-own `mav_snapshot` through `snapshot_state`. Nothing joins them, so a connector's state today lives
-for one session and no longer. The two ends are deliberately kept rather than deleted; what is
-missing is the decision about when a session snapshots and how that interacts with activation, and
-that belongs in a packet rather than in a passing change.
+### What is made durable, and when
+
+The durable blob is the connector's own `mav_snapshot`, and `RestoreState` is its inverse. The
+staged `StatePut`/`StateCommit` map is the *bound* — it is what caps a namespace at
+`MAX_STATE_BYTES` — while `StateCommit` is the connector saying "this is worth keeping".
+
+`mav-ffi` joins the two ends, because it is the only layer holding both the install store and the
+live session:
+
+- **Write.** After anything that can dispatch an event, the runtime compares the host's
+  `state_revision` with the last one it persisted. Unchanged means no commit happened and no
+  connector code runs; changed means it takes `snapshot_state` and writes it through `save_state`.
+  Snapshotting per event instead would spend a connector's fuel re-serialising state that has not
+  moved.
+- **Read.** `open_connector_session` loads the namespace and starts the session with
+  `start_restored`, which sends `RestoreState` *in place of* `Init` — the order the embedded
+  fixtures run, so a restored production session takes the path the parity reports cover.
+- **Namespace.** `(connector_id, publisher_key_id, device_id, state_schema)`, with the publisher
+  and schema read from the signed manifest and the device from the session. `save_state` refuses a
+  namespace that disagrees with the active artifact, so one publisher's state cannot reach another's
+  connector and one strap's cannot reach another strap's.
+- **Failure is never silent and never fatal.** A state write that fails is journalled and the
+  session continues — the event it belonged to has already been handled and its samples already
+  committed, so failing it would throw away good data to report a durability problem, and the next
+  commit retries. A connector that *refuses* its own stored bytes is a different case: the row is
+  dropped and the session starts fresh, because keeping it would make every future reconnect fail
+  identically and turn one bad write into a permanently dead device.
+
+Migration and rollback remain as described above and are not on this path: `migrate_and_activate`
+rewrites a namespace when the artifact changes, and a session only ever reads what is already
+there.
 
 Update runs `PrepareStateMigration` in an ephemeral copy. Success returns bounded replacement state
 and a deterministic hash; core commits it with artifact activation. Failure leaves prior artifact

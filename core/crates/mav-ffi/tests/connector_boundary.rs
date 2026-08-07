@@ -1338,3 +1338,190 @@ fn a_day_range_returns_one_snapshot_per_day_oldest_first() {
     );
     let _ = std::fs::remove_file(path);
 }
+
+// --------------------------------------------------------------- durable connector state
+
+/// The state namespace the runtime writes to, as the manifest defines it.
+fn state_namespace(device_id: u64) -> mav_connector_store::StateNamespace {
+    mav_connector_store::StateNamespace {
+        connector_id: CONNECTOR.to_owned(),
+        publisher_key_id: "store-test-key".to_owned(),
+        device_id: device_id.to_string(),
+        state_schema: 1,
+    }
+}
+
+/// Install a connector that commits state during activation, and open a session for it.
+fn committing_session(
+    snapshot: &[u8],
+    session_id: u64,
+    device_id: u64,
+) -> (std::sync::Arc<MavRuntime>, std::path::PathBuf) {
+    let (runtime, path) = runtime();
+    let (policy, revocations) = trust(1);
+    let bytes = common::signed_committing_artifact("1.0.0", 1, session_id, snapshot);
+    let inspection = runtime
+        .inspect_connector_bytes(
+            bytes.clone(),
+            source(),
+            policy.clone(),
+            revocations.clone(),
+            2,
+            1_000,
+        )
+        .expect("inspect");
+    runtime
+        .install_connector_bytes(
+            ConnectorInstallRequest {
+                bytes,
+                source: source(),
+                approval_token: inspection.approval_token,
+                activate: true,
+                now_ms: 3,
+            },
+            policy.clone(),
+            revocations.clone(),
+        )
+        .expect("install");
+    runtime
+        .open_connector_session(
+            ConnectorSessionConfig {
+                connector_id: CONNECTOR.to_owned(),
+                session_id,
+                device_id,
+                transport_capacity: 16,
+                now_ms: 4,
+            },
+            policy,
+            revocations,
+        )
+        .expect("open session");
+    (runtime, path)
+}
+
+/// What a connector commits survives the process, and the next session is handed it back.
+///
+/// This is the whole point of durable state: a strap that has learned where it got to in a history
+/// offload should not start that offload again because the app was killed. Before this was wired,
+/// the store could persist state and the host could produce it and nothing joined the two, so
+/// every reconnect was a cold start.
+#[test]
+fn committed_connector_state_survives_a_restart_and_is_restored() {
+    let snapshot = [0xAB_u8, 0xCD, 0xEF];
+    let (first, path) = committing_session(&snapshot, 41, 7);
+
+    // The session committed while activating, so the row is there before anything else happens.
+    let stored = mav_connector_store::ConnectorRepository::open(&path)
+        .expect("repository")
+        .load_state(&state_namespace(7))
+        .expect("load state")
+        .expect("the activation commit was persisted");
+    assert_eq!(stored.bytes, snapshot, "the connector's own snapshot bytes");
+    assert_eq!(
+        stored.digest.to_vec(),
+        Sha256::digest(snapshot).to_vec(),
+        "the digest must describe the bytes beside it"
+    );
+
+    // A second runtime over the same database is what a relaunch looks like.
+    drop(first);
+    let relaunched = MavRuntime::new(RuntimeConfig {
+        database_path: path.to_string_lossy().into_owned(),
+        timezone_id: "Europe/London".to_owned(),
+        app_version: "0.1.0".to_owned(),
+    })
+    .expect("relaunch");
+    let (policy, revocations) = trust(1);
+    let report = relaunched
+        .open_connector_session(
+            ConnectorSessionConfig {
+                connector_id: CONNECTOR.to_owned(),
+                session_id: 41,
+                device_id: 7,
+                transport_capacity: 16,
+                now_ms: 9,
+            },
+            policy,
+            revocations,
+        )
+        .expect("reopen restores rather than failing");
+    assert_eq!(report.lifecycle, ConnectorLifecycleState::Selected);
+
+    // The trace hash covers every event the connector was given, so a session that was handed
+    // `RestoreState` cannot hash the same as one that was handed `Init`. This is what proves the
+    // stored bytes actually reached the connector rather than merely sitting in a table.
+    let (policy, revocations) = trust(1);
+    let (cold, cold_path) = runtime();
+    let bytes = common::signed_committing_artifact("1.0.0", 1, 41, &snapshot);
+    let inspection = cold
+        .inspect_connector_bytes(
+            bytes.clone(),
+            source(),
+            policy.clone(),
+            revocations.clone(),
+            2,
+            1_000,
+        )
+        .expect("inspect");
+    cold.install_connector_bytes(
+        ConnectorInstallRequest {
+            bytes,
+            source: source(),
+            approval_token: inspection.approval_token,
+            activate: true,
+            now_ms: 3,
+        },
+        policy.clone(),
+        revocations.clone(),
+    )
+    .expect("install");
+    let cold_report = cold
+        .open_connector_session(
+            ConnectorSessionConfig {
+                connector_id: CONNECTOR.to_owned(),
+                session_id: 41,
+                device_id: 7,
+                transport_capacity: 16,
+                now_ms: 9,
+            },
+            policy,
+            revocations,
+        )
+        .expect("cold open");
+    assert_ne!(
+        report.trace_hash, cold_report.trace_hash,
+        "the reopened session took the same path as a cold start, so nothing was restored"
+    );
+    let _ = std::fs::remove_file(cold_path);
+    // Still there, and still the same bytes: a restore must not clear what it restored from.
+    assert_eq!(
+        mav_connector_store::ConnectorRepository::open(&path)
+            .expect("repository")
+            .load_state(&state_namespace(7))
+            .expect("load state")
+            .expect("state survives the reopen")
+            .bytes,
+        snapshot,
+    );
+    let _ = std::fs::remove_file(path);
+}
+
+/// State is keyed per device, so two straps do not read each other's.
+#[test]
+fn connector_state_is_scoped_to_the_device_that_produced_it() {
+    let snapshot = [1_u8, 2, 3, 4];
+    let (_runtime, path) = committing_session(&snapshot, 41, 7);
+    let repository = mav_connector_store::ConnectorRepository::open(&path).expect("repository");
+    assert!(repository
+        .load_state(&state_namespace(7))
+        .expect("load")
+        .is_some());
+    assert!(
+        repository
+            .load_state(&state_namespace(8))
+            .expect("load")
+            .is_none(),
+        "a second device must start from nothing rather than from another strap's session"
+    );
+    let _ = std::fs::remove_file(path);
+}

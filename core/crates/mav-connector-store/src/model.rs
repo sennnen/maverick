@@ -138,3 +138,20 @@ pub struct StoredState {
     pub digest: [u8; 32],
     pub updated_at_ms: i64,
 }
+
+impl StoredState {
+    /// State with its digest computed from its bytes.
+    ///
+    /// `save_state` refuses a digest that does not match, so every caller would otherwise hash the
+    /// bytes itself and the only way to get it wrong is to have the chance. This is the one place
+    /// that chance exists.
+    pub fn new(namespace: StateNamespace, bytes: Vec<u8>, updated_at_ms: i64) -> Self {
+        let digest = <sha2::Sha256 as sha2::Digest>::digest(&bytes).into();
+        Self {
+            namespace,
+            bytes,
+            digest,
+            updated_at_ms,
+        }
+    }
+}

@@ -19,33 +19,135 @@ pub fn signed_capture_artifact(version: &str, state_schema: u32) -> Vec<u8> {
     signed_artifact_with_capture(version, state_schema, true, true)
 }
 
+/// A connector that commits state while it activates, and whose snapshot is `snapshot`.
+///
+/// The plain test connector returns an empty batch for everything, so it never commits and never
+/// exercises the durable-state path at all. This one answers `Activate` — event sequence 2, the
+/// second and last event `ConnectorHost::start` dispatches — with a put and a commit, which is the
+/// shape a real connector uses to make a session resumable.
+#[allow(dead_code)]
+pub fn signed_committing_artifact(
+    version: &str,
+    state_schema: u32,
+    session_id: u64,
+    snapshot: &[u8],
+) -> Vec<u8> {
+    let empty = encode_canonical(&ActionBatch {
+        actions: Vec::new(),
+    })
+    .expect("batch encode");
+    let committing = encode_canonical(&ActionBatch {
+        actions: vec![
+            action(
+                session_id,
+                1,
+                ActionBody::StatePut {
+                    key: "session".to_owned(),
+                    value: snapshot.to_vec(),
+                },
+            ),
+            action(session_id, 2, ActionBody::StateCommit),
+        ],
+    })
+    .expect("batch encode");
+    signed_artifact_with_batches(version, state_schema, snapshot, &empty, &committing)
+}
+
+#[allow(dead_code)]
+fn action(session_id: u64, operation: u64, body: ActionBody) -> ConnectorAction {
+    ConnectorAction {
+        connector_id: ConnectorId::new("org.example.store").expect("connector id"),
+        session_id: SessionId(session_id),
+        caused_by: EventSequence(2),
+        cancellation_generation: CancellationGeneration(0),
+        operation_id: OperationId(operation),
+        deadline_token: TimerToken(operation + 100),
+        body,
+    }
+}
+
 fn signed_artifact_with_capture(
     version: &str,
     state_schema: u32,
     valid_fixture: bool,
     capture: bool,
 ) -> Vec<u8> {
-    let output = encode_canonical(&ActionBatch {
+    let empty = encode_canonical(&ActionBatch {
         actions: Vec::new(),
     })
     .expect("batch encode");
-    let state = [1_u8, 2, 3];
-    let output_packed = ((1_024_u64) << 32) | output.len() as u64;
+    build_artifact(
+        version,
+        state_schema,
+        &[1, 2, 3],
+        &empty,
+        &empty,
+        valid_fixture,
+        capture,
+    )
+}
+
+#[allow(dead_code)]
+fn signed_artifact_with_batches(
+    version: &str,
+    state_schema: u32,
+    snapshot: &[u8],
+    init: &[u8],
+    handle: &[u8],
+) -> Vec<u8> {
+    build_artifact(version, state_schema, snapshot, init, handle, true, false)
+}
+
+/// One test connector: a snapshot it always returns, one batch for `mav_init` and one for
+/// `mav_handle`. Static batches are enough because a host session dispatches exactly two events
+/// before a test takes over, and their sequences are therefore known in advance.
+fn build_artifact(
+    version: &str,
+    state_schema: u32,
+    state: &[u8],
+    init: &[u8],
+    handle: &[u8],
+    valid_fixture: bool,
+    capture: bool,
+) -> Vec<u8> {
+    let empty = encode_canonical(&ActionBatch {
+        actions: Vec::new(),
+    })
+    .expect("batch encode");
+    let init_packed = ((1_024_u64) << 32) | init.len() as u64;
+    let handle_packed = ((4_096_u64) << 32) | handle.len() as u64;
+    let empty_packed = ((6_144_u64) << 32) | empty.len() as u64;
     let state_packed = ((2_048_u64) << 32) | state.len() as u64;
+    // `mav_handle` answers the first event with `handle` and everything after it with an empty
+    // batch. A batch names the event sequence that caused it, so a connector that returned the
+    // same one twice would be refused the second time — including for the `StateCommitted` the
+    // host chains straight back after a commit.
     let wat = format!(
         r#"(module
             (memory (export "memory") 2 100)
             (data (i32.const 1024) "{}")
             (data (i32.const 2048) "{}")
+            (data (i32.const 4096) "{}")
+            (data (i32.const 6144) "{}")
+            (global $answered (mut i32) (i32.const 0))
             (func (export "mav_abi_version") (result i64) i64.const 4294967296)
-            (func (export "mav_alloc") (param i32) (result i32) i32.const 4096)
+            (func (export "mav_alloc") (param i32) (result i32) i32.const 8192)
             (func (export "mav_dealloc") (param i32 i32))
-            (func (export "mav_init") (param i32 i32) (result i64) i64.const {output_packed})
-            (func (export "mav_handle") (param i32 i32) (result i64) i64.const {output_packed})
+            (func (export "mav_init") (param i32 i32) (result i64) i64.const {init_packed})
+            (func (export "mav_handle") (param i32 i32) (result i64)
+                (local $result i64)
+                (if (global.get $answered)
+                    (then (local.set $result (i64.const {empty_packed})))
+                    (else
+                        (global.set $answered (i32.const 1))
+                        (local.set $result (i64.const {handle_packed}))))
+                (local.get $result))
             (func (export "mav_snapshot") (result i64) i64.const {state_packed})
         )"#,
-        wat_bytes(&output),
-        wat_bytes(&state),
+        wat_bytes(init),
+        wat_bytes(state),
+        wat_bytes(handle),
+        wat_bytes(&empty),
     );
     let mut module = wat::parse_str(wat).expect("valid test WAT");
     let fixtures = fixture_set(if valid_fixture {

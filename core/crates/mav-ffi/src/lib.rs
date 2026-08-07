@@ -90,6 +90,10 @@ pub struct MavRuntime {
     /// per call so the core can complete a chained head — including picking the probe branch a
     /// sex selects — without either platform reimplementing the substitution.
     profile: Mutex<Option<mav_engine::WearerProfile>>,
+    /// The connector state revision already written through to the install store, so a session
+    /// that commits nothing new does not re-serialise a connector's state on every packet.
+    /// Reset when a session opens, because revisions count from zero within one session.
+    persisted_state_revision: Mutex<u64>,
 }
 
 /// How many stage events the ring log holds. Bounded on purpose: observability that grows without
@@ -324,6 +328,7 @@ impl MavRuntime {
             models: Mutex::new(mav_engine::ModelHost::new()),
             scheduler: Mutex::new(mav_engine::AnalyticsScheduler::new()),
             profile: Mutex::new(None),
+            persisted_state_revision: Mutex::new(0),
         }))
     }
 
@@ -585,30 +590,59 @@ impl MavRuntime {
             &revocations,
             config.now_ms,
         )?;
-        let store = mav_engine::Store::open(std::path::Path::new(&self.database_path))?;
-        let mut host = mav_engine::ConnectorHost::instantiate(
-            &artifact,
-            mav_connector_runtime::LimitProfile::mobile_v1(),
-            store,
-            mav_engine::ConnectorHostConfig {
-                session_id: config.session_id,
-                device_id: config.device_id,
-                transport_capacity: config.transport_capacity,
-            },
-        )?;
-        host.set_tap(Arc::new(mav_obs::RingLogTap(Arc::clone(&self.ring))));
-        // Carry the user's power choice into the new session before it activates, so a reconnect
-        // never silently returns to full power (ADR-030).
-        host.set_low_power(
-            self.low_power.load(core::sync::atomic::Ordering::Relaxed),
-            Some(config.now_ms),
-        )?;
-        host.start()?;
+        let build = || -> Result<mav_engine::ConnectorHost, FfiError> {
+            let mut host = mav_engine::ConnectorHost::instantiate(
+                &artifact,
+                mav_connector_runtime::LimitProfile::mobile_v1(),
+                mav_engine::Store::open(std::path::Path::new(&self.database_path))?,
+                mav_engine::ConnectorHostConfig {
+                    session_id: config.session_id,
+                    device_id: config.device_id,
+                    transport_capacity: config.transport_capacity,
+                },
+            )?;
+            host.set_tap(Arc::new(mav_obs::RingLogTap(Arc::clone(&self.ring))));
+            // Carry the user's power choice into the new session before it activates, so a
+            // reconnect never silently returns to full power (ADR-030).
+            host.set_low_power(
+                self.low_power.load(core::sync::atomic::Ordering::Relaxed),
+                Some(config.now_ms),
+            )?;
+            Ok(host)
+        };
+
+        // Resume from whatever the last session committed. A connector that cannot read its own
+        // stored bytes — a downgrade, a corrupted row — starts fresh instead of failing the
+        // session, and the unreadable row is dropped rather than left to fail every reconnect.
+        // The wearer gets a connector that reconnects; the journal gets the reason.
+        let mut host = build()?;
+        match self.load_connector_state(&host)? {
+            Some(bytes) => {
+                if let Err(error) = host.start_restored(&bytes) {
+                    self.discard_unreadable_state(&host, &error, config.now_ms);
+                    // A part-way restore leaves the host failed, so the fresh start needs a fresh
+                    // instance rather than a second `start` on this one.
+                    host = build()?;
+                    host.start()?;
+                }
+            }
+            None => host.start()?,
+        }
+
         let report = host.lifecycle_snapshot().into();
         let mut session = self.connector_session_lock()?;
         if let Some(previous) = session.as_mut() {
+            // The outgoing session may have committed since its last write; give it the chance to
+            // land before it is replaced, then start this one's revision count from zero.
+            self.persist_connector_state(previous, config.now_ms);
             previous.terminate(mav_connector_abi::CancelReason::Update, Some(config.now_ms))?;
         }
+        if let Ok(mut persisted) = self.persisted_state_revision.lock() {
+            *persisted = 0;
+        }
+        // Activation itself can commit — a restored connector re-stating what it learned — so the
+        // first persist happens here rather than waiting for the first transport event.
+        self.persist_connector_state(&mut host, config.now_ms);
         *session = Some(host);
         Ok(report)
     }
@@ -620,9 +654,11 @@ impl MavRuntime {
     ) -> Result<ConnectorApplyOutcome, FfiError> {
         let mut session = self.connector_session_lock()?;
         let host = session.as_mut().ok_or_else(no_connector_session)?;
-        Ok(host
-            .apply(connector::event_from_ffi(event), wall_time_ms)?
-            .into())
+        let outcome = host.apply(connector::event_from_ffi(event), wall_time_ms)?;
+        // Anything the connector committed while handling that event becomes durable here, so a
+        // process death after this call resumes from it rather than from the last session.
+        self.persist_connector_state(host, wall_time_ms.unwrap_or_default());
+        Ok(outcome.into())
     }
 
     pub fn cancel_connector_session(
@@ -633,6 +669,9 @@ impl MavRuntime {
         let mut session = self.connector_session_lock()?;
         let host = session.as_mut().ok_or_else(no_connector_session)?;
         host.cancel(connector::cancel_from_ffi(reason), wall_time_ms)?;
+        // A cancelled session still knows where it got to. Persisting here is what makes a
+        // disconnect-and-reconnect resume instead of restart.
+        self.persist_connector_state(host, wall_time_ms.unwrap_or_default());
         Ok(host.lifecycle_snapshot().into())
     }
 
@@ -1273,9 +1312,123 @@ impl MavRuntime {
         let mut session = self.connector_session_lock()?;
         if let Some(host) = session.as_mut() {
             host.terminate(reason, Some(now_ms))?;
+            // Terminate cancels, which is itself a chance for the connector to commit. Persist
+            // before the host goes, or the last thing it learned dies with the session.
+            self.persist_connector_state(host, now_ms);
         }
         *session = None;
         Ok(())
+    }
+
+    /// What the last session committed for this connector on this device, if anything.
+    fn load_connector_state(
+        &self,
+        host: &mav_engine::ConnectorHost,
+    ) -> Result<Option<Vec<u8>>, FfiError> {
+        let namespace = Self::state_namespace(host);
+        Ok(self
+            .connectors_lock()?
+            .load_state(&namespace)?
+            .map(|state| state.bytes))
+    }
+
+    /// Drop state the connector could not read, and say why in the journal.
+    ///
+    /// Keeping it would make every future reconnect fail the same way, which turns one bad row
+    /// into a permanently broken device. Dropping it costs whatever the connector had learned —
+    /// a history cursor, a pairing step — all of which it can learn again.
+    fn discard_unreadable_state(
+        &self,
+        host: &mav_engine::ConnectorHost,
+        failure: &mav_model::error::MavError,
+        now_ms: i64,
+    ) {
+        let namespace = Self::state_namespace(host);
+        let dropped = self
+            .connectors_lock()
+            .and_then(|mut connectors| connectors.clear_state(&namespace).map_err(Into::into));
+        let mut record = MavError::new(
+            mav_model::error::codes::CONNECTOR_INSTALL_STATE_NAMESPACE,
+            "connector refused its own stored state; starting fresh and dropping the row",
+        )
+        .context(format!("{failure:?}"));
+        if let Err(error) = dropped {
+            record = record.context(format!("and the row could not be dropped: {error:?}"));
+        }
+        if let Ok(store) = self.reader_lock() {
+            let _ = store.record_error(&record, now_ms.saturating_mul(1_000_000));
+        }
+    }
+
+    /// The state namespace one session writes to, from the manifest the store already trusts.
+    fn state_namespace(host: &mav_engine::ConnectorHost) -> mav_connector_store::StateNamespace {
+        let (publisher_key_id, state_schema) = host.state_namespace();
+        mav_connector_store::StateNamespace {
+            connector_id: host.connector_id().to_owned(),
+            publisher_key_id: publisher_key_id.to_owned(),
+            // The store keys state per device, and the host's device id is the only identity a
+            // session has. Rendered rather than typed as a number because the column is a text
+            // namespace shared with connector-chosen ids.
+            device_id: host.device_id().to_string(),
+            state_schema,
+        }
+    }
+
+    /// Write the connector's own snapshot through to the install store, if it has moved.
+    ///
+    /// Called after anything that can dispatch an event. Cheap when nothing committed: the
+    /// revision has not moved, so no connector code runs.
+    ///
+    /// Failures are recorded and swallowed on purpose. This runs after the event it belongs to has
+    /// already been handled and its samples already committed; turning a state-write failure into a
+    /// failed transport event would throw away good data to report a durability problem, and the
+    /// next commit will try again. What must never happen is silence, so it goes to the journal.
+    fn persist_connector_state(&self, host: &mut mav_engine::ConnectorHost, now_ms: i64) {
+        let revision = host.state_revision();
+        {
+            let mut persisted = match self.persisted_state_revision.lock() {
+                Ok(guard) => guard,
+                Err(_) => return,
+            };
+            if revision == 0 || revision == *persisted {
+                return;
+            }
+            *persisted = revision;
+        }
+        if let Err(error) = self.write_connector_state(host, now_ms) {
+            self.journal_state_failure(&error, now_ms);
+        }
+    }
+
+    /// A state write that failed goes to the durable journal, never nowhere.
+    ///
+    /// If the journal write fails too there is genuinely nothing left to do about it — the caller
+    /// is a transport event that has already succeeded — so it is dropped here and only here.
+    fn journal_state_failure(&self, failure: &FfiError, now_ms: i64) {
+        let record = MavError::new(
+            mav_model::error::codes::CONNECTOR_INSTALL_STATE_NAMESPACE,
+            "connector state could not be made durable; the session continues and will retry \
+             on its next commit",
+        )
+        .context(format!("{failure:?}"));
+        if let Ok(store) = self.reader_lock() {
+            let _ = store.record_error(&record, now_ms.saturating_mul(1_000_000));
+        }
+    }
+
+    fn write_connector_state(
+        &self,
+        host: &mut mav_engine::ConnectorHost,
+        now_ms: i64,
+    ) -> Result<(), FfiError> {
+        let bytes = host.snapshot_state()?;
+        let namespace = Self::state_namespace(host);
+        let mut connectors = self.connectors_lock()?;
+        connectors
+            .save_state(&mav_connector_store::StoredState::new(
+                namespace, bytes, now_ms,
+            ))
+            .map_err(Into::into)
     }
 }
 

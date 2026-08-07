@@ -190,8 +190,8 @@ pub struct ConnectorHost {
     pending_timers: BTreeSet<u64>,
     staged_state: BTreeMap<String, Option<Vec<u8>>>,
     /// The host's mirror of what the connector has committed, kept so the session can bound the
-    /// namespace. Session-local: nothing writes it through to `mav-connector-store` yet, so it
-    /// dies with the session — see [`Self::snapshot_state`].
+    /// namespace. What is made durable is the connector's own `mav_snapshot`, not this map — see
+    /// [`Self::snapshot_state`].
     committed_state: BTreeMap<String, Vec<u8>>,
     state_revision: u64,
     timeline: Timeline,
@@ -299,18 +299,38 @@ impl ConnectorHost {
         })
     }
 
+    /// Start a fresh session. The connector is told nothing about any previous one.
     pub fn start(&mut self) -> Result<()> {
+        self.begin(None)
+    }
+
+    /// Start from state a previous session committed.
+    ///
+    /// `RestoreState` replaces `Init` as the first event rather than following it — that is the
+    /// order the embedded fixtures run and therefore the order every connector's parity report was
+    /// produced under, so a restored production session and a restored fixture take the same path
+    /// through the connector.
+    ///
+    /// A connector that refuses the bytes fails the session rather than silently continuing from a
+    /// blank slate: state it cannot read is a fact worth surfacing, and the caller can always drop
+    /// the row and start fresh.
+    pub fn start_restored(&mut self, state: &[u8]) -> Result<()> {
+        self.begin(Some(state))
+    }
+
+    fn begin(&mut self, restored: Option<&[u8]>) -> Result<()> {
         if self.lifecycle != ConnectorLifecycle::Installed {
             return Err(host_state("connector session has already started"));
         }
-        self.dispatch(
-            EventBody::Init {
+        let first = match restored {
+            Some(bytes) => EventBody::RestoreState {
+                bytes: bytes.to_vec(),
+            },
+            None => EventBody::Init {
                 manifest_hash: self.manifest_hash,
             },
-            None,
-            true,
-            0,
-        )?;
+        };
+        self.dispatch(first, None, true, 0)?;
         self.lifecycle = ConnectorLifecycle::Selected;
         self.dispatch(EventBody::Activate, None, false, 0)?;
         // Connectors start at full power, so only a low-power session needs stating (ADR-030).
@@ -647,11 +667,29 @@ impl ConnectorHost {
 
     /// The connector's own serialised state, as its `mav_snapshot` export produces it.
     ///
-    /// Nothing calls this yet, and that is the honest state of durable connector state: the store
-    /// can persist, migrate and roll back a namespace, the host mirrors and bounds the state
-    /// actions, and the seam between the two is not built. See `docs/connectors.md`.
+    /// The inverse of [`Self::start_restored`]. `mav-ffi` takes this whenever
+    /// [`Self::state_revision`] moves and writes it to the connector store, which is what makes a
+    /// reconnect resume rather than restart.
     pub fn snapshot_state(&mut self) -> Result<Vec<u8>> {
         self.program.snapshot()
+    }
+
+    /// How many times the connector has committed its state this session.
+    ///
+    /// Monotonic, and the only thing a caller needs in order to decide whether a snapshot is worth
+    /// taking: `mav_snapshot` runs connector code, so taking one per event would spend a
+    /// connector's fuel to re-serialise state that has not moved.
+    pub const fn state_revision(&self) -> u64 {
+        self.state_revision
+    }
+
+    /// The publisher and state-schema half of this connector's state namespace, from the signed
+    /// manifest. The store refuses a namespace that disagrees with the active artifact's.
+    pub fn state_namespace(&self) -> (&str, u32) {
+        (
+            self.manifest.publisher_key_id.as_str(),
+            self.manifest.state_schema,
+        )
     }
 
     pub(super) fn dispatch(
