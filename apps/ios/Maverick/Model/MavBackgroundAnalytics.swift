@@ -80,9 +80,11 @@ enum MavBackgroundAnalytics {
     }
 
     let finished = MavAtomicFlag()
-    // The system can pull the window at any moment. Cancelling here lets the drain loop stop
-    // between stages rather than being killed mid-inference.
+    // The system can pull the window at any moment. Telling the engine first lets its drain loop
+    // stop at a stage boundary instead of running inferences the app no longer has time for —
+    // which is the difference between being expired and being killed.
     task.expirationHandler = {
+      engine.cancelCurrentPass()
       if finished.testAndSet() { return }
       task.setTaskCompleted(success: false)
     }
@@ -101,20 +103,40 @@ enum MavBackgroundAnalytics {
   }
 }
 
-/// One-shot flag, so an expiration and a completion racing cannot both finish the same task.
+/// A flag two threads can share.
 ///
-/// Calling `setTaskCompleted` twice is a hard crash in `BackgroundTasks`, and the two callbacks
-/// genuinely can race: the system may expire a window in the same instant the pass returns.
+/// Two uses, both races that are real rather than theoretical. `testAndSet` settles which of an
+/// expiration and a completion finishes a `BGTask` — calling `setTaskCompleted` twice is a hard
+/// crash in `BackgroundTasks`, and the system may expire a window in the same instant the pass
+/// returns. `raise`/`isRaised` is the cancellation signal a pass reads between stages.
 final class MavAtomicFlag: @unchecked Sendable {
   private let lock = NSLock()
-  private var raised = false
+  private var flag = false
 
   /// Raise the flag. Returns true when it was *already* raised — that is, when the caller lost.
   func testAndSet() -> Bool {
     lock.lock()
     defer { lock.unlock() }
-    if raised { return true }
-    raised = true
+    if flag { return true }
+    flag = true
     return false
+  }
+
+  func raise() {
+    lock.lock()
+    flag = true
+    lock.unlock()
+  }
+
+  func lower() {
+    lock.lock()
+    flag = false
+    lock.unlock()
+  }
+
+  var isRaised: Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return flag
   }
 }

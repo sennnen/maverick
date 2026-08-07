@@ -212,6 +212,67 @@ final class MavAnalyticsEngineTests: XCTestCase {
     XCTAssertEqual(host.submitted.count, 2, "the release must not have cut the pass short")
   }
 
+  /// A runner that cancels the pass it is running, after `cancelAfter` inferences.
+  private final class CancellingRunner: MavModelBridge.Runner, @unchecked Sendable {
+    private let lock = NSLock()
+    private var ran = 0
+    private let cancelAfter: Int
+    /// Set after construction, because the engine needs the runner to exist first.
+    var engine: MavAnalyticsEngine?
+
+    init(cancelAfter: Int) { self.cancelAfter = cancelAfter }
+
+    func run(slug: String, inputs: [String: [Float]]) throws -> [String: [Float]] {
+      lock.lock()
+      ran += 1
+      let reached = ran == cancelAfter
+      lock.unlock()
+      if reached { engine?.cancelCurrentPass() }
+      return ["out": [1.0]]
+    }
+    func admittedSHA256(for slug: String) throws -> String { String(repeating: "a", count: 64) }
+    func releaseCache() {}
+  }
+
+  /// A cancelled pass stops draining instead of finishing the queue it was given.
+  ///
+  /// This is the background window being taken back. Before the engine had a cancellation signal
+  /// the expiration handler completed the `BGTask` and the pass carried on running inferences
+  /// behind it — with the comment above it claiming otherwise. Android has always stopped at
+  /// `ensureActive()`; this is the same boundary.
+  ///
+  /// Deferred mode drains four per round, so eight queued models are two rounds. Cancelling
+  /// during the first inference must leave the second round unstarted: four submitted, not eight.
+  func testACancelledPassStopsDrainingAtTheNextRound() {
+    let host = FakeHost((0..<8).map { _ in "pulse_ppg" })
+    let runner = CancellingRunner(cancelAfter: 1)
+    let engine = MavAnalyticsEngine(
+      runtime: FakeRuntime(host),
+      runner: runner,
+      clock: { 0 }
+    )
+    runner.engine = engine
+    _ = run(engine, mode: .deferred)
+    XCTAssertEqual(
+      host.submitted.count, MavAnalyticsEngine.RunMode.deferred.burst,
+      "the round in flight finishes and the next one must not start"
+    )
+  }
+
+  /// Cancellation is per pass, not sticky. One expired background window must not disable
+  /// analytics until the app is reinstalled.
+  func testACancellationDoesNotCarryIntoTheNextPass() {
+    let host = FakeHost((0..<8).map { _ in "pulse_ppg" })
+    let engine = MavAnalyticsEngine(
+      runtime: FakeRuntime(host),
+      runner: FakeRunner(failOn: nil),
+      clock: { 0 }
+    )
+    engine.cancelCurrentPass()
+    XCTAssertEqual(run(engine, mode: .deferred), .completed)
+    XCTAssertEqual(host.submitted.count, 8, "a fresh pass inherited a stale cancellation")
+  }
+
   func testTheDeferredModeAsksForLessWorkThanTheInteractiveOne() {
     XCTAssertLessThan(
       MavAnalyticsEngine.RunMode.deferred.burst,

@@ -45,6 +45,9 @@ final class MavAnalyticsEngine: @unchecked Sendable {
   private let queue = DispatchQueue(label: "com.sennnen.mav.analytics", qos: .utility)
   private var running = false
   private var failures: [String: Int] = [:]
+  /// Raised when the OS takes the window back. Read between drain rounds, so a cancelled pass
+  /// stops at a stage boundary rather than being killed part-way through an inference.
+  private let cancelled = MavAtomicFlag()
 
   /// The latest snapshot, for a view to observe. Read on any thread; written only on `queue`.
   private let state = MavAnalyticsState()
@@ -82,6 +85,7 @@ final class MavAnalyticsEngine: @unchecked Sendable {
         return completion(.skippedBusy)
       }
       self.running = true
+      self.cancelled.lower()
       defer { self.running = false }
       completion(self.onePass(deviceID: deviceID, mode: mode, permissionMissing: permissionMissing))
     }
@@ -109,6 +113,10 @@ final class MavAnalyticsEngine: @unchecked Sendable {
     // core, so an empty queue — not a fixed count — is the terminating condition.
     var rounds = 0
     while rounds < Self.maxRounds {
+      // Checked between rounds rather than mid-round: an inference already handed to Core ML
+      // finishes, and the pass stops before starting the next one. The Kotlin twin's
+      // `ensureActive()` sits in the same place.
+      if cancelled.isRaised { break }
       rounds += 1
       let outcome = bridge.drain(limit: mode.burst)
       failed += outcome.failed
@@ -154,6 +162,16 @@ final class MavAnalyticsEngine: @unchecked Sendable {
     for stage in stages where stage.state == .ready {
       failures[stage.model, default: 0] += 1
     }
+  }
+
+  /// Stop the pass in flight at its next stage boundary.
+  ///
+  /// For the moment iOS takes a background window back. The work already queued in the core stays
+  /// queued and the next pass picks it up; what this avoids is running inferences after the system
+  /// has stopped granting the app time for them, which is how a background task gets the app
+  /// killed rather than merely expired.
+  func cancelCurrentPass() {
+    cancelled.raise()
   }
 
   /// Forget every retry budget, so a wearer tapping retry gets a genuine fresh attempt.
