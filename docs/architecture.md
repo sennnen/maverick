@@ -136,8 +136,11 @@ the `Tap` boundary is where the pipeline is observed and the pipeline is what en
 passive and can change neither the data nor the call order. Loadable connector source lives only in
 `sennnen/maverick-connectors` and compiles against the public SDK. FFI reaches ABI, runtime,
 `mav-analytic` (for the availability vocabulary it flattens), and the
-connector store only to translate frozen records, open verified sessions, and serialize all
-mutation. FFI and replay have no connector implementation dependency.
+connector store only to translate frozen records, open verified sessions, carry a session's
+committed state to and from that store, and serialize all mutation. That last pair is FFI's because
+it is the only layer holding both the install store and the live session — the engine cannot reach
+the connector store and must not learn to. FFI and replay have no connector implementation
+dependency.
 
 ## Adding a device after migration
 

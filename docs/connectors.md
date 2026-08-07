@@ -232,8 +232,9 @@ microunits, then runs SQI, timeline placement/deduplication, provenance, and tra
 before any later transport action becomes visible. V1 units are `beats-per-minute`, `milliseconds`,
 `counts`, `milli-g`, `milli-degrees-per-second`, `degrees-celsius`, `percent`, `count`, `code`, or
 `boolean` according to the closed stream mapping in the host. The exact canonical event/action trace
-has a stable hash in the lifecycle snapshot. P5 state actions use a bounded session-local staging
-map; WC-P6 replaces that temporary compatibility with namespaced durable state transactions.
+has a stable hash in the lifecycle snapshot. State actions stage into a bounded session-local map
+that becomes visible at `StateCommit`; what a commit makes *durable* is the connector's own
+snapshot, written to its namespace in the install store — see "What is made durable, and when".
 
 ## Installation, activation, and durable state
 
