@@ -6,19 +6,20 @@ connectors: tests install bytes through the public API, and WC-P12 proves no dev
 is linked into Maverick.
 
 - `generic_hr_v1.mavconn` (1.0.0): SHA-256
-  `17f1ee6eee7eea6cd2a03fbcb8c9eada80ae0f4a5a39cab708a949ff5251041a`.
+  `9ac7a6648d2a508998a05797d3c38acd8bb1d28d1322d6352fce989553862d98`.
 - `whoop4_v1.mavconn` (1.0.3): SHA-256
-  `085369dacb6ae747e9bec0a1f8588e18a0e5539e6ea07a4bc41253d607e47304`.
+  `c7539ff1fdae3a0cdc07aef88bae1ae220345878391e7367973fa0502ecac551`.
 - `whoop5_v1.mavconn` (1.0.7): SHA-256
-  `166dfeaab9752de02eda845dd5cfabd5e6689625a46f1955480c683344503584`.
+  `6137a0a2e1708f681a4f85d4109f186720ef74114fc2b7f08d3ee30fc19cd427`.
 
 Each of those is an `artifact_sha256` the signed registry names at the commit `CONNECTORS_REF`
-pins, and `ConnectorParityTest` recomputes them from the bytes on disk rather than trusting this
-list. `whoop5` last moved when it stopped parsing the SIG heart-rate characteristic by hand and
-went through `ble-sig` like `whoop4` always has; before that, both moved when a refused ECG capture
-started reporting why instead of returning an empty batch. The pin, this list and the frozen
-expectations in that test all have to move together, in the same commit; missing that is what left
-the three disagreeing once before.
+pins, and `ConnectorParityTest` — on both platforms — recomputes them from the bytes on disk rather
+than trusting this list. All three last moved together when maverick-connectors started staging the
+SDK inside its own workspace: the artifacts had been carrying the absolute path of whichever
+maverick checkout the SDK was patched in from, so a digest signed on one machine did not rebuild on
+another. `whoop5` also moved for the SIG heart-rate fix in the same release. The pin, this list and
+the frozen expectations in both tests all have to move together, in the same commit; missing that
+is what left the three disagreeing once before.
 - `*_parity_v1.expected.json`: canonical event, action, sample, final-state, fuel, and linear-memory
   results produced by `mavconn-test --report` from those exact bytes.
 

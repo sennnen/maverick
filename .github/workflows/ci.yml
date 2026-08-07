@@ -77,17 +77,11 @@ jobs:
       - uses: actions/checkout@v5
       - run: bash tools/check_docs.sh
       - run: python3 tools/check_deps.py
-      - name: design tokens are the single source
+      # check_docs.sh above already runs check_model_assets, check_claims, model_matrix --check
+      # and check_generated — the last of which covers the design tokens, the model bindings, the
+      # precision ledger and the Xcode project. What is left here is the gates' own tests.
+      - name: the gates' own tests
         run: |
-          python3 tools/gen_design_tokens.py
-          git diff --exit-code -- apps/ios/Maverick/UI/AuraTokens.generated.swift \
-            apps/android/app/src/main/java/com/sennnen/mav/ui/aura/AuraTokens.generated.kt
-      # check_docs.sh above already runs check_model_assets, check_claims and model_matrix
-      # --check; this step is the rest — the generators, and the gates' own tests.
-      - name: the model manifest is the single source
-        run: |
-          python3 tools/ml/generate_bindings.py --check
-          python3 tools/ml/build_ledger.py --check
           python3 tools/test_check_model_assets.py
           python3 tools/ml/test_build_manifest.py
           python3 tools/ml/test_android_delegate.py

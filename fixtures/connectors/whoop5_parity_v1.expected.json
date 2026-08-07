@@ -2,9 +2,9 @@
   "schema": "mavconn-parity/v1",
   "connector_id": "dev.maverick.whoop5",
   "connector_version": "1.0.7",
-  "artifact_sha256": "166dfeaab9752de02eda845dd5cfabd5e6689625a46f1955480c683344503584",
+  "artifact_sha256": "6137a0a2e1708f681a4f85d4109f186720ef74114fc2b7f08d3ee30fc19cd427",
   "manifest_sha256": "118976aa973927e4a9771c6c6bb8174776c5db583314349d280754ab6a83e46a",
-  "signed_sha256": "788365aa25e0bbbdc4f6a13b868443a034e2d304bf262acb6aa08bdf87ee131d",
+  "signed_sha256": "a1da58e5e14b91dfc65948ec273135af81e5058b57f11617f0827e100b99dd3d",
   "fixture_count": 16,
   "fixtures": [
     {

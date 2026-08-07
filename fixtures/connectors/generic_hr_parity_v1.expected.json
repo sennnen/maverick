@@ -2,9 +2,9 @@
   "schema": "mavconn-parity/v1",
   "connector_id": "dev.maverick.generic-hr",
   "connector_version": "1.0.0",
-  "artifact_sha256": "17f1ee6eee7eea6cd2a03fbcb8c9eada80ae0f4a5a39cab708a949ff5251041a",
+  "artifact_sha256": "9ac7a6648d2a508998a05797d3c38acd8bb1d28d1322d6352fce989553862d98",
   "manifest_sha256": "72da8bbd6ea71c6ff57378e7eafe8fdcb830cbf26267091683200eb3953fdced",
-  "signed_sha256": "c9eac643ad45f207140983555ccf137990db15776cace7da0d831a31de61b4a9",
+  "signed_sha256": "4a72192386a46f8113d567be2505a662b3f1209e5816a88dd9f8b6b4a383ba24",
   "fixture_count": 3,
   "fixtures": [
     {

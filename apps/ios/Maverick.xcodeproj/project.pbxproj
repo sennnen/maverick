@@ -49,7 +49,9 @@
 		5034D7315ED71F586C2BEC07 /* popsicle_ovulation_prediction_v16.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 7A6C1781EEB40E29BE3C6190 /* popsicle_ovulation_prediction_v16.mlpackage */; };
 		50FCE15FBAC6697F5B2AC2C0 /* nao_full_ecg_model_fp16.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 1065FEFA27777263E5C8F9A3 /* nao_full_ecg_model_fp16.mlpackage */; };
 		527465D77BB9B5B5AFB309EC /* pulsenet_foundation.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = E1B14EB9E773ACBA78447A26 /* pulsenet_foundation.mlpackage */; };
+		537205397C4F0BB19ED80730 /* generic_hr_v1.mavconn in Resources */ = {isa = PBXBuildFile; fileRef = DF3FB61CB0D9A2D4EDD6DE54 /* generic_hr_v1.mavconn */; };
 		5494C89F6E2F3AF3B6EBD2DC /* MavElapsedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2FAEFD0D8E895FD77F9735B /* MavElapsedTests.swift */; };
+		549AA747C4CBD9E6237734AA /* whoop4_v1.mavconn in Resources */ = {isa = PBXBuildFile; fileRef = BA6C5B411E80887EC6B34280 /* whoop4_v1.mavconn */; };
 		553E9AE6D0DF7E745B7DA739 /* MavStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F54528C914D0CBF2B09C338 /* MavStore.swift */; };
 		573A30C787107C21D9955132 /* cva_encoder.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 8BA956187237F9A25266D175 /* cva_encoder.mlpackage */; };
 		57AAD6FC22ACA6EB1838AA13 /* behavior_embedding.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = B2B5156EB260CA9C05A015AD /* behavior_embedding.mlpackage */; };
@@ -89,6 +91,7 @@
 		9CCC21EA725AD8184732BD36 /* MavVitalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 316C3859F47FF177EDFD9B86 /* MavVitalsView.swift */; };
 		A33EBA4378436EEDEBED4E45 /* MavHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F404B46E83FC0675B2358B /* MavHaptics.swift */; };
 		A5C07676138137A686BB37DB /* MavBackgroundAnalytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71AB08B950930E41DDED51E /* MavBackgroundAnalytics.swift */; };
+		A675F605BA138EDB00BA3AD3 /* generic_hr_parity_v1.expected.json in Resources */ = {isa = PBXBuildFile; fileRef = 1285517A4AFA1B3F0656CEFD /* generic_hr_parity_v1.expected.json */; };
 		AEE958CB7AFCC8040A024802 /* MavThemeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23CFB48160BB2DE1EA42BF4E /* MavThemeTests.swift */; };
 		B0A76FAB04EA1408E18865C8 /* o_tachy_120.csv in Resources */ = {isa = PBXBuildFile; fileRef = 4EBADB12FB8A547884E75B5E /* o_tachy_120.csv */; };
 		B5F048BB0A13BFE5B2F192E7 /* energy_expenditure_no_hr.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 350A5135579CB479A6B2AC64 /* energy_expenditure_no_hr.mlpackage */; };
@@ -100,6 +103,7 @@
 		BDF7BC0C446E61462E3F9F1C /* o_brady_40.csv in Resources */ = {isa = PBXBuildFile; fileRef = 633304F0696786E8935AB9AD /* o_brady_40.csv */; };
 		BE88F51C439C6B5C87199E90 /* source_embedding.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 6D8732F625F8ED36FCA7D88B /* source_embedding.mlpackage */; };
 		BE9A55E8AA3FCE7CBE8A1806 /* step_multiplier.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 8DBDAF6425109FCAC2B49917 /* step_multiplier.mlpackage */; };
+		BF1FB9EF771566B801599C13 /* whoop5_v1.mavconn in Resources */ = {isa = PBXBuildFile; fileRef = 6BA9109669FEDFE61B2A0B3D /* whoop5_v1.mavconn */; };
 		C263D86C965501A11430223C /* AppModelApplyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B3A80484C0D2EBE2A641896 /* AppModelApplyTests.swift */; };
 		C51780D648B2E7FE10B0BE83 /* whoop5_parity_v1.expected.json in Resources */ = {isa = PBXBuildFile; fileRef = 1054DBC84705088AB71BF7F0 /* whoop5_parity_v1.expected.json */; };
 		C7C7C75EE912047AFAF132AB /* MavPresent.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0EEC1686C819DFDDDE874B /* MavPresent.swift */; };
@@ -158,6 +162,7 @@
 		1054DBC84705088AB71BF7F0 /* whoop5_parity_v1.expected.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = whoop5_parity_v1.expected.json; sourceTree = "<group>"; };
 		1065FEFA27777263E5C8F9A3 /* nao_full_ecg_model_fp16.mlpackage */ = {isa = PBXFileReference; path = nao_full_ecg_model_fp16.mlpackage; sourceTree = "<group>"; };
 		1142256492D4FB00CB48A6C9 /* WorkoutPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPrefs.swift; sourceTree = "<group>"; };
+		1285517A4AFA1B3F0656CEFD /* generic_hr_parity_v1.expected.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = generic_hr_parity_v1.expected.json; sourceTree = "<group>"; };
 		1411016E80EC956AB4185328 /* halite_ppg_score.mlpackage */ = {isa = PBXFileReference; path = halite_ppg_score.mlpackage; sourceTree = "<group>"; };
 		14A49EDDB7C36481A91500DC /* MavSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavSnapshotTests.swift; sourceTree = "<group>"; };
 		174C7CD9E6117274F3B5EEC3 /* pulse_ppg.mlpackage */ = {isa = PBXFileReference; path = pulse_ppg.mlpackage; sourceTree = "<group>"; };
@@ -216,6 +221,7 @@
 		6836ED6D7FEC56E3717EF5ED /* MavKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavKit.swift; sourceTree = "<group>"; };
 		68B5903D83A0C96D71D51891 /* MavStrengthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavStrengthView.swift; sourceTree = "<group>"; };
 		6A141959201E4EB00A533D15 /* MavModelRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavModelRunner.swift; sourceTree = "<group>"; };
+		6BA9109669FEDFE61B2A0B3D /* whoop5_v1.mavconn */ = {isa = PBXFileReference; path = whoop5_v1.mavconn; sourceTree = "<group>"; };
 		6D3C89300A02D56CF61D1ADA /* activity_ensemble.mlpackage */ = {isa = PBXFileReference; path = activity_ensemble.mlpackage; sourceTree = "<group>"; };
 		6D8732F625F8ED36FCA7D88B /* source_embedding.mlpackage */ = {isa = PBXFileReference; path = source_embedding.mlpackage; sourceTree = "<group>"; };
 		6FA0C0D2F36FCAB853951588 /* Maverick.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Maverick.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -251,6 +257,7 @@
 		B4ABDFE81EDEEB916FFBF8FE /* MavShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavShell.swift; sourceTree = "<group>"; };
 		B5249FF3636C461B75A5DA9A /* ConnectorManagement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectorManagement.swift; sourceTree = "<group>"; };
 		B71AB08B950930E41DDED51E /* MavBackgroundAnalytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavBackgroundAnalytics.swift; sourceTree = "<group>"; };
+		BA6C5B411E80887EC6B34280 /* whoop4_v1.mavconn */ = {isa = PBXFileReference; path = whoop4_v1.mavconn; sourceTree = "<group>"; };
 		BC45713B7650201F3BBA999F /* MaverickApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaverickApp.swift; sourceTree = "<group>"; };
 		BC4DDC7FE63A5BD0D9B52928 /* MavCore.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = MavCore.xcframework; path = "build/mav-core/MavCore.xcframework"; sourceTree = "<group>"; };
 		D04A83EC53A946A18F5CF75B /* MavCoreAnalyticsRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavCoreAnalyticsRuntime.swift; sourceTree = "<group>"; };
@@ -259,6 +266,7 @@
 		D81BB132E15FD138D990D171 /* MavSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavSnapshot.swift; sourceTree = "<group>"; };
 		DD26E77400D9DAA30D7A8259 /* popsicle_ovulation_prediction.mlpackage */ = {isa = PBXFileReference; path = popsicle_ovulation_prediction.mlpackage; sourceTree = "<group>"; };
 		DE0EEC1686C819DFDDDE874B /* MavPresent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavPresent.swift; sourceTree = "<group>"; };
+		DF3FB61CB0D9A2D4EDD6DE54 /* generic_hr_v1.mavconn */ = {isa = PBXFileReference; path = generic_hr_v1.mavconn; sourceTree = "<group>"; };
 		E04B2EAC4E12763779F7E48E /* MavModelZooTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavModelZooTests.swift; sourceTree = "<group>"; };
 		E0AA768583510E28245102A2 /* MavStrengthTraining.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavStrengthTraining.swift; sourceTree = "<group>"; };
 		E19F20B3C5D4141EDED8B6C3 /* step_head.mlpackage */ = {isa = PBXFileReference; path = step_head.mlpackage; sourceTree = "<group>"; };
@@ -408,8 +416,12 @@
 		53BAE78A1B564431426C6DAC /* connectors */ = {
 			isa = PBXGroup;
 			children = (
+				1285517A4AFA1B3F0656CEFD /* generic_hr_parity_v1.expected.json */,
+				DF3FB61CB0D9A2D4EDD6DE54 /* generic_hr_v1.mavconn */,
 				F0ED95858C7EE69BAE8158A0 /* whoop4_parity_v1.expected.json */,
+				BA6C5B411E80887EC6B34280 /* whoop4_v1.mavconn */,
 				1054DBC84705088AB71BF7F0 /* whoop5_parity_v1.expected.json */,
+				6BA9109669FEDFE61B2A0B3D /* whoop5_v1.mavconn */,
 			);
 			path = connectors;
 			sourceTree = "<group>";
@@ -656,6 +668,8 @@
 				38458E2334D97C4ADAA544D0 /* a_irregular_110.csv in Resources */,
 				159188AD75D928A2AE358437 /* a_irregular_70.csv in Resources */,
 				E602C85122D335740692DDBD /* a_irregular_90.csv in Resources */,
+				A675F605BA138EDB00BA3AD3 /* generic_hr_parity_v1.expected.json in Resources */,
+				537205397C4F0BB19ED80730 /* generic_hr_v1.mavconn in Resources */,
 				8BB6C251B9D029A2DED3D107 /* host_snapshot_v1.expected.json in Resources */,
 				8F103CC0292FDE65F7B8E0BA /* manifest.json in Resources */,
 				5BB1937F5BF562C34ED68057 /* n_regular_55.csv in Resources */,
@@ -665,7 +679,9 @@
 				BDF7BC0C446E61462E3F9F1C /* o_brady_40.csv in Resources */,
 				B0A76FAB04EA1408E18865C8 /* o_tachy_120.csv in Resources */,
 				66321EC3F4B7A008BEB970AC /* whoop4_parity_v1.expected.json in Resources */,
+				549AA747C4CBD9E6237734AA /* whoop4_v1.mavconn in Resources */,
 				C51780D648B2E7FE10B0BE83 /* whoop5_parity_v1.expected.json in Resources */,
+				BF1FB9EF771566B801599C13 /* whoop5_v1.mavconn in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

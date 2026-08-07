@@ -50,8 +50,14 @@ Run the complete, reproducible app build from the repository root:
     bash tools/platform/build_ios_app.sh
 
 It first rebuilds the ignored core package, then generates `Maverick.xcodeproj` from `project.yml`
-and runs the first available iPhone simulator's unit tests. The project itself is committed; run XcodeGen again
-after changing the project specification.
+and runs the first available iPhone simulator's unit tests.
+
+The project itself is committed, and `project.yml` is the source of truth for it.
+`tools/check_generated.py` — which `tools/check_docs.sh` runs, so every pre-commit run covers it —
+regenerates the project and fails if that changed anything, so a spec edit cannot ship without the
+project that goes with it. Run `tools/check_generated.py --write` to regenerate deliberately.
+Generation works on a fresh clone before the core has ever been built; the build does not, and says
+so.
 
 Set `MAV_BUILD_RELEASE=1` to also produce an unsigned generic-device Release app at
 `build/release/Build/Products/Release-iphoneos/Mav.app`. CI archives it and publishes an

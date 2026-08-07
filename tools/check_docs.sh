@@ -77,4 +77,8 @@ python3 tools/ml/check_claims.py || exit 1
 # Stock python3: the generator reads committed JSON and Rust, and the conversion virtualenv it
 # was reaching for is local-only and gitignored, so a gate that needed it would never run in CI.
 python3 tools/ml/model_matrix.py --check || exit 1
+# Every committed file whose header says "Do not edit" still matches what generates it. Runs here
+# rather than only in CI because a stale generated file is the kind of thing you want to hear
+# about before the commit, not after.
+python3 tools/check_generated.py || exit 1
 echo "check_docs: ok"

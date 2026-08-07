@@ -15,20 +15,20 @@ class ConnectorParityTest {
                 "generic_hr",
                 "dev.maverick.generic-hr",
                 3,
-                "17f1ee6eee7eea6cd2a03fbcb8c9eada80ae0f4a5a39cab708a949ff5251041a",
+                "9ac7a6648d2a508998a05797d3c38acd8bb1d28d1322d6352fce989553862d98",
                 setOf("chest-strap-reports-electrical-intervals"),
             ),
             Expected(
                 "whoop4",
                 "dev.maverick.whoop4",
                 18,
-                "085369dacb6ae747e9bec0a1f8588e18a0e5539e6ea07a4bc41253d607e47304",
+                "c7539ff1fdae3a0cdc07aef88bae1ae220345878391e7367973fa0502ecac551",
             ),
             Expected(
                 "whoop5",
                 "dev.maverick.whoop5",
                 16,
-                "166dfeaab9752de02eda845dd5cfabd5e6689625a46f1955480c683344503584",
+                "6137a0a2e1708f681a4f85d4109f186720ef74114fc2b7f08d3ee30fc19cd427",
                 setOf(
                     "history-cursor-retry",
                     "state-restart",

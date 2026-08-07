@@ -28,7 +28,12 @@ targets:
     deploymentTarget: "26.0"
     sources:
       - path: Maverick
+      # Written by tools/platform/build_ios.sh and gitignored, so it is absent on a fresh clone.
+      # Optional here purely so the project can be *generated* before the core has been built —
+      # without it XcodeGen refuses the spec and a clean checkout cannot produce an .xcodeproj at
+      # all. A build with the directory genuinely missing still fails, loudly, at link time.
       - path: build/mav-core/Sources
+        optional: true
     info:
       path: Maverick/Info.plist
       properties:
@@ -87,9 +92,19 @@ targets:
       - path: MaverickTests
       - path: ../../fixtures/platform/host_snapshot_v1.expected.json
         buildPhase: resources
+      - path: ../../fixtures/connectors/generic_hr_parity_v1.expected.json
+        buildPhase: resources
       - path: ../../fixtures/connectors/whoop4_parity_v1.expected.json
         buildPhase: resources
       - path: ../../fixtures/connectors/whoop5_parity_v1.expected.json
+        buildPhase: resources
+      # The artifacts themselves, so the parity reports can be checked against the bytes they
+      # claim to describe rather than only against a frozen constant.
+      - path: ../../fixtures/connectors/generic_hr_v1.mavconn
+        buildPhase: resources
+      - path: ../../fixtures/connectors/whoop4_v1.mavconn
+        buildPhase: resources
+      - path: ../../fixtures/connectors/whoop5_v1.mavconn
         buildPhase: resources
       - path: ../../fixtures/ecg/corpus
         buildPhase: resources
