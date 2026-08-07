@@ -8,6 +8,12 @@
 *~
 
 /apps/ios/build
+# Generated from apps/ios/project.yml by XcodeGen on every build, and not reproducible outside a
+# fully built tree: it lists the uniffi bindings that build/mav-core/Sources holds, so the same
+# spec produces a different project before and after the core is built. Committing it meant
+# committing a file nobody could regenerate identically. `tools/platform/build_ios_app.sh` makes
+# it; `xcodegen generate` in apps/ios is enough to open the project on its own.
+/apps/ios/Maverick.xcodeproj
 /apps/android/build
 /apps/android/app/build
 /apps/android/.gradle

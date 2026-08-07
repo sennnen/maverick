@@ -68,7 +68,7 @@ Before a commit, every one of these has to pass:
     cargo fmt --check
     cargo clippy --workspace --all-targets -- -D warnings
     tools/check_docs.sh          links resolve, CLAUDE.md == AGENTS.md, plans indexed,
-                                 every generated file matches its source (check_generated.py)
+                                 generated files match their sources (check_generated.py)
     tools/check_deps.py          crate dependency edges match architecture.md
     tools/check_a11y.py          every ink weight clears its contrast ratio in both schemes
 
