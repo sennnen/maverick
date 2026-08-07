@@ -185,6 +185,12 @@ Keep the console diagnostic on throughout. It has already earned its place twice
 
 ## Run 4 — the config key exchange is open
 
+> Point-in-time record on firmware **50.33.2.0**. The key count and table are versioned firmware
+> state, not fixed — 50.41.1.0 announces **20** keys, `enable_raw_data_w_ecg` is in **no** version,
+> and opcode **63** (not `START_RAW_DATA`) is the raw trigger. Current per-firmware tables live in
+> [`whoop-raw-afe.md`](../../protocol/whoop-raw-afe.md#the-firmware-config-table); the hypotheses
+> below about the ECG key were superseded by that work. [2026-08-07]
+
 Swept revision bytes 1..8 across opcodes 117 and 118 in one session. The answer is **revision
 `0x01`**, and it is unambiguous:
 

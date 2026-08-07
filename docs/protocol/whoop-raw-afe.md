@@ -161,10 +161,17 @@ assignment as well-evidenced rather than exhaustively proven.
 bonds (a renamed strap keeps its old bond record too), so target the strap by its exact bonded name
 and log the discovered service before trusting a capture.
 
-## The firmware config table (14 keys)
+## The firmware config table
 
-The config key exchange (`117 [0x01]` opens, `118 [0x01]` walks) enumerates exactly **14** keys on
-this firmware — the first time this table has been listed:
+The config key exchange (`117 [0x01]` opens, `118 [0x01]` walks) enumerates the exact set of keys
+`SET_CONFIG` (opcode 120) will accept: any name the walk did not announce is rejected (status 0),
+including **`enable_raw_data_w_ecg`**, which is not a key on any firmware seen so far. The `117`
+reply carries the key count in its body, and the walk ends when the announced count is reached (the
+console says `Persistent config index N is invalid` one past the end, and later `118` calls answer
+`ff`). **The table is not stable across firmware — it grew from 14 keys to 20 between 50.33.2.0 and
+50.41.1, so treat any hard-coded list as a snapshot, not a contract.** [HW on both, own MG]
+
+**50.33.2.0 — 14 keys** (`117` reports count `0x0e`):
 
 ```
 general_ab_test          enable_r22_v5_packets    enable_pdaf_walk_det
@@ -174,11 +181,39 @@ enable_r22_v3_packets    disable_pip_r26_packets  ir_hw_switching
 enable_r22_v4_packets    wear_detect_bias
 ```
 
-`SET_CONFIG` (opcode 120) accepts **only** these keys (status 1); any other name — `make_hrfm_visible`,
-`enable_passive_strap_fit_gen5`, `enable_sig11_during_sleep`, `dorset_inhibit_wpt`, `enable_sig12`,
-and crucially **`enable_raw_data_w_ecg`** — is rejected (status 0). The console confirms the walk with
-`Persistent config index 14 is invalid`. Novel keys worth noting: `enable_maverick_model`,
-`enable_pdaf_walk_det`, `general_ab_test`.
+**50.41.1.0 — 20 keys** (`117` reports count `0x14`), walked live on our own MG 2026-08-07, in the
+announced index order (the strap uses internal indices `0x01`–`0x16` with `0x0c`/`0x0d` skipped, so
+the walk returns 20 names across a 22-slot space):
+
+```
+enable_r22_packets       wear_detect_bias              enable_sig12
+enable_r22_v2_packets    hr_ch_switching               enable_frizzle_burst_mode
+enable_r22_v3_packets    ir_hw_switching               ir_1x_enable
+enable_r22_v4_packets    enable_passive_strap_fit_gen5 enable_rocky2
+enable_r22_v5_packets    enable_sig11_during_sleep
+enable_r22_v6_packets    dorset_inhibit_wpt
+enable_r22_v8_packets    make_hrfm_visible
+enable_r22_v9_packets    disable_pip_r26_packets
+```
+
+What changed, 50.33.2.0 → 50.41.1.0:
+
+- **Added:** `enable_r22_v9_packets` (the R22 series extends by one), `make_hrfm_visible`,
+  `enable_passive_strap_fit_gen5`, `enable_sig11_during_sleep`, `enable_sig12`,
+  `enable_frizzle_burst_mode`, `ir_1x_enable`, `enable_rocky2`. **Five of these
+  (`make_hrfm_visible`, `enable_passive_strap_fit_gen5`, `enable_sig11_during_sleep`,
+  `dorset_inhibit_wpt`, `enable_sig12`) were exactly the names rejected on 50.33.2.0** — they were
+  real keys arriving in a later firmware, not typos, which is the cleanest confirmation that this
+  table is versioned firmware state.
+- **Removed:** `general_ab_test`, `enable_pdaf_walk_det`, and `enable_maverick_model` are no longer
+  announced (their internal slots `0x0c`/`0x0d` are the gap in the walk). WHOOP's `maverick_model`
+  is their own strap-side codename and unrelated to this project; its disappearance is coincidence.
+- **`enable_frizzle_burst_mode`** is a new AFE burst-mode selector (firmware `SIGPROC: Starting /
+  Ending / Blocking Burst Mode`), distinct from the BLE history burst; `ir_1x_enable` is a new IR
+  gain control beside `ir_hw_switching`. These are the likely reason opcode 63 (the raw-AFE trigger)
+  stopped opening the stream on 50.41.1 — the raw path may now be gated behind a flag that did not
+  exist before. Not chased further: Maverick reads the strap's own summary records, not raw AFE
+  (see whoop.md, "no live optical stream"), so this is a curiosity, not a blocker.
 
 ## The AFE and what else it exposes
 

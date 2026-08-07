@@ -245,11 +245,12 @@ two accounts are consistent with one another]
 
 **Solved on hardware: the config key exchange is `117 [0x01]` then `118 [0x01]` per key.** [HW]
 Revision `0x01` is the only accepted value — 2 through 8 all answer `Unknown(0)`. `117 [0x01]`
-answers `Ok` with the key count in its body (`0x0e` = 14 on firmware 50.33.2.0), and each
-`118 [0x01]` answers `Ok` with one config key's **name**; the first returned is `general_ab_test`,
-one of the firmware-only flags absent from the R22 sequence. So 118 enumerates the firmware's real
-config table, and a `SET_CONFIG` for a key the firmware has not announced that way is refused —
-which is why five R22 flags failed, `enable_raw_data_w_ecg` among them.
+answers `Ok` with the key count in its body (`0x0e` = 14 on firmware 50.33.2.0; **`0x14` = 20 on
+50.41.1.0** — the table is versioned firmware state, not fixed), and each `118 [0x01]` answers `Ok`
+with one config key's **name**. So 118 enumerates the firmware's real config table, and a
+`SET_CONFIG` for a key the firmware has not announced that way is refused — which is why five R22
+flags failed on 50.33.2.0, `enable_raw_data_w_ecg` among them. The full per-firmware tables and the
+14→20 delta are in [`whoop-raw-afe.md`](whoop-raw-afe.md#the-firmware-config-table). [HW on both]
 
 The original symptom, for the record: A live MG console reports
 
@@ -697,8 +698,8 @@ optical front-end, a TDK ICM45686 six-axis IMU, and an ams AS6221 skin-temperatu
 
 **Solved on our own MG (firmware 50.33.2.0): the ECG/PPG raw stream is started by opcode `63` with a
 `[0x01]` revision byte — not by `START_RAW_DATA` (81).** 81 is accepted but streams nothing, and
-`enable_raw_data_w_ecg` is not a config key on this firmware at all (the 14-key table is enumerated in
-`whoop-raw-afe.md`). Opcode 63 was in the table above the whole time as "type-43 raw stream on/off"; it
+`enable_raw_data_w_ecg` is not a config key on any firmware seen (the per-firmware config tables,
+14 keys on 50.33.2.0 and 20 on 50.41.1.0, are enumerated in `whoop-raw-afe.md`). Opcode 63 was in the table above the whole time as "type-43 raw stream on/off"; it
 just needed the revision byte every other command on this firmware wants. It produces packet type 43
 `REALTIME_RAW_DATA` at **100 Hz**: three `u16` channels — two optical PPG and, between them, the
 single-lead ECG electrode, identified by an electrode-contact control capture. **Full frame format,
